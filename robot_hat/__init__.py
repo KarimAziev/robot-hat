@@ -1,13 +1,11 @@
-# #!/usr/bin/env python3
-
-from .adc import ADC
 from .filedb import FileDB
-from .battery import Battery
 from .i2c import I2C
+from .battery import Battery
 from .ultrasonic import Ultrasonic
 from .grayscale import Grayscale
 from .accelerometer import ADXL345
 from .music import Music
+from .adc import ADC
 from .pin import Pin
 from .pwm import PWM
 from .servo import Servo
@@ -24,7 +22,7 @@ from .address_descriptions import (
     get_address_description,
     get_value_description,
 )
-from robot_hat.exceptions import ADCAddressNotFound
+from .exceptions import ADCAddressNotFound
 
 __all__ = [
     "ADC",

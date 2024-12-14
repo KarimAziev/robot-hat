@@ -1,6 +1,4 @@
 import time
-from robot_hat.i2c import I2C
-
 from typing import TypeVar
 
 T = TypeVar('T', int, float)
@@ -60,6 +58,8 @@ def reset_mcu_sync():
 
 
 def get_firmware_version():
+    from .i2c import I2C
+
     ADDR = [0x14, 0x15]
     VERSSION_REG_ADDR = 0x05
     i2c = I2C(ADDR)
