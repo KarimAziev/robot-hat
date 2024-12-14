@@ -11,7 +11,7 @@ You can install the `robot_hat` library in multiple ways, depending on your need
 If you want to get the latest development version of the library (from the **`main` branch**) directly from GitHub, use:
 
 ```bash
-pip install git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat
+pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
 ```
 
 #### Example: `requirements.txt`
@@ -19,7 +19,7 @@ pip install git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat
 Add this line to your `requirements.txt` to always install the latest version:
 
 ```plaintext
-git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat
+git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
 ```
 
 ---
@@ -29,7 +29,7 @@ git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat
 If you want to install a specific release version of the library (e.g., `v1.0.1`), you can reference that tag from GitHub:
 
 ```bash
-pip install git+https://github.com/KarimAziev/robot_hat.git@v1.0.1#egg=robot_hat
+pip install git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
 ```
 
 #### Example: `requirements.txt`
@@ -37,7 +37,7 @@ pip install git+https://github.com/KarimAziev/robot_hat.git@v1.0.1#egg=robot_hat
 To lock the installation to a specific version (e.g., `v1.0.1`):
 
 ```plaintext
-git+https://github.com/KarimAziev/robot_hat.git@v1.0.1#egg=robot_hat
+git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
 ```
 
 ---
@@ -47,7 +47,7 @@ git+https://github.com/KarimAziev/robot_hat.git@v1.0.1#egg=robot_hat
 To install the library at a particular commit, replace `<commit_hash>` with the desired commit hash:
 
 ```bash
-pip install git+https://github.com/KarimAziev/robot_hat.git@<commit_hash>#egg=robot_hat
+pip install git+https://github.com/KarimAziev/robot-hat.git@<commit_hash>#egg=robot_hat
 ```
 
 #### Example: `requirements.txt`
@@ -55,7 +55,7 @@ pip install git+https://github.com/KarimAziev/robot_hat.git@<commit_hash>#egg=ro
 If you know the exact Git commit hash to reference:
 
 ```plaintext
-git+https://github.com/KarimAziev/robot_hat.git@a1b2c3d4#egg=robot_hat
+git+https://github.com/KarimAziev/robot-hat.git@a1b2c3d4#egg=robot_hat
 ```
 
 ---
@@ -71,13 +71,13 @@ pip install "robot_hat[dev]"
 Or, to install from GitHub with `dev` dependencies:
 
 ```bash
-pip install git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat[dev]
+pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
 ```
 
 #### Example: `requirements.txt`
 
 ```plaintext
-git+https://github.com/KarimAziev/robot_hat.git@main#egg=robot_hat[dev]
+git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
 ```
 
 ---
@@ -111,7 +111,7 @@ To set up a fresh development environment for the `robot_hat` project, follow th
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/KarimAziev/robot_hat.git
+   git clone https://github.com/KarimAziev/robot-hat.git
    cd robot_hat
    ```
 
