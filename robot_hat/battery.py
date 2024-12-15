@@ -14,8 +14,6 @@ class Battery(ADC):
     scaling the voltage to 10V systems (e.g., common in battery applications).
     """
 
-    CACHE_SECONDS = 5
-
     def __init__(
         self,
         channel: Union[str, int],
@@ -40,6 +38,7 @@ class Battery(ADC):
             float: The scaled battery voltage in volts.
         """
         voltage = self.read_voltage()
+
         scaled_voltage = round(voltage * 3, 2)  # Scale the 0-3.3V reading to 0-10V
         logger.debug(f"Battery voltage (scaled to 0-10V): {scaled_voltage} V")
         return scaled_voltage
