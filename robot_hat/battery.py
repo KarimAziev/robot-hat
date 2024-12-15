@@ -16,7 +16,7 @@ class Battery(ADC):
 
     def __init__(
         self,
-        channel: Union[str, int],
+        channel: Union[str, int] = "A4",
         address: Union[int, List[int]] = ADC_DEFAULT_ADDRESSES,
         *args,
         **kwargs,
