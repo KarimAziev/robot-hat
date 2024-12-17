@@ -2,7 +2,6 @@
 This module provides an interface for interacting with the HC-SR04 ultrasonic sensor to measure distances.
 """
 
-import asyncio
 import time
 
 from robot_hat.pin import Pin
@@ -47,8 +46,8 @@ class Ultrasonic:
 
     ### Methods:
         - `__init__(self, trig: Pin, echo: Pin, timeout: float = 0.1)`: Initialize the Ultrasonic sensor.
-        - `async _read(self) -> float`: Perform a single distance measurement.
-        - `async read(self, times: int = 10) -> float`: Attempt to read the distance measurement multiple times and return the first successful read.
+        - `_read(self) -> float`: Perform a single distance measurement.
+        - `read(self, times: int = 10) -> float`: Attempt to read the distance measurement multiple times and return the first successful read.
     """
 
     SOUND_SPEED = 343.3  # Speed of sound in m/s
@@ -69,7 +68,7 @@ class Ultrasonic:
         self.trig = Pin(trig._pin_num)
         self.echo = Pin(echo._pin_num, mode=Pin.IN, pull=Pin.PULL_DOWN)
 
-    async def _read(self) -> float:
+    def _read(self) -> float:
         """
         Perform a single distance measurement.
 
@@ -81,9 +80,9 @@ class Ultrasonic:
             RuntimeError: If the echo pin is not properly initialized.
         """
         self.trig.off()
-        await asyncio.sleep(0.001)
+        time.sleep(0.001)
         self.trig.on()
-        await asyncio.sleep(0.00001)
+        time.sleep(0.00001)
         self.trig.off()
 
         pulse_end = 0
@@ -110,7 +109,7 @@ class Ultrasonic:
         cm = round(during * self.SOUND_SPEED / 2 * 100, 2)
         return cm
 
-    async def read(self, times: int = 10):
+    def read(self, times: int = 10):
         """
         Attempt to read the distance measurement multiple times and return the first successful read.
 
@@ -121,7 +120,7 @@ class Ultrasonic:
             float: The measured distance in centimeters. Returns -1 if all attempts fail.
         """
         for _ in range(times):
-            a = await self._read()
+            a = self._read()
             if a != -1:
                 return a
         return -1
