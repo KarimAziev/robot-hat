@@ -1,5 +1,6 @@
 import errno
 import logging
+import os
 from typing import List, Optional, Sequence, Union
 
 from smbus2 import i2c_msg
@@ -75,7 +76,7 @@ class MockSMBus:
         }
 
         self._byte_responses_by_addrs = {
-            "20": generate_discharge_sequence(),
+            "20": [],
         }
 
     def open(self, bus: Union[int, str]) -> None:
@@ -100,7 +101,12 @@ class MockSMBus:
         if byte_responses is None:
             return self._command_responses["byte"]
         if len(byte_responses) == 0:
-            self._byte_responses_by_addrs[f"{i2c_addr}"] = generate_discharge_sequence()
+            DISCHARGE_RATE = os.getenv("ROBOT_HAT_DISCHARGE_RATE")
+            rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 20
+
+            self._byte_responses_by_addrs[f"{i2c_addr}"] = generate_discharge_sequence(
+                rate=rate
+            )
             byte_responses = self._byte_responses_by_addrs[f"{i2c_addr}"]
         return byte_responses.pop(0)
 

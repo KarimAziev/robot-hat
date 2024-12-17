@@ -15,6 +15,8 @@ communicate with one another using just two lines:
 """
 
 import errno
+import logging
+import os
 from typing import Any, List, Optional, Union
 
 from robot_hat.address_descriptions import (
@@ -22,15 +24,15 @@ from robot_hat.address_descriptions import (
     get_value_description,
 )
 from robot_hat.exceptions import ADCAddressNotFound
-from robot_hat.utils import is_raspberry_pi
-import logging
 
 logger = logging.getLogger(__name__)
 
-if is_raspberry_pi():
-    from smbus2 import SMBus
-else:
+USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
+
+if USE_MOCK == "1":
     from .mock.smbus2 import MockSMBus as SMBus
+else:
+    from smbus2 import SMBus
 
 
 def _retry_wrapper(func):
