@@ -3,39 +3,44 @@ Grayscale Module provides 3-channel grayscale sensing, allowing for the
 detection of line status or intensity using three individual ADC channels.
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from .adc import ADC
 
 
-class Grayscale(object):
+class Grayscale:
     """
-    The Grayscale Module provides 3-channel grayscale sensing, allowing for the detection of line status or intensity using three individual ADC channels.
-
-    ### Channels:
-    - `LEFT` (int): Left channel index.
-    - `MIDDLE` (int): Middle channel index.
-    - `RIGHT` (int): Right channel index.
-
-    ### Attributes:
-    - `REFERENCE_DEFAULT` (list): Default reference values for the grayscale sensors.
-
-    ### Methods:
-    - `__init__(self, pin0: ADC, pin1: ADC, pin2: ADC, _: Optional[int] = None)`: Initializes the Grayscale Module.
-    - `reference(self, ref: Optional[List[int]] = None) -> List[int]`: Sets or gets the reference values for the sensors.
-    - `read_status(self, datas: Optional[List[int]] = None) -> List[int]`: Reads the status of the lines (white or black).
-    - `read(self, channel: Optional[int] = None) -> List[int]`: Reads the grayscale data from the specified channel or all channels.
+    Grayscale class provides 3-channel grayscale sensing, allowing for the
+    detection of line status or intensity using three individual ADC channels.
 
     ### Example usage
 
     ```python
-    grayscale = Grayscale(pin0, pin1, pin2)
+    from robot_hat.adc import ADC
+    from robot_hat.grayscale import Grayscale
 
-    # Get the status of all lines:
+    # Initialize ADC channels
+    pin0 = ADC(0)  # Initialize ADC object for channel 0
+    pin1 = ADC(1)  # Initialize ADC object for channel 1
+    pin2 = ADC(2)  # Initialize ADC object for channel 2
+
+    # Initialize Grayscale module with ADC pins and a reference (optional)
+    grayscale = Grayscale(pin0, pin1, pin2, reference=[900, 900, 900])
+
+    # Set reference manually
+    grayscale.reference = [1000, 1000, 1000]
+
+    # Get the status of all lines
     status = grayscale.read_status()
+    print(f"Line statuses: {status}")
 
-    ### Read the grayscale value from the left channel:
+    # Read the grayscale value from the left channel
     left_value = grayscale.read(Grayscale.LEFT)
+    print(f"Left channel value: {left_value}")
+
+    # Read grayscale values for all channels
+    all_values = grayscale.read_all()
+    print(f"All channel values: {all_values}")
     ```
     """
 
@@ -46,68 +51,123 @@ class Grayscale(object):
     RIGHT = 2
     """Right Channel"""
 
-    REFERENCE_DEFAULT = [1000] * 3
+    _reference = [1000, 1000, 1000]
 
-    def __init__(self, pin0: ADC, pin1: ADC, pin2: ADC, _: Optional[int] = None):
+    def __init__(
+        self, pin0: ADC, pin1: ADC, pin2: ADC, reference: List[int] = [1000, 1000, 1000]
+    ):
         """
-        Initialize Grayscale Module
+        Initializes a Grayscale module with three ADC channels and optional reference values.
 
-        :param pin0: ADC object or int for channel 0
-        :type pin0: robot_hat.ADC/int
-        :param pin1: ADC object or int for channel 1
-        :type pin1: robot_hat.ADC/int
-        :param pin2: ADC object or int for channel 2
-        :type pin2: robot_hat.ADC/int
-        :param reference: reference voltage
-        :type reference: 1*3 list, [int, int, int]
+        Args:
+            pin0 (ADC): ADC object for the left channel.
+            pin1 (ADC): ADC object for the middle channel.
+            pin2 (ADC): ADC object for the right channel.
+            reference (List[int], optional): Default reference values for black/white thresholds
+                for the three channels. Defaults to [1000, 1000, 1000].
+
+        Raises:
+            TypeError: If the ADC objects are not valid.
         """
         self.pins = (pin0, pin1, pin2)
         for i, pin in enumerate(self.pins):
             if not isinstance(pin, ADC):
                 raise TypeError(f"pin{i} must be robot_hat.ADC")
-        self._reference = self.REFERENCE_DEFAULT
+        self.reference = reference
 
-    def reference(self, ref: Optional[list] = None) -> list:
+    @property
+    def reference(self) -> List[int]:
         """
-        Get Set reference value
+        Retrieves the reference values for the grayscale sensors.
 
-        :param ref: reference value, None to get reference value
-        :type ref: list
-        :return: reference value
-        :rtype: list
+        The reference values are used to distinguish between black and white in
+        the `read_status` method. Each channel has its own reference value that
+        sets the threshold for determining line status.
+
+        Returns:
+            The current reference values for the three channels, in the order: [LEFT, MIDDLE, RIGHT].
         """
-        if ref is not None:
-            if isinstance(ref, list) and len(ref) == 3:
-                self._reference = ref
-            else:
-                raise TypeError("ref parameter must be 1*3 list.")
         return self._reference
 
-    def read_status(self, datas: Optional[list] = None) -> list:
+    @reference.setter
+    def reference(self, value: List[int]):
         """
-        Read line status
+        Sets the reference values for the grayscale sensors.
 
-        :param datas: list of grayscale datas, if None, read from sensor
-        :type datas: list
-        :return: list of line status, 0 for white, 1 for black
-        :rtype: list
+        The reference values determine the threshold between black and white for
+        the three channels. Each reference value should correspond to one of the
+        channels (LEFT, MIDDLE, RIGHT). The values must be provided as a list
+        containing exactly three integers.
+
+        Args:
+            value (List[int]): A list of three integers representing the reference
+                               values for each of the three channels.
+
+        Raises:
+            TypeError: If the input is not a list of three integers.
+
+        Example:
+            >>> grayscale.reference = [950, 960, 970]  # Set new reference values
+            >>> print(grayscale.reference)            # Output: [950, 960, 970]
+        """
+        if not isinstance(value, list) or len(value) != 3:
+            raise TypeError("Reference value must be a list of three integers.")
+
+        self._reference = value
+
+    def read_status(self, datas: Optional[List[int]] = None) -> List[int]:
+        """
+        Reads the status of the lines based on current reference values. Status is
+        calculated as 0 for white and 1 for black.
+
+        Args:
+            datas (Optional[List[int]], optional): List of grayscale data to process.
+                If not provided, grayscale data is read directly from the sensors.
+
+        Returns:
+            A list of statuses for each channel, where 0 represents white
+            and 1 represents black.
+
+        Raises:
+            ValueError: If the reference values are not set.
         """
         if self._reference == None:
             raise ValueError("Reference value is not set")
         if datas == None:
-            datas = self.read()
+            datas = self.read_all()
         return [0 if data > self._reference[i] else 1 for i, data in enumerate(datas)]
 
-    def read(self, channel: Optional[int] = None) -> list:
+    def read_all(self) -> List[int]:
         """
-        Read a channel or all datas.
+        Reads grayscale intensity values from all three channels.
 
-        :param channel: channel to read, leave empty to read all. 0, 1, 2 or Grayscale.LEFT, Grayscale.CENTER, Grayscale.RIGHT
-        :type channel: int/None
-        :return: list of grayscale data
-        :rtype: list
+        Returns:
+            A list of grayscale intensity values for all channels.
+        """
+        result: List[int] = []
+        for pin in self.pins:
+            val = pin.read()
+            result.extend(val)
+
+        return result
+
+    def read(self, channel: Optional[int] = None) -> List[int]:
+        """
+        Reads grayscale data from a specific channel or all channels.
+
+        Args:
+            channel (Optional[int], optional): Channel to read from. If not provided,
+                data from all channels is returned.
+
+                - `Grayscale.LEFT`: Left channel (index 0).
+                - `Grayscale.MIDDLE`: Middle channel (index 1).
+                - `Grayscale.RIGHT`: Right channel (index 2).
+
+        Returns:
+            A list of grayscale intensity values for the specified channel
+            or all channels.
         """
         if channel == None:
-            return [self.pins[i].read() for i in range(3)]
+            return self.read_all()
         else:
             return self.pins[channel].read()
