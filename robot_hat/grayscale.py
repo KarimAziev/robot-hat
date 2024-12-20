@@ -100,8 +100,7 @@ class Grayscale:
         containing exactly three integers.
 
         Args:
-            value (List[int]): A list of three integers representing the reference
-                               values for each of the three channels.
+            value: A list of three integers representing the reference values for each of the channels.
 
         Raises:
             TypeError: If the input is not a list of three integers.
