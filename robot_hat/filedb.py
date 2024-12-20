@@ -247,16 +247,20 @@ class FileDB(object):
         with open(self.db, "r") as conf:
             lines = conf.readlines()
 
-        file_len = len(lines) - 1
-        flag = False
+        found = False
 
-        for i in range(file_len):
-            if lines[i][0] != "#":
-                if lines[i].split("=")[0].strip() == name:
-                    lines[i] = f"{name} = {value}\n"
-                    flag = True
+        for i, line in enumerate(lines):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
 
-        if not flag:
+            parts = [item.strip() for item in line.split("=") if item.strip()]
+
+            if parts and len(parts) > 0 and parts[0] == name:
+                lines[i] = f"{name} = {value}\n"
+                found = True
+
+        if not found:
             lines.append(f"{name} = {value}\n")
 
         with open(f"{self.db}.tmp", "w") as tmp:
