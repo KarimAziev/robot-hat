@@ -86,6 +86,33 @@ class FileDB(object):
         return default_value
 
     def get_value_with(self, name: str, fn: Callable[[str], T]) -> Optional[T]:
+        """
+        Retrieves a single value associated with a given key in the database and
+        processes it using a provided conversion function.
+
+        This method looks up the specified key in the database, retrieves its
+        value as a string, and applies the provided conversion function (`fn`)
+        to transform the value into the desired type. If the key is missing or
+        the value is `None`, `None` is returned.
+
+        Args:
+            name: The key to look up in the database.
+            fn: A function that converts a string value into the desired type
+            (e.g., `int`, `float`, or a custom type).
+
+        Returns:
+            The transformed value after applying the provided function, or `None` if the value is missing or `None`.
+
+        Example:
+            Assuming the database contains the key-value pair `"key" = "123"`:
+                result = get_value_with("key", int)  # result is 123
+
+            For the key-value pair `"key" = "45.67"`:
+                result = get_value_with("key", float)  # result is 45.67
+
+            If `"key"` is missing or set to an empty value:
+                result = get_value_with("key", int)  # result is None
+        """
         value = self.get(name, default_value=None)
         if value:
             return fn(value)
