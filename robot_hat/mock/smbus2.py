@@ -7,6 +7,8 @@ from smbus2 import i2c_msg
 
 logger = logging.getLogger(__name__)
 
+I2C_ALLOWED_ADDRESES = [20, 54]
+
 
 def generate_discharge_sequence(
     start_voltage=2.6, end_voltage=2.0, amount: Optional[int] = None, rate=20
@@ -114,7 +116,7 @@ class MockSMBus:
         self, i2c_addr: int, value: int, force: Optional[bool] = None
     ) -> None:
         logger.debug("write_byte: %s", value)
-        if i2c_addr != 20:
+        if i2c_addr not in I2C_ALLOWED_ADDRESES:
             raise OSError(errno.EREMOTEIO, "No such device or address")
         self._set_address(i2c_addr, force)
         return
