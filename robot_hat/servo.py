@@ -78,7 +78,7 @@ class Servo(PWM):
     def __init__(
         self,
         channel: Union[int, str],
-        address: Optional[Union[int, List[int]]],
+        address: Optional[Union[int, List[int]]] = None,
         *args,
         **kwargs,
     ):
