@@ -3,6 +3,8 @@ pin_descriptions = {
     "P0": "Camera pan servo PIN",
     "P1": "Camera tilt servo PIN",
     "P2": "Direction servo PIN",
+    "D2": "Ultrasonic Trigger PIN",
+    "D3": "Ultrasonic Echo PIN",
     "D4": "Left motor direction PIN",
     "D5": "Right motor direction PIN",
     "P12": "Left motor speed PIN",
@@ -10,7 +12,5 @@ pin_descriptions = {
     "A0": "Grayscale PIN",
     "A1": "Grayscale PIN",
     "A2": "Grayscale PIN",
-    "D2": "Ultrasonic Trigger PIN",
-    "D3": "Ultrasonic Echo PIN",
     "MCURST": "MCU Reset PIN",
 }
