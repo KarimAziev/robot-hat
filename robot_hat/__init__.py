@@ -2,7 +2,15 @@ from .accelerometer import ADXL345
 from .adc import ADC
 from .address_descriptions import get_address_description, get_value_description
 from .battery import Battery
-from .exceptions import ADCAddressNotFound
+from .exceptions import (
+    ADCAddressNotFound,
+    InvalidPin,
+    InvalidPinInterruptTrigger,
+    InvalidPinMode,
+    InvalidPinName,
+    InvalidPinNumber,
+    InvalidPinPull,
+)
 from .filedb import FileDB
 from .grayscale import Grayscale
 from .i2c import I2C
@@ -47,5 +55,11 @@ __all__ = [
     "pin_descriptions",
     "mapping",
     "UltrasonicMock",
+    "InvalidPin",
+    "InvalidPinInterruptTrigger",
+    "InvalidPinMode",
+    "InvalidPinName",
+    "InvalidPinNumber",
+    "InvalidPinPull",
     "version",
 ]
