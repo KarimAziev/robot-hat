@@ -10,8 +10,9 @@ from robot_hat.pin import Pin
 # 0 to 400 cm
 class Ultrasonic:
     """
-    Picar-x uses the `HC-SR04` ultrasonic distance sensor to provide non-contact distance measurements
-    from 2 cm to 400 cm, with a ranging accuracy that can reach up to 3 mm.
+    This class measures distance using the ultrasonic sensor `HC-SR04` to
+    provide non-contact distance measurements from 2 cm to 400 cm, with a
+    ranging accuracy that can reach up to 3 mm.
 
     Each HC-SR04 module consists of an ultrasonic transmitter, a receiver, and a control circuit.
 
