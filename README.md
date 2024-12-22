@@ -87,7 +87,7 @@ git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
 After installing the library, you can verify it is installed and working properly:
 
 ```bash
-python -c "import robot_hat; print(robot_hat.__version__)"
+python -c "import robot_hat; print(robot_hat.version)"
 ```
 
 This will print the version of the library installed. If you are using `setuptools_scm`, the version will reflect your Git tags or branch state.

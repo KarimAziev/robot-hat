@@ -21,6 +21,7 @@ from .utils import (
     reset_mcu_sync,
     run_command,
 )
+from .version import version
 
 __all__ = [
     "ADC",
@@ -46,4 +47,5 @@ __all__ = [
     "pin_descriptions",
     "mapping",
     "UltrasonicMock",
+    "version",
 ]
