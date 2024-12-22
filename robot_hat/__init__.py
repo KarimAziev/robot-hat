@@ -1,28 +1,26 @@
-from .filedb import FileDB
-from .i2c import I2C
-from .battery import Battery
-from .ultrasonic import Ultrasonic
-from .grayscale import Grayscale
 from .accelerometer import ADXL345
-from .music import Music
 from .adc import ADC
+from .address_descriptions import get_address_description, get_value_description
+from .battery import Battery
+from .exceptions import ADCAddressNotFound
+from .filedb import FileDB
+from .grayscale import Grayscale
+from .i2c import I2C
+from .mock.ultrasonic import Ultrasonic as UltrasonicMock
+from .music import Music
 from .pin import Pin
+from .pin_descriptions import pin_descriptions
 from .pwm import PWM
+from .robot import Robot
 from .servo import Servo
+from .ultrasonic import Ultrasonic
 from .utils import (
+    get_firmware_version,
+    is_raspberry_pi,
+    mapping,
     reset_mcu_sync,
     run_command,
-    is_raspberry_pi,
-    get_firmware_version,
-    mapping,
 )
-from .robot import Robot
-from .pin_descriptions import pin_descriptions
-from .address_descriptions import (
-    get_address_description,
-    get_value_description,
-)
-from .exceptions import ADCAddressNotFound
 
 __all__ = [
     "ADC",
@@ -47,4 +45,5 @@ __all__ = [
     "get_value_description",
     "pin_descriptions",
     "mapping",
+    "UltrasonicMock",
 ]
