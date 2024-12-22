@@ -87,7 +87,13 @@ class PWM(I2C):
     CLOCK = 72000000.0
     """Clock frequency for in Hertz"""
 
-    def __init__(self, channel: Union[int, str], address=None, *args, **kwargs):
+    def __init__(
+        self,
+        channel: Union[int, str],
+        address: Optional[Union[int, List[int]]] = None,
+        *args,
+        **kwargs,
+    ):
         """
         Initialize the PWM module.
 

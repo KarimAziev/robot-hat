@@ -52,3 +52,11 @@ class InvalidPinInterruptTrigger(ValueError):
     """
 
     pass
+
+
+class InvalidServoAngle(ValueError):
+    """
+    Exception raised when Interrupt Pin triggers the trigger is not valid.
+    """
+
+    pass

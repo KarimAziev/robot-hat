@@ -1,10 +1,10 @@
 import time
-from typing import TypeVar
+from typing import Tuple, TypeVar
 
 T = TypeVar('T', int, float)
 
 
-def run_command(cmd):
+def run_command(cmd) -> Tuple[int | None, str]:
     """
     Run command and return status and output
 
@@ -24,7 +24,7 @@ def run_command(cmd):
     return status, result
 
 
-def reset_mcu_sync():
+def reset_mcu_sync() -> None:
     """
     Resets the MCU (Microcontroller Unit) by toggling the state of the MCU reset pin.
 
@@ -57,7 +57,7 @@ def reset_mcu_sync():
     mcu_reset.close()
 
 
-def get_firmware_version():
+def get_firmware_version() -> str:
     from .i2c import I2C
 
     ADDR = [0x14, 0x15]

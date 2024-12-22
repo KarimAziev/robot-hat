@@ -10,6 +10,7 @@ from .exceptions import (
     InvalidPinName,
     InvalidPinNumber,
     InvalidPinPull,
+    InvalidServoAngle,
 )
 from .filedb import FileDB
 from .grayscale import Grayscale
@@ -61,5 +62,6 @@ __all__ = [
     "InvalidPinName",
     "InvalidPinNumber",
     "InvalidPinPull",
+    "InvalidServoAngle",
     "version",
 ]

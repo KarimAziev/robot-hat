@@ -110,7 +110,7 @@ class Ultrasonic:
         cm = round(during * self.SOUND_SPEED / 2 * 100, 2)
         return cm
 
-    def read(self, times: int = 10):
+    def read(self, times: int = 10) -> float:
         """
         Attempt to read the distance measurement multiple times and return the first successful read.
 
