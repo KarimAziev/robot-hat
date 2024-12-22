@@ -3,7 +3,10 @@ import logging
 import os
 from typing import List, Optional, Sequence, Union
 
-from smbus2 import i2c_msg
+from typing_extensions import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from smbus2 import i2c_msg
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +206,7 @@ class MockSMBus:
         self._set_address(i2c_addr, force)
         return self._command_responses["block"][:length]
 
-    def i2c_rdwr(self, *i2c_msgs: i2c_msg) -> None:
+    def i2c_rdwr(self, *i2c_msgs: "i2c_msg") -> None:
         logger.debug("%s", i2c_msgs)
         return
 
