@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, TypeVar, Union
 
+from robot_hat.exceptions import FileDBValidationError
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T')
@@ -238,9 +240,11 @@ class FileDB(object):
         contains newline characters.
         """
         if not name or "=" in name:
-            raise ValueError(f"Invalid name: '{name}' cannot be empty or contain '='")
+            raise FileDBValidationError(
+                f"Invalid name: '{name}' cannot be empty or contain '='"
+            )
         if "\n" in value:
-            raise ValueError("Value cannot contain newline characters")
+            raise FileDBValidationError("Value cannot contain newline characters")
 
         lines = []
 

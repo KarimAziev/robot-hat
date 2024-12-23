@@ -3,9 +3,13 @@ Grayscale Module provides 3-channel grayscale sensing, allowing for the
 detection of line status or intensity using three individual ADC channels.
 """
 
+import logging
 from typing import List, Optional
 
 from .adc import ADC
+from .exceptions import GrayscaleTypeError
+
+logger = logging.getLogger(__name__)
 
 
 class Grayscale:
@@ -67,12 +71,14 @@ class Grayscale:
                 for the three channels. Defaults to [1000, 1000, 1000].
 
         Raises:
-            TypeError: If the ADC objects are not valid.
+            GrayscaleTypeError: If the ADC objects are not valid.
         """
         self.pins = (pin0, pin1, pin2)
         for i, pin in enumerate(self.pins):
             if not isinstance(pin, ADC):
-                raise TypeError(f"pin{i} must be robot_hat.ADC")
+                msg = f"Invalid Pin{i}: must be ADC instance"
+                logger.error(msg)
+                raise GrayscaleTypeError(msg)
         self.reference = reference
 
     @property
@@ -103,14 +109,16 @@ class Grayscale:
             value: A list of three integers representing the reference values for each of the channels.
 
         Raises:
-            TypeError: If the input is not a list of three integers.
+            GrayscaleTypeError: If the input is not a list of three integers.
 
         Example:
             >>> grayscale.reference = [950, 960, 970]  # Set new reference values
             >>> print(grayscale.reference)            # Output: [950, 960, 970]
         """
         if not isinstance(value, list) or len(value) != 3:
-            raise TypeError("Reference value must be a list of three integers.")
+            raise GrayscaleTypeError(
+                "Reference value must be a list of three integers."
+            )
 
         self._reference = value
 
@@ -128,10 +136,10 @@ class Grayscale:
             and 1 represents black.
 
         Raises:
-            ValueError: If the reference values are not set.
+            GrayscaleTypeError: If the reference values are not set.
         """
         if self._reference == None:
-            raise ValueError("Reference value is not set")
+            raise GrayscaleTypeError("Reference value is not set")
         if datas == None:
             datas = self.read_all()
         return [0 if data > self._reference[i] else 1 for i, data in enumerate(datas)]

@@ -1,6 +1,6 @@
 class ADCAddressNotFound(Exception):
     """
-    Exception raised when ADC address is not found.
+    Exception raised when the ADC address is not found.
     """
 
     pass
@@ -8,7 +8,7 @@ class ADCAddressNotFound(Exception):
 
 class InvalidPin(ValueError):
     """
-    Exception raised when pin not found.
+    Exception raised when the specified pin is invalid or not found.
     """
 
     pass
@@ -16,7 +16,7 @@ class InvalidPin(ValueError):
 
 class InvalidPinName(InvalidPin):
     """
-    Exception raised when pin name is not found.
+    Exception raised when the specified pin name is invalid or not found.
     """
 
     pass
@@ -24,7 +24,7 @@ class InvalidPinName(InvalidPin):
 
 class InvalidPinNumber(InvalidPin):
     """
-    Exception raised when pin number is not found.
+    Exception raised when the specified pin number is invalid or not found.
     """
 
     pass
@@ -32,7 +32,7 @@ class InvalidPinNumber(InvalidPin):
 
 class InvalidPinMode(ValueError):
     """
-    Exception raised when pin mode is invalid.
+    Exception raised when the specified pin mode is invalid.
     """
 
     pass
@@ -40,7 +40,7 @@ class InvalidPinMode(ValueError):
 
 class InvalidPinPull(ValueError):
     """
-    Exception raised when pull mode is invalid.
+    Exception raised when the specified pull mode is invalid.
     """
 
     pass
@@ -48,7 +48,7 @@ class InvalidPinPull(ValueError):
 
 class InvalidPinInterruptTrigger(ValueError):
     """
-    Exception raised when Interrupt Pin triggers the trigger is not valid.
+    Exception raised when the specified interrupt trigger for the pin is invalid.
     """
 
     pass
@@ -56,7 +56,55 @@ class InvalidPinInterruptTrigger(ValueError):
 
 class InvalidServoAngle(ValueError):
     """
-    Exception raised when Interrupt Pin triggers the trigger is not valid.
+    Exception raised when the specified servo angle is invalid.
+    """
+
+    pass
+
+
+class InvalidChannel(ValueError):
+    """
+    Exception raised when the specified channel is invalid.
+    """
+
+    pass
+
+
+class InvalidChannelName(InvalidChannel):
+    """
+    Exception raised when the specified channel name, provided as a string, is invalid.
+    """
+
+    pass
+
+
+class InvalidChannelNumber(InvalidChannel):
+    """
+    Exception raised when the specified channel number, provided as an integer, is invalid.
+    """
+
+    pass
+
+
+class UltrasonicEchoPinError(RuntimeError):
+    """
+    Exception raised when the echo pin is not properly initialized.
+    """
+
+    pass
+
+
+class GrayscaleTypeError(TypeError):
+    """
+    Exception raised for errors in the grayscale module.
+    """
+
+    pass
+
+
+class FileDBValidationError(ValueError):
+    """
+    Exception raised when there is an attempt to set an invalid config key-value pair.
     """
 
     pass

@@ -4,63 +4,59 @@ This module provides an interface for interacting with the HC-SR04 ultrasonic se
 
 import time
 
+from robot_hat.exceptions import UltrasonicEchoPinError
 from robot_hat.pin import Pin
 
 
-# 0 to 400 cm
 class Ultrasonic:
     """
     This class measures distance using the ultrasonic sensor `HC-SR04` to
-    provide non-contact distance measurements from 2 cm to 400 cm, with a
-    ranging accuracy that can reach up to 3 mm.
+    provide distance measurements from 2 cm to 400 cm, with a ranging accuracy
+    that can reach up to 3 mm.
 
     Each HC-SR04 module consists of an ultrasonic transmitter, a receiver, and a control circuit.
 
-    ### Principle of Operation:
+    Principle of Operation:
+    --------------
 
     1. Triggering the Sensor:
        - Send a high level to the `trig` (trigger) pin for at least 10 microseconds.
        - This initiates the module to send ultrasonic pulses at a frequency of 40 kHz.
 
     2. Sending and Receiving Pulses:
-       - The transmitter emits the ultrasonic pulses and the receiver waits to detect the reflected pulses from any obstacle in the range.
+       - The transmitter emits the ultrasonic pulses and the receiver waits to
+         detect the reflected pulses from any obstacle in the range.
 
     3. Calculating Distance:
        - If an obstacle is detected, the module sets a low level on the `echo` pin for 150 milliseconds.
        - Calculate the distance to the obstacle using the formula:
 
+    Formula
+    --------------
     ```
     distance = (time * sound_velocity) / 2
     ```
-    Here, `time` is the measured pulse duration, and `sound velocity` is
-    approximately 343.3 meters/second (or 340 meters/second depending on the ambient conditions and altitude).
+    Here, `time` is the measured pulse duration, and `sound velocity` is near 343.3 meters/second.
 
-    ### Pin Configuration:
+    Pin Configuration:
+    --------------
     - `VCC`: Power supply (typically connected to 5V).
     - `Trig`: Trigger input (required by this class).
     - `Echo`: Echo output (required by this class).
     - `GND`: Ground (typically connected to ground).
-
-    ### Attributes:
-        - `SOUND_SPEED` (float): Speed of sound in m/s. Default is 343.3 m/s.
-        - `timeout` (float): Maximum duration to wait for a pulse to return before timing out.
-
-    ### Methods:
-        - `__init__(self, trig: Pin, echo: Pin, timeout: float = 0.1)`: Initialize the Ultrasonic sensor.
-        - `_read(self) -> float`: Perform a single distance measurement.
-        - `read(self, times: int = 10) -> float`: Attempt to read the distance measurement multiple times and return the first successful read.
     """
 
-    SOUND_SPEED = 343.3  # Speed of sound in m/s
+    SOUND_SPEED = 343.3
+    """Speed of sound in m/s."""
 
     def __init__(self, trig: Pin, echo: Pin, timeout: float = 0.1):
         """
         Initialize the Ultrasonic sensor with specified trigger and echo pins.
 
         Args:
-            trig (Pin): The pin connected to the TRIG of the ultrasonic sensor.
-            echo (Pin): The pin connected to the ECHO of the ultrasonic sensor.
-            timeout (float): Maximum duration to wait for a pulse to return. Default is 0.1 seconds.
+        - `trig` (Pin): The pin connected to the TRIG of the ultrasonic sensor.
+        - `echo` (Pin): The pin connected to the ECHO of the ultrasonic sensor.
+        - `timeout` (float): Maximum duration to wait for a pulse to return.
         """
         self.timeout = timeout
 
@@ -78,7 +74,7 @@ class Ultrasonic:
                    and -2 if the measurement fails.
 
         Raises:
-            RuntimeError: If the echo pin is not properly initialized.
+            `UltrasonicEchoPinError`: If the echo pin is not properly initialized.
         """
         self.trig.off()
         time.sleep(0.001)
@@ -91,7 +87,7 @@ class Ultrasonic:
         timeout_start = time.time()
 
         if self.echo.gpio is None or not hasattr(self.echo.gpio, "value"):
-            raise RuntimeError("Echo pin is not properly initialized")
+            raise UltrasonicEchoPinError("Echo pin is not properly initialized")
 
         while self.echo.gpio.value == 0:
             pulse_start = time.time()
@@ -115,10 +111,13 @@ class Ultrasonic:
         Attempt to read the distance measurement multiple times and return the first successful read.
 
         Args:
-            times (int): Number of attempts to take a reading. Default is 10.
+            `times` (int): Number of attempts to take a reading. Default is 10.
 
         Returns:
             float: The measured distance in centimeters. Returns -1 if all attempts fail.
+
+        Raises:
+            `UltrasonicEchoPinError`: If the echo pin is not properly initialized.
         """
         for _ in range(times):
             a = self._read()

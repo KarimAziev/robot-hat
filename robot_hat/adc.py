@@ -1,16 +1,12 @@
 """
-A module to manage the Analog-to-Digital Converter (ADC) on the Raspberry Pi.
-
-An Analog-to-Digital Converter (ADC) converts an analog signal into a digital signal.
-
-This is essential for interpreting analog signals from sensors in digital devices like a Raspberry Pi.
+A module to manage the Analog-to-Digital Converter (ADC).
 """
 
+import logging
 from typing import List, Union
 
+from robot_hat.exceptions import InvalidChannel
 from robot_hat.i2c import I2C
-
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,19 +24,21 @@ ADC_ALLOWED_CHANNELS_DESCRIPTION = "Channel should be one of: " + ", ".join(
 
 class ADC(I2C):
     """
-    A class to manage the Analog-to-Digital Converter (ADC) on the Raspberry Pi.
+    A class to manage the Analog-to-Digital Converter (ADC).
 
-    An Analog-to-Digital Converter (ADC) converts an analog signal into a digital signal.
-    This is essential for interpreting analog signals from sensors in digital devices like a Raspberry Pi.
+    Key Concepts:
+    --------------
+    - Channel: Each sensor or input signal is connected to an ADC channel.
+    - Resolution: Determines how accurately the analog signal is converted to
+      digital. A 12-bit ADC, for instance, could represent an analog signal with
+      a value between 0 and 4095.
+    - MSB (Most Significant Byte): The byte in the data that has the highest
+      value, representing the upper part of a numerical value.
+    - LSB (Least Significant Byte): The byte in the data that has the lowest
+      value, representing the lower part of a numerical value.
 
-    #### Key Concepts:
-
-    - **Channel**: Each sensor or input signal is connected to an ADC channel.
-    - **Resolution**: Determines how accurately the analog signal is converted to digital. A 12-bit ADC, for instance, could represent an analog signal with a value between 0 and 4095.
-    - **MSB (Most Significant Byte)**: The byte in the data that has the highest value, representing the upper part of a numerical value.
-    - **LSB (Least Significant Byte)**: The byte in the data that has the lowest value, representing the lower part of a numerical value.
-
-    #### Example Usage
+    Example
+    --------------
     ```python
     from robot_hat.adc import ADC
 
@@ -82,7 +80,7 @@ class ADC(I2C):
             channel not in ADC_ALLOWED_CHANNELS_PIN_NAMES
             and channel not in ADC_ALLOWED_CHANNELS
         ):
-            raise ValueError(
+            raise InvalidChannel(
                 f'Invalid ADC channel {channel}. ' + ADC_ALLOWED_CHANNELS_DESCRIPTION
             )
 

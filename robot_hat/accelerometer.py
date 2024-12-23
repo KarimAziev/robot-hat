@@ -13,7 +13,8 @@ class ADXL345(I2C):
 
     The ADXL345 is a small 3-axis accelerometer with high resolution (13-bit) measurement at up to ±16g.
 
-    ### Example usage:
+    Example:
+    --------------
 
     ```python
     adxl = ADXL345()

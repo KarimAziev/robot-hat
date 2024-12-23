@@ -4,6 +4,10 @@ from .address_descriptions import get_address_description, get_value_description
 from .battery import Battery
 from .exceptions import (
     ADCAddressNotFound,
+    FileDBValidationError,
+    InvalidChannel,
+    InvalidChannelName,
+    InvalidChannelNumber,
     InvalidPin,
     InvalidPinInterruptTrigger,
     InvalidPinMode,
@@ -11,6 +15,7 @@ from .exceptions import (
     InvalidPinNumber,
     InvalidPinPull,
     InvalidServoAngle,
+    UltrasonicEchoPinError,
 )
 from .filedb import FileDB
 from .grayscale import Grayscale
@@ -63,5 +68,10 @@ __all__ = [
     "InvalidPinNumber",
     "InvalidPinPull",
     "InvalidServoAngle",
+    "InvalidChannel",
+    "InvalidChannelName",
+    "InvalidChannelNumber",
+    "UltrasonicEchoPinError",
+    "FileDBValidationError",
     "version",
 ]

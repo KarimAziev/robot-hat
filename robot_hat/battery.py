@@ -25,8 +25,8 @@ class Battery(ADC):
         Initialize the Battery object.
 
         Args:
-            channel: ADC channel connected to the battery.
-            address: The address or list of addresses of I2C devices (defaults to ADC_DEFAULT_ADDRESSES).
+            `channel`: ADC channel connected to the battery.
+            `address`: The address or list of addresses of I2C devices.
         """
         super().__init__(channel, address, *args, **kwargs)
 
@@ -40,5 +40,5 @@ class Battery(ADC):
         voltage = self.read_voltage()
 
         scaled_voltage = round(voltage * 3, 2)  # Scale the 0-3.3V reading to 0-10V
-        logger.debug(f"Battery voltage (scaled to 0-10V): {scaled_voltage} V")
+        logger.debug("Battery voltage (scaled to 0-10V): %sV", scaled_voltage)
         return scaled_voltage

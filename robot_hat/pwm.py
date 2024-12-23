@@ -6,6 +6,7 @@ import logging
 import math
 from typing import Dict, List, Optional, Union
 
+from robot_hat.exceptions import InvalidChannelName, InvalidChannelNumber
 from robot_hat.i2c import I2C
 from robot_hat.pin_descriptions import pin_descriptions
 
@@ -28,7 +29,8 @@ class PWM(I2C):
     - High Pulse: The duration when the signal is in a high state (logic 1).
     - Low Pulse:  The duration when the signal is in a low state (logic 0).
     - Period (T): The total time of one complete cycle, which includes both the high and low pulses.
-    - Duty Cycle: The fraction of time a signal stays high during a period. Higher duty cycles deliver more power.
+    - Duty Cycle: The fraction of time a signal stays high during a period.
+      Higher duty cycles deliver more power.
 
     PWM Waveform Representation
     --------------
@@ -46,9 +48,12 @@ class PWM(I2C):
        - High (logic 1) – when the waveform is at its upper level (e.g., `5V` for a digital signal).
        - Low (logic 0) – when the waveform is at its lower level (e.g., `0V`).
 
-    2. Horizontal Axis (time): Represents the progression of time. The cycles repeat periodically, with each cycle having a duration of time `T` (the period).
+    2. Horizontal Axis (time): Represents the progression of time. The cycles
+       repeat periodically, with each cycle having a duration of time `T` (the
+       period).
 
-    3. Period (T): The horizontal distance (or time) between the start of one pulse and the start of the next.
+    3. Period (T): The horizontal distance (or time) between the start of one
+       pulse and the start of the next.
 
     Example:
 
@@ -121,11 +126,11 @@ class PWM(I2C):
             else:
                 msg = f'PWM channel should be between [P0, P19], not "{channel}"'
                 logger.error(msg)
-                raise ValueError(msg)
+                raise InvalidChannelName(msg)
         if isinstance(channel, int):
             if channel > 19 or channel < 0:
                 msg = f'channel must be in range of 0-19, not "{channel}"'
-                raise ValueError(msg)
+                raise InvalidChannelNumber(msg)
 
         if isinstance(self.address, int):
             logger.debug(
