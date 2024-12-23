@@ -421,7 +421,7 @@ class Pin(object):
 
         if trigger not in [self.IRQ_FALLING, self.IRQ_RISING, self.IRQ_RISING_FALLING]:
             raise InvalidPinInterruptTrigger(
-                f"trigger param error, should be Pin.IRQ_FALLING, Pin.IRQ_RISING, Pin.IRQ_RISING_FALLING"
+                "trigger param error, should be Pin.IRQ_FALLING, Pin.IRQ_RISING, Pin.IRQ_RISING_FALLING"
             )
 
         if pull in [self.PULL_NONE, self.PULL_DOWN, self.PULL_UP]:
@@ -432,7 +432,7 @@ class Pin(object):
                 _pull_up = False
         else:
             raise InvalidPinPull(
-                f"pull param error, should be Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
+                "pull param error, should be Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
             )
 
         pressed_handler = None
