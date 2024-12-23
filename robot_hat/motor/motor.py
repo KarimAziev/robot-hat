@@ -1,6 +1,7 @@
 import logging
 from typing import TYPE_CHECKING, Optional
 
+from robot_hat.exceptions import MotorValidationError
 from robot_hat.utils import compose, constrain
 
 if TYPE_CHECKING:
@@ -178,7 +179,11 @@ class Motor:
         Returns:
             The updated direction calibration.
         """
+        if value not in (1, -1):
+            raise MotorValidationError("Calibration value must be 1 or -1.")
+
         self.direction = value
+
         if persist:
             self.calibration_direction = value
         return self.direction

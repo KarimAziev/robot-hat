@@ -108,3 +108,11 @@ class FileDBValidationError(ValueError):
     """
 
     pass
+
+
+class MotorValidationError(ValueError):
+    """
+    Exception raised when there is an attempt to set an invalid motor parameter.
+    """
+
+    pass
