@@ -1,22 +1,61 @@
-# Robot Hat
+# Robot Hat [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
-This is a rewritten version of [Sunfounder's Robot Hat Python library](https://github.com/sunfounder/robot-hat/tree/v2.0) for Raspberry Pi.
+`robot_hat` is a custom Python library designed for the Raspberry Pi. It builds on and improves the original [Sunfounder Robot Hat Python library](https://github.com/sunfounder/robot-hat/tree/v2.0) by introducing significant enhancements, fixes, and improvements.
 
-## Installation
+> **Note:** While not all modules are fully compatible with the original library, most of them are supported and can be used in similar ways.
 
-You can install the `robot_hat` library in multiple ways, depending on your needs.
+## Key Features & Improvements
 
-### Install the Latest Version Directly from GitHub
+### 🚀 **No `sudo` Needed**
 
-If you want to get the latest development version of the library (from the **`main` branch**) directly from GitHub, use:
+The original library includes several instances of unnecessary `sudo` usage. For example:
+
+```python
+User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
+UserHome = os.popen('getent passwd %s | cut -d: -f 6' % User).readline().strip()
+config_file = '%s/.config/robot-hat/robot-hat.conf' % UserHome
+```
+
+This approach elevates permissions unnecessarily, even for reading the login name. All such patterns have been removed in this library.
+
+### 🧹 **Type Hints & Clean Code**
+
+This version prioritizes:
+
+- **Type hints** for better developer experience.
+- Modular, maintainable, and well-documented code.
+
+### 🛠️ **Bug Fixes**
+
+Numerous bugs from the original implementation have been identified and resolved.
+
+### 🧩 **Mock Support for Testing**
+
+Development and testing are now possible on non-Raspberry Pi platforms, thanks to the support of mocks. To enable mocking, set the following environment variables before importing the `robot_hat` library:
+
+```python
+import os
+os.environ["GPIOZERO_PIN_FACTORY"] = "mock"
+os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+```
+
+---
+
+## 🔧 Installation
+
+You can install the `robot_hat` library in multiple ways based on your requirements:
+
+### Option 1: Install the Latest Version from GitHub
+
+To install the latest version directly from the `main` branch:
 
 ```bash
 pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
 ```
 
-#### Example: `requirements.txt`
+#### Using in `requirements.txt`
 
-Add this line to your `requirements.txt` to always install the latest version:
+Add the following line to your `requirements.txt` file:
 
 ```plaintext
 git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
@@ -24,17 +63,17 @@ git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
 
 ---
 
-### Install a Specific Tag (Versioned Release)
+### Option 2: Install a Specific Version
 
-If you want to install a specific release version of the library (e.g., `v1.0.1`), you can reference that tag from GitHub:
+To install a specific version (e.g., `v1.0.1`), reference a Git tag:
 
 ```bash
 pip install git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
 ```
 
-#### Example: `requirements.txt`
+#### Using in `requirements.txt`
 
-To lock the installation to a specific version (e.g., `v1.0.1`):
+To lock your installation to that specific version:
 
 ```plaintext
 git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
@@ -42,17 +81,17 @@ git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
 
 ---
 
-### Install from a Specific Commit
+### Option 3: Install a Specific Commit
 
-To install the library at a particular commit, replace `<commit_hash>` with the desired commit hash:
+To install the library from a specific Git commit (replace `<commit_hash>` with the desired commit hash):
 
 ```bash
 pip install git+https://github.com/KarimAziev/robot-hat.git@<commit_hash>#egg=robot_hat
 ```
 
-#### Example: `requirements.txt`
+#### Using in `requirements.txt`
 
-If you know the exact Git commit hash to reference:
+Specify the commit hash like this:
 
 ```plaintext
 git+https://github.com/KarimAziev/robot-hat.git@a1b2c3d4#egg=robot_hat
@@ -60,21 +99,21 @@ git+https://github.com/KarimAziev/robot-hat.git@a1b2c3d4#egg=robot_hat
 
 ---
 
-### Include Development Dependencies
+### Option 4: Install with Development Dependencies
 
-If your library has optional development dependencies (e.g., for linting, testing, or contributing), you can install them using the `[dev]` extras marker, like so:
+The library includes optional development dependencies (e.g., for linting, testing). To install them:
 
 ```bash
 pip install "robot_hat[dev]"
 ```
 
-Or, to install from GitHub with `dev` dependencies:
+If installing from GitHub:
 
 ```bash
 pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
 ```
 
-#### Example: `requirements.txt`
+#### Using in `requirements.txt`
 
 ```plaintext
 git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
@@ -84,62 +123,60 @@ git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
 
 ### Verifying the Installation
 
-After installing the library, you can verify it is installed and working properly:
+After installing, verify the library is set up correctly by running:
 
 ```bash
 python -c "import robot_hat; print(robot_hat.version)"
 ```
 
-This will print the version of the library installed. If you are using `setuptools_scm`, the version will reflect your Git tags or branch state.
+This will display the installed version of `robot_hat`. If `setuptools_scm` is being used, the version reflects the Git tags or branch state.
 
 ---
 
-## Setting Up Development Environment
-
-To set up a fresh development environment for the `robot_hat` project, follow these steps:
+## 🚀 Development Environment Setup
 
 ### Prerequisites
 
-1. Ensure you have Python 3.10 or newer installed.
-2. Install `pip` (comes bundled with Python) and upgrade it to the latest version:
+1. **Python 3.10 or newer** must be installed.
+2. Ensure you have `pip` installed (a recent version is recommended):
    ```bash
    python3 -m pip install --upgrade pip
    ```
 
-### Steps to Set Up the Environment
+### Steps to Set Up
 
-1. Clone the repository:
+1. **Clone the Repository**:
 
    ```bash
    git clone https://github.com/KarimAziev/robot-hat.git
-   cd robot_hat
+   cd robot-hat
    ```
 
-2. Create and activate a virtual environment:
+2. **Set Up a Virtual Environment**:
 
    ```bash
    python3 -m venv .venv
-   source .venv/bin/activate  # For Linux/Mac
-   # or
-   .venv\Scripts\activate     # On Windows
+   source .venv/bin/activate  # Linux/Mac
+   # OR
+   .venv\Scripts\activate     # Windows
    ```
 
-3. Upgrade core tools inside the virtual environment:
+3. **Upgrade Core Tools**:
 
    ```bash
    pip install --upgrade pip setuptools wheel
    ```
 
-4. Install the project in editable (development) mode with all dependencies:
+4. **Install in Development Mode**:
    ```bash
-   pip install -e ".[dev]"  # Includes dev dependencies like black, pre-commit, isort
+   pip install -e ".[dev]"  # Installs all dev dependencies (e.g., black, isort, pre-commit)
    ```
 
 ---
 
-### Building the Project
+## 📦 Distribution
 
-To build the project for distribution, e.g., creating `.tar.gz` and `.whl` files:
+To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
 1. Install the build tool:
 
@@ -147,34 +184,33 @@ To build the project for distribution, e.g., creating `.tar.gz` and `.whl` files
    pip install build
    ```
 
-2. Build the distribution:
+2. Build the project:
    ```bash
    python -m build
    ```
+   The built files will be located in the `dist/` directory:
 
-This will generate a `dist/` directory containing the following artifacts:
+- Source distribution: `robot_hat-x.y.z.tar.gz`
+- Wheel: `robot_hat-x.y.z-py3-none-any.whl`
 
-- Source distribution (`robot_hat-x.y.z.tar.gz`)
-- Wheel file (`robot_hat-x.y.z-py3-none-any.whl`)
-
-You can install these locally for testing or upload them to PyPI for publishing.
+These can be installed locally for testing or uploaded to PyPI for distribution.
 
 ---
 
-## Common Commands
+## 🛠️ Common Commands
 
-- **Clean build artifacts:**
+- **Clean Build Artifacts**:
   ```bash
   rm -rf build dist *.egg-info
   ```
-- **Deactivate virtual environment:**
+- **Deactivate Virtual Environment**:
   ```bash
   deactivate
   ```
 
 ---
 
-## Notes
+## ⚡ Notes & Recommendations
 
-- This project uses `setuptools_scm` to handle versioning, based on the Git tags of the repository. Ensure you use proper semver tags like `v1.0.0` to manage versions correctly.
-- Dev dependencies (like `black`, `isort`) are automatically installed when running `pip install -e ".[dev]"`.
+- The library uses `setuptools_scm` for versioning, which dynamically determines the version based on Git tags. Use proper semantic versioning (e.g., `v1.0.0`) in your repository for best results.
+- Development tools like `black` (code formatter) and `isort` (import sorter) are automatically installed with `[dev]` dependencies.
