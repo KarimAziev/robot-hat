@@ -35,11 +35,11 @@ class Robot:
         Initializes the robot.
 
         Args:
-            pin_list: List of integers representing servo pins.
-            db: Path to the configuration file for saving settings.
-            name: Robot name (used for offsets in the config file).
-            init_angles: Initial angles for each servo. Defaults to [0] for all servos.
-            init_order: Order in which servos are initialized to avoid power surges.
+        - `pin_list`: List of integers representing servo pins.
+        - `db`: Path to the configuration file for saving settings.
+        - `name`: Robot name (used for offsets in the config file).
+        - `init_angles`: Initial angles for each servo. Defaults to [0] for all servos.
+        - `init_order`: Order in which servos are initialized to avoid power surges.
         """
         super().__init__(**kwargs)
         self.servo_list = []
@@ -90,7 +90,7 @@ class Robot:
         """
         return [default_value] * self.pin_num
 
-    def servo_write_raw(self, angle_list):
+    def servo_write_raw(self, angle_list) -> None:
         """
         Sets servos to the specified raw angles (ignoring offsets).
 
@@ -100,7 +100,7 @@ class Robot:
         for i in range(self.pin_num):
             self.servo_list[i].angle(angle_list[i])
 
-    def servo_write_all(self, angles):
+    def servo_write_all(self, angles) -> None:
         """
         Set servo positions relative to their origin and offsets.
 
@@ -118,7 +118,7 @@ class Robot:
             )
         self.servo_write_raw(relative_angles)
 
-    def servo_move(self, targets, speed=50, bpm=None):
+    def servo_move(self, targets, speed=50, bpm=None) -> None:
         """
         Move servos to target angles at a given speed or beats per minute (BPM).
 
@@ -178,7 +178,7 @@ class Robot:
             delay = max(0, delay)
             time.sleep(delay)
 
-    def do_action(self, motion_name, step=1, speed=50):
+    def do_action(self, motion_name, step=1, speed=50) -> None:
         """
         Perform a predefined action multiple times.
 
@@ -193,7 +193,7 @@ class Robot:
             for motion in self.move_list[motion_name]:
                 self.servo_move(motion, speed)
 
-    def set_offset(self, offset_list):
+    def set_offset(self, offset_list) -> None:
         """
         Set servo offset values in the database.
 
@@ -207,12 +207,12 @@ class Robot:
         self.db.set(self.offset_value_name, temp)
         self.offset = offset_list
 
-    def calibration(self):
+    def calibration(self) -> None:
         """Move all servos to their home (calibration) position."""
         self.servo_positions = self.calibrate_position
         self.servo_write_all(self.servo_positions)
 
-    def reset(self, list=None):
+    def reset(self, list=None) -> None:
         """
         Reset servo positions to their original or specified state.
 
@@ -227,7 +227,7 @@ class Robot:
             self.servo_positions = list
             self.servo_write_all(self.servo_positions)
 
-    def soft_reset(self):
+    def soft_reset(self) -> None:
         """
         Gently reset servos to their neutral position.
         """
