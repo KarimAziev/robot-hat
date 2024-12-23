@@ -1,14 +1,12 @@
 import logging
-from typing import TYPE_CHECKING, Literal, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
-from .utils import compose, constrain
-
-logger = logging.getLogger(__name__)
+from robot_hat.utils import compose, constrain
 
 if TYPE_CHECKING:
     from robot_hat import PWM, Pin
 
-Direction = Union[Literal[1], Literal[-1]]
+logger = logging.getLogger(__name__)
 
 
 class Motor:
@@ -25,7 +23,7 @@ class Motor:
         self,
         dir_pin: "Pin",
         pwm_pin: "PWM",
-        calibration_direction: Direction = 1,
+        calibration_direction: int = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         period=4095,
@@ -169,7 +167,7 @@ class Motor:
         self.speed_offset = self.calibration_speed_offset
         return self.speed_offset
 
-    def update_calibration_direction(self, value: Direction, persist=False) -> float:
+    def update_calibration_direction(self, value: int, persist=False) -> int:
         """
         Update the temporary or permanent direction calibration for the motor.
 
@@ -185,7 +183,7 @@ class Motor:
             self.calibration_direction = value
         return self.direction
 
-    def reset_calibration_direction(self) -> float:
+    def reset_calibration_direction(self) -> int:
         """
         Restore the direction calibration to its default state.
 

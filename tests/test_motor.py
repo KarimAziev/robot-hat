@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from robot_hat import PWM, Pin
-from robot_hat.motor import Motor
+from robot_hat.motor.motor import Motor
 
 
 class TestMotor(unittest.TestCase):
