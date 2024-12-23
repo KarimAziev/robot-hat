@@ -1,8 +1,30 @@
-# Robot Hat [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
+# Robot Hat
+
+[![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
 `robot_hat` is a custom Python library designed for the Raspberry Pi. It builds on and improves the original [Sunfounder Robot Hat Python library](https://github.com/sunfounder/robot-hat/tree/v2.0) by introducing significant enhancements, fixes, and improvements.
 
 > **Note:** While not all modules are fully compatible with the original library, most of them are supported and can be used in similar ways.
+
+<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+
+**Table of Contents**
+
+> - [Robot Hat](#robot-hat)
+>   - [Key Features & Improvements](#key-features--improvements)
+>     - [🚀 **No `sudo` Needed**](#🚀-no-sudo-needed)
+>     - [🧹 **Type Hints & Clean Code**](#🧹-type-hints--clean-code)
+>     - [🛠️ **Bug Fixes**](#🛠️-bug-fixes)
+>     - [🧩 **Mock Support for Testing**](#🧩-mock-support-for-testing)
+>   - [🔧 Installation](#🔧-installation)
+>   - [🚀 Development Environment Setup](#🚀-development-environment-setup)
+>     - [Prerequisites](#prerequisites)
+>     - [Steps to Set Up](#steps-to-set-up)
+>   - [📦 Distribution](#📦-distribution)
+>   - [🛠️ Common Commands](#🛠️-common-commands)
+>   - [⚡ Notes & Recommendations](#⚡-notes--recommendations)
+
+<!-- markdown-toc end -->
 
 ## Key Features & Improvements
 
@@ -43,93 +65,11 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 ## 🔧 Installation
 
-You can install the `robot_hat` library in multiple ways based on your requirements:
-
-### Option 1: Install the Latest Version from GitHub
-
-To install the latest version directly from the `main` branch:
+Install this via pip (or your favourite package manager):
 
 ```bash
-pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
+pip install robot-hat
 ```
-
-#### Using in `requirements.txt`
-
-Add the following line to your `requirements.txt` file:
-
-```plaintext
-git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat
-```
-
----
-
-### Option 2: Install a Specific Version
-
-To install a specific version (e.g., `v1.0.1`), reference a Git tag:
-
-```bash
-pip install git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
-```
-
-#### Using in `requirements.txt`
-
-To lock your installation to that specific version:
-
-```plaintext
-git+https://github.com/KarimAziev/robot-hat.git@v1.0.1#egg=robot_hat
-```
-
----
-
-### Option 3: Install a Specific Commit
-
-To install the library from a specific Git commit (replace `<commit_hash>` with the desired commit hash):
-
-```bash
-pip install git+https://github.com/KarimAziev/robot-hat.git@<commit_hash>#egg=robot_hat
-```
-
-#### Using in `requirements.txt`
-
-Specify the commit hash like this:
-
-```plaintext
-git+https://github.com/KarimAziev/robot-hat.git@a1b2c3d4#egg=robot_hat
-```
-
----
-
-### Option 4: Install with Development Dependencies
-
-The library includes optional development dependencies (e.g., for linting, testing). To install them:
-
-```bash
-pip install "robot_hat[dev]"
-```
-
-If installing from GitHub:
-
-```bash
-pip install git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
-```
-
-#### Using in `requirements.txt`
-
-```plaintext
-git+https://github.com/KarimAziev/robot-hat.git@main#egg=robot_hat[dev]
-```
-
----
-
-### Verifying the Installation
-
-After installing, verify the library is set up correctly by running:
-
-```bash
-python -c "import robot_hat; print(robot_hat.version)"
-```
-
-This will display the installed version of `robot_hat`. If `setuptools_scm` is being used, the version reflects the Git tags or branch state.
 
 ---
 
