@@ -21,6 +21,7 @@ from .filedb import FileDB
 from .grayscale import Grayscale
 from .i2c import I2C
 from .mock.ultrasonic import Ultrasonic as UltrasonicMock
+from .motor import Motor
 from .music import Music
 from .pin import Pin
 from .pin_descriptions import pin_descriptions
@@ -29,6 +30,8 @@ from .robot import Robot
 from .servo import Servo
 from .ultrasonic import Ultrasonic
 from .utils import (
+    compose,
+    constrain,
     get_firmware_version,
     is_raspberry_pi,
     mapping,
@@ -50,6 +53,7 @@ __all__ = [
     "Pin",
     "PWM",
     "Servo",
+    "Motor",
     "reset_mcu_sync",
     "run_command",
     "is_raspberry_pi",
@@ -59,6 +63,8 @@ __all__ = [
     "get_firmware_version",
     "get_value_description",
     "pin_descriptions",
+    "compose",
+    "constrain",
     "mapping",
     "UltrasonicMock",
     "InvalidPin",

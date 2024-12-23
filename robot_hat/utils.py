@@ -1,7 +1,24 @@
 import time
-from typing import Tuple, TypeVar
+from functools import reduce
+from typing import Any, Callable, Tuple, TypeVar
 
 T = TypeVar("T", int, float)
+
+
+def compose(*functions: Callable[[Any], Any]) -> Callable[[Any], Any]:
+    """
+    Compose functions in reverse order (right-to-left).
+
+    The output of one function is passed as the input to the next.
+    Functions are executed from right to left (last to first).
+
+    Args:
+        *functions: Functions to compose.
+
+    Returns:
+        A composed function that applies all the functions in sequence.
+    """
+    return reduce(lambda f, g: lambda x: f(g(x)), functions, lambda x: x)
 
 
 def run_command(cmd) -> Tuple[int | None, str]:
@@ -103,6 +120,13 @@ def mapping(x: T, in_min: T, in_max: T, out_min: T, out_max: T) -> T:
     if isinstance(x, int):
         return int(result)
     return result
+
+
+def constrain(x: T, min_val: T, max_val: T):
+    """
+    Constrains value to be within a range.
+    """
+    return max(min_val, min(max_val, x))
 
 
 if __name__ == "main":
