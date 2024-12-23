@@ -198,6 +198,28 @@ class MotorController:
 
     def reset_calibration(self) -> None:
         """
+        Resets the calibration for both the left and right motors, including speed and direction calibration.
+        """
+        for motor in [self.left_motor, self.right_motor]:
+            motor.reset_calibration_direction()
+            motor.reset_calibration_speed()
+
+    def move(self, speed: int, direction: int) -> None:
+        """
+        Move the robot forward or backward.
+
+        Args:
+        - speed (int): The base speed (-100 to 100).
+        - direction (int): 1 for forward, -1 for backward.
+        """
+        speed1 = speed * direction
+        speed2 = -speed * direction
+
+        self.left_motor.set_speed(speed1)
+        self.right_motor.set_speed(speed2)
+
+    def move_with_steering(self, speed: int, direction: int, current_angle=0) -> None:
+        """
         Move the robot with speed and direction, applying steering based on the current angle.
 
         Args:
@@ -221,11 +243,6 @@ class MotorController:
             3. Move forward with a right turn:
                 >>> controller.move(speed=90, direction=1, current_angle=45)
         """
-        for motor in [self.left_motor, self.right_motor]:
-            motor.reset_calibration_direction()
-            motor.reset_calibration_speed()
-
-    def move(self, speed: int, direction: int, current_angle=0) -> None:
         """
         Move the robot forward or backward, optionally steering it based on the current angle.
 
