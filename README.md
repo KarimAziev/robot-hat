@@ -11,24 +11,32 @@
 **Table of Contents**
 
 > - [Robot Hat](#robot-hat)
->   - [Key Features & Improvements](#key-features--improvements)
->     - [🚀 **No `sudo` Needed**](#🚀-no-sudo-needed)
->     - [🧹 **Type Hints & Clean Code**](#🧹-type-hints--clean-code)
->     - [🛠️ **Bug Fixes**](#🛠️-bug-fixes)
->     - [🧩 **Mock Support for Testing**](#🧩-mock-support-for-testing)
->   - [🔧 Installation](#🔧-installation)
->   - [🚀 Development Environment Setup](#🚀-development-environment-setup)
+>   - [Installation](#installation)
+>   - [Key Features](#key-features)
+>     - [No sudo](#no-sudo)
+>     - [Type Hints](#type-hints)
+>     - [Bug Fixes](#bug-fixes)
+>     - [Mock Support for Testing](#mock-support-for-testing)
+>   - [Development Environment Setup](#development-environment-setup)
 >     - [Prerequisites](#prerequisites)
 >     - [Steps to Set Up](#steps-to-set-up)
->   - [📦 Distribution](#📦-distribution)
->   - [🛠️ Common Commands](#🛠️-common-commands)
->   - [⚡ Notes & Recommendations](#⚡-notes--recommendations)
+>   - [Distribution](#distribution)
+>   - [Common Commands](#common-commands)
+>   - [Notes & Recommendations](#notes--recommendations)
 
 <!-- markdown-toc end -->
 
-## Key Features & Improvements
+## Installation
 
-### 🚀 **No `sudo` Needed**
+Install this via pip (or your favourite package manager):
+
+```bash
+pip install robot-hat
+```
+
+## Key Features
+
+### No sudo
 
 The original library includes several instances of unnecessary `sudo` usage. For example:
 
@@ -40,18 +48,18 @@ config_file = '%s/.config/robot-hat/robot-hat.conf' % UserHome
 
 This approach elevates permissions unnecessarily, even for reading the login name. All such patterns have been removed in this library.
 
-### 🧹 **Type Hints & Clean Code**
+### Type Hints
 
 This version prioritizes:
 
 - **Type hints** for better developer experience.
 - Modular, maintainable, and well-documented code.
 
-### 🛠️ **Bug Fixes**
+### Bug Fixes
 
 Numerous bugs from the original implementation have been identified and resolved.
 
-### 🧩 **Mock Support for Testing**
+### Mock Support for Testing
 
 Development and testing are now possible on non-Raspberry Pi platforms, thanks to the support of mocks. To enable mocking, set the following environment variables before importing the `robot_hat` library:
 
@@ -63,17 +71,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 ---
 
-## 🔧 Installation
-
-Install this via pip (or your favourite package manager):
-
-```bash
-pip install robot-hat
-```
-
----
-
-## 🚀 Development Environment Setup
+## Development Environment Setup
 
 ### Prerequisites
 
@@ -114,7 +112,7 @@ pip install robot-hat
 
 ---
 
-## 📦 Distribution
+## Distribution
 
 To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
@@ -137,7 +135,7 @@ These can be installed locally for testing or uploaded to PyPI for distribution.
 
 ---
 
-## 🛠️ Common Commands
+## Common Commands
 
 - **Clean Build Artifacts**:
   ```bash
@@ -150,7 +148,7 @@ These can be installed locally for testing or uploaded to PyPI for distribution.
 
 ---
 
-## ⚡ Notes & Recommendations
+## Notes & Recommendations
 
 - The library uses `setuptools_scm` for versioning, which dynamically determines the version based on Git tags. Use proper semantic versioning (e.g., `v1.0.0`) in your repository for best results.
 - Development tools like `black` (code formatter) and `isort` (import sorter) are automatically installed with `[dev]` dependencies.
