@@ -9,7 +9,7 @@ write_to = "robot_hat/version.py"
 
 [project]
 name = "robot_hat"
-description = "Rewritten version of Sunfounder's Robot Hat Python library for Raspberry Pi"
+description = "Custom version of Robot Hat Python library for Sunfounder's Raspberry Pi robots."
 readme = { file = "README.md", content-type = "text/markdown" }
 license = { text = "GNU" }
 authors = [
@@ -21,8 +21,12 @@ dependencies = [
     "gpiozero",
     "RPi.GPIO",
 ]
-keywords = ["python", "i2c", "raspberrypi"]
+keywords = ["i2c", "raspberrypi"]
 dynamic = ["version"]
+
+[tool.black]
+line-length = 88
+extend_exclude = 'robot_hat/version.py'
 
 [project.optional-dependencies]
 dev = [
