@@ -24,6 +24,17 @@ jobs:
             3.12
             3.13
 
+    - name: Install Node.js (needed for Pyright)
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'current'
+
+    - name: Install Pyright
+      run: npm install -g pyright
+
+    - name: Run Pyright static type checker
+      run: pyright
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
