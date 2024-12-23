@@ -33,7 +33,7 @@ jobs:
     - name: Lint code
       run: |
         black --check .
-        isort --check-only .
+        isort --profile black --check-only .
 
     - name: Run tests with unittest and measure coverage
       run: |
