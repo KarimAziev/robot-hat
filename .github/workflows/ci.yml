@@ -104,7 +104,15 @@ jobs:
         run: |
           echo "Listing contents of the workspace:"
           ls -al
-          echo "Listing contents of the 'dist' directory after download:"
+
+      - name: Organize artifact files into dist/
+        run: |
+          mkdir -p dist  # Create the dist directory if it doesn't exist
+          echo "Moving downloaded files to dist/..."
+          mv robot_hat-*.whl robot_hat-*.tar.gz dist/  # Move files matching artifact content into dist/
+          echo "Contents of workspace after organizing:"
+          ls -al
+          echo "Contents of 'dist/' after organizing:"
           ls -al dist/
 
       - name: Set up Python
