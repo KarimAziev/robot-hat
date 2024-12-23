@@ -101,7 +101,11 @@ jobs:
           name: dist
 
       - name: Verify contents of dist directory after artifact download
-        run: ls -al dist/
+        run: |
+          echo "Listing contents of the workspace:"
+          ls -al
+          echo "Listing contents of the 'dist' directory after download:"
+          ls -al dist/
 
       - name: Set up Python
         uses: actions/setup-python@v5
