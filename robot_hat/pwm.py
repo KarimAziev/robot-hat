@@ -4,14 +4,14 @@ A module to manage Pulse Width Modulation (PWM) to control the power delivered t
 
 import logging
 import math
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from robot_hat.i2c import I2C
 from robot_hat.pin_descriptions import pin_descriptions
 
 logger = logging.getLogger(__name__)
 
-timer: list[dict[str, int]] = [{"arr": 1}] * 7
+timer: List[Dict[str, int]] = [{"arr": 1}] * 7
 
 PRESCALER_SQRT_OFFSET = (
     5  # The offset applied to the square root result in prescaler calculation.
