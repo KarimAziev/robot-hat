@@ -1,10 +1,17 @@
-# Robot Hat
-
+[![PyPI](https://img.shields.io/pypi/v/robot-hat)](https://pypi.org/project/robot-hat/)
 [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
-`robot_hat` is a custom Python library designed for the Raspberry Pi. It builds on and improves the original [Sunfounder Robot Hat Python library](https://github.com/sunfounder/robot-hat/tree/v2.0) by introducing significant enhancements, fixes, and improvements.
+# Robot Hat
 
-> **Note:** While not all modules are fully compatible with the original library, most of them are supported and can be used in similar ways.
+This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling **motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
+
+The motivation comes from dissatisfaction with the code quality, safety, and unnecessary `sudo` requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi). That being said, this library was originally written as a replacement for Sunfounder's Robot-HAT.
+
+Unlike the aforementioned libraries:
+
+- This library scales well for **both small and large robotics projects**. For example, advanced usage is demonstrated in the [Picar-X Racer](https://github.com/KarimAziev/picar-x-racer) project.
+- It offers type safety and portability.
+- It avoids requiring **sudo calls** or introducing unnecessary system dependencies, focusing instead on clean, self-contained operations.
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 
@@ -12,10 +19,15 @@
 
 > - [Robot Hat](#robot-hat)
 >   - [Installation](#installation)
->   - [Key Features](#key-features)
+>   - [Usage Examples](#usage-examples)
+>     - [Motor Control](#motor-control)
+>     - [I2C Example](#i2c-example)
+>     - [Ultrasonic Sensor for Distance Measurement](#ultrasonic-sensor-for-distance-measurement)
+>     - [Reading Battery Voltage](#reading-battery-voltage)
+>     - [Controlling a Servo Motor](#controlling-a-servo-motor)
+>   - [Comparison with Other Libraries](#comparison-with-other-libraries)
 >     - [No sudo](#no-sudo)
 >     - [Type Hints](#type-hints)
->     - [Bug Fixes](#bug-fixes)
 >     - [Mock Support for Testing](#mock-support-for-testing)
 >   - [Development Environment Setup](#development-environment-setup)
 >     - [Prerequisites](#prerequisites)
@@ -28,17 +40,123 @@
 
 ## Installation
 
-Install this via pip (or your favourite package manager):
+Install this via `pip` or your favorite package manager:
 
 ```bash
 pip install robot-hat
 ```
 
-## Key Features
+## Usage Examples
+
+### Motor Control
+
+Control dual motors using the `MotorController` modules.
+
+```python
+from robot_hat import MotorConfig, MotorController, MotorFabric
+
+left_motor, right_motor = MotorFabric.create_motor_pair(
+    MotorConfig(
+        dir_pin="D4",
+        pwm_pin="P12",
+        name="LeftMotor",
+    ),
+    MotorConfig(
+        dir_pin="D5",
+        pwm_pin="P13",
+        name="RightMotor",
+    ),
+)
+motor_controller = MotorController(left_motor=left_motor, right_motor=right_motor)
+
+# move forward
+speed = 40
+motor_controller.move(speed, 1)
+
+# move backward
+motor_controller.move(speed, -1)
+
+# stop
+motor_controller.stop_all()
+
+```
+
+### I2C Example
+
+Scan and communicate with connected I2C devices.
+
+```python
+from robot_hat.i2c import I2C
+
+# Initialize I2C connection
+i2c_device = I2C(address=[0x15, 0x17], bus=1)
+
+# Write a byte to the device
+i2c_device.write(0x01)
+
+# Read data from the device
+data = i2c_device.read(5)
+print("I2C Data Read:", data)
+
+# Scan for connected devices
+devices = i2c_device.scan()
+print("I2C Devices Detected:", devices)
+```
+
+### Ultrasonic Sensor for Distance Measurement
+
+Measure distance using the `HC-SR04` ultrasonic sensor module.
+
+```python
+from robot_hat.pin import Pin
+from robot_hat.ultrasonic import Ultrasonic
+
+# Initialize Ultrasonic Sensor
+trig_pin = Pin("P9")
+echo_pin = Pin("P10")
+ultrasonic = Ultrasonic(trig_pin, echo_pin)
+
+# Measure distance
+distance_cm = ultrasonic.read(times=5)
+print(f"Distance: {distance_cm} cm")
+```
+
+### Reading Battery Voltage
+
+Use the ADC module to measure and scale the battery voltage.
+
+```python
+from robot_hat.battery import Battery
+
+# Initialize Battery module
+battery = Battery(channel="A4")
+
+# Get battery voltage
+voltage = battery.get_battery_voltage()
+print(f"Battery Voltage: {voltage} V")
+```
+
+### Controlling a Servo Motor
+
+Control the angle of a servo motor using PWM.
+
+```python
+from robot_hat.servo import Servo
+
+# Initialize Servo motor
+servo = Servo(channel="P0")
+
+# Control servo angle
+servo.angle(-90)  # Set angle to -90 degrees
+servo.angle(45)   # Set angle to 45 degrees
+servo.angle(0)    # Center position
+```
+
+## Comparison with Other Libraries
 
 ### No sudo
 
-The original library includes several instances of unnecessary `sudo` usage. For example:
+For reasons that remain a mystery (and a source of endless frustration), the providers of many popular DRY robotics libraries insist on requiring `sudo` for the most basic operations. For example:
 
 ```python
 User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
@@ -46,7 +164,15 @@ UserHome = os.popen('getent passwd %s | cut -d: -f 6' % User).readline().strip()
 config_file = '%s/.config/robot-hat/robot-hat.conf' % UserHome
 ```
 
-This approach elevates permissions unnecessarily, even for reading the login name. All such patterns have been removed in this library.
+And later, they modify file permissions with commands like:
+
+```python
+os.popen('sudo chmod %s %s' % (mode, file_path))  # 🤦
+os.popen('sudo chown -R %s:%s %s' % (owner, owner, some_path))
+```
+
+This library removes all such archaic and potentially unsafe patterns by leveraging user-friendly Python APIs like `pathlib`. File-related operations are scoped to user-accessible directories (e.g., `~/.config`) rather than requiring administrative access
+via `sudo`.
 
 ### Type Hints
 
@@ -55,13 +181,9 @@ This version prioritizes:
 - **Type hints** for better developer experience.
 - Modular, maintainable, and well-documented code.
 
-### Bug Fixes
-
-Numerous bugs from the original implementation have been identified and resolved.
-
 ### Mock Support for Testing
 
-Development and testing are now possible on non-Raspberry Pi platforms, thanks to the support of mocks. To enable mocking, set the following environment variables before importing the `robot_hat` library:
+`Sunfounder` (and similar libraries) offer no direct way to mock their hardware APIs, making it nearly impossible to write meaningful unit tests on non-Raspberry Pi platforms.
 
 ```python
 import os
