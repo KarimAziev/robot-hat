@@ -1,7 +1,7 @@
 import time
 from typing import Tuple, TypeVar
 
-T = TypeVar('T', int, float)
+T = TypeVar("T", int, float)
 
 
 def run_command(cmd) -> Tuple[int | None, str]:

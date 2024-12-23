@@ -8,7 +8,7 @@ from robot_hat.exceptions import FileDBValidationError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 @dataclass

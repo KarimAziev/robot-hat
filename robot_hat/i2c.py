@@ -398,7 +398,7 @@ class I2C(object):
                 continue
 
         logger.debug(
-            "Connected I2C devices: %s", ['0x%02x' % addr for addr in addresses]
+            "Connected I2C devices: %s", ["0x%02x" % addr for addr in addresses]
         )
         return addresses
 
@@ -656,7 +656,7 @@ class I2C(object):
                 self.address,
                 memaddr,
                 reg_description,
-                [f'0x{i:02X} {descr}' for i, descr in zip(result, result_descriptions)],
+                [f"0x{i:02X} {descr}" for i, descr in zip(result, result_descriptions)],
             )
 
         return result

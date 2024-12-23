@@ -32,4 +32,5 @@ extend_exclude = 'robot_hat/version.py'
 dev = [
     "black",
     "isort",
+    "pre-commit",
 ]

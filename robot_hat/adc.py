@@ -81,7 +81,7 @@ class ADC(I2C):
             and channel not in ADC_ALLOWED_CHANNELS
         ):
             raise InvalidChannel(
-                f'Invalid ADC channel {channel}. ' + ADC_ALLOWED_CHANNELS_DESCRIPTION
+                f"Invalid ADC channel {channel}. " + ADC_ALLOWED_CHANNELS_DESCRIPTION
             )
 
         if isinstance(channel, str):

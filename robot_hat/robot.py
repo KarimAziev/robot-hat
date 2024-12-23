@@ -4,7 +4,7 @@ from typing import List, Optional, TypeVar
 from robot_hat.filedb import FileDB
 from robot_hat.servo import Servo
 
-T = TypeVar('T', int, float, str)
+T = TypeVar("T", int, float, str)
 
 
 class Robot:
@@ -64,7 +64,7 @@ class Robot:
         if init_angles is None:
             init_angles = [0] * self.pin_num
         elif len(init_angles) != self.pin_num:
-            raise ValueError('init angels numbers do not match pin numbers ')
+            raise ValueError("init angels numbers do not match pin numbers ")
 
         if init_order == None:
             init_order = range(self.pin_num)

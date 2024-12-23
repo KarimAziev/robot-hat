@@ -227,7 +227,7 @@ if __name__ == "__main__":
     mock_bus = MockSMBus(1)
     mock_bus.open(1)
 
-    count = len(mock_bus._byte_responses_by_addrs['20']) + 1
+    count = len(mock_bus._byte_responses_by_addrs["20"]) + 1
 
     for i in range(count):
         res = mock_bus.read_byte(20)
