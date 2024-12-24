@@ -252,6 +252,7 @@ class ServoService:
 
         if persist:
             self._persisted_calibration_offset = value
+        self.servo.angle(self.calibration_offset)
         return self.calibration_offset
 
     def reset_calibration(self) -> float:
@@ -267,6 +268,7 @@ class ServoService:
             self._persisted_calibration_offset,
         )
         self.calibration_offset = self._persisted_calibration_offset
+        self.servo.angle(self.calibration_offset)
         return self.calibration_offset
 
     def reset(self) -> None:
