@@ -11,13 +11,6 @@ class TestMotorController(unittest.TestCase):
 
         self.controller = MotorService(self.left_motor, self.right_motor)
 
-    def test_set_speeds(self):
-
-        self.controller.set_speeds(50, -30)
-
-        self.left_motor.set_speed.assert_called_once_with(50)
-        self.right_motor.set_speed.assert_called_once_with(-30)
-
     def test_stop_all(self):
 
         self.controller.stop_all()
@@ -66,6 +59,45 @@ class TestMotorController(unittest.TestCase):
 
         self.assertEqual(result, -1)
 
+    def test_speed_property(self):
+        # Test when both motors have positive speeds
+        self.left_motor.speed = 50
+        self.right_motor.speed = 70
+        self.assertEqual(self.controller.speed, 60)  # (|50| + |70|) / 2 = 60
+
+        # Test when motors have negative speeds
+        self.left_motor.speed = -40
+        self.right_motor.speed = -60
+        self.assertEqual(self.controller.speed, 50)  # (|40| + |60|) / 2 = 50
+
+        # Test when one motor is stopped (speed = 0)
+        self.left_motor.speed = 0
+        self.right_motor.speed = 80
+        self.assertEqual(self.controller.speed, 40)  # (|0| + |80|) / 2 = 40
+
+        # Test when both motors are stopped (speed = 0)
+        self.left_motor.speed = 0
+        self.right_motor.speed = 0
+        self.assertEqual(self.controller.speed, 0)  # (|0| + |0|) / 2 = 0
+
+        # Test with floating-point speeds
+        self.left_motor.speed = 33.33
+        self.right_motor.speed = 66.66
+        self.assertAlmostEqual(self.controller.speed, 50.0, places=2)  # Approximation
+
+        # Test with mixed positive and negative speeds
+        self.left_motor.speed = -45
+        self.right_motor.speed = 55
+        self.assertEqual(self.controller.speed, 50)  # (|45| + |55|) / 2 = 50
+
+        self.left_motor.speed = -100
+        self.right_motor.speed = 100
+        self.assertEqual(self.controller.speed, 100)
+
+        self.left_motor.speed = -50
+        self.right_motor.speed = 50
+        self.assertEqual(self.controller.speed, 50)
+
     def test_reset_calibration(self):
 
         self.controller.reset_calibration()
@@ -96,11 +128,6 @@ class TestMotorController(unittest.TestCase):
 
         self.left_motor.set_speed.assert_called_once_with(-60)
         self.right_motor.set_speed.assert_called_once_with(60)
-
-    def test_move_with_steering_right(self):
-        self.controller.move_with_steering(speed=10, direction=1, current_angle=-30)
-        self.left_motor.set_speed.assert_called_once_with(10)
-        self.right_motor.set_speed.assert_called_once_with(-7.0)
 
     def test_move_with_steering(self):
         self.controller.move_with_steering(speed=10, direction=1, current_angle=-30)

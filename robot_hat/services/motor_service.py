@@ -55,29 +55,7 @@ class MotorService:
         """
         self.left_motor = left_motor
         self.right_motor = right_motor
-
-    def _stop_all(self):
-        """
-        Internal method to stop all motors.
-
-        Stops both the left and right motors instantly without additional delays.
-        """
-        self.left_motor.stop()
-        self.right_motor.stop()
-
-    def set_speeds(self, left_speed: float, right_speed: float):
-        """
-        Set speeds for both motors.
-
-        Args:
-            left_speed (float): Speed for the left motor (range: -100 to 100).
-            right_speed (float): Speed for the right motor (range: -100 to 100).
-
-        Usage:
-            >>> controller.set_speeds(50, 70)  # Left motor at 50% speed; Right motor at 70% speed
-        """
-        self.left_motor.set_speed(left_speed)
-        self.right_motor.set_speed(right_speed)
+        self.direction = 0
 
     def stop_all(self) -> None:
         """
@@ -91,14 +69,32 @@ class MotorService:
         """
         logger.debug("Stopping motors")
         self._stop_all()
-
         time.sleep(0.002)
-
         self._stop_all()
-
         time.sleep(0.002)
-
         logger.debug("Motors Stopped")
+
+    def move(self, speed: int, direction: int) -> None:
+        """
+        Move the robot forward or backward.
+
+        Args:
+        - speed (int): The base speed (-100 to 100).
+        - direction (int): 1 for forward, -1 for backward.
+        """
+        speed1 = speed * direction
+        speed2 = -speed * direction
+
+        self.left_motor.set_speed(speed1)
+        self.right_motor.set_speed(speed2)
+        self.direction = direction
+
+    @property
+    def speed(self):
+        """
+        Get the average speed of the motors.
+        """
+        return round((abs(self.left_motor.speed) + abs(self.right_motor.speed)) / 2)
 
     def update_left_motor_calibration_speed(self, value: float, persist=False) -> float:
         """
@@ -176,19 +172,15 @@ class MotorService:
             motor.reset_calibration_direction()
             motor.reset_calibration_speed()
 
-    def move(self, speed: int, direction: int) -> None:
+    def _stop_all(self):
         """
-        Move the robot forward or backward.
+        Internal method to stop all motors.
 
-        Args:
-        - speed (int): The base speed (-100 to 100).
-        - direction (int): 1 for forward, -1 for backward.
+        Stops both the left and right motors instantly without additional delays.
         """
-        speed1 = speed * direction
-        speed2 = -speed * direction
-
-        self.left_motor.set_speed(speed1)
-        self.right_motor.set_speed(speed2)
+        self.left_motor.stop()
+        self.right_motor.stop()
+        self.direction = 0
 
     def move_with_steering(self, speed: int, direction: int, current_angle=0) -> None:
         """
@@ -237,3 +229,4 @@ class MotorService:
 
         self.left_motor.set_speed(speed1)
         self.right_motor.set_speed(speed2)
+        self.direction = direction
