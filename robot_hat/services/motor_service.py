@@ -5,14 +5,14 @@ from typing import TYPE_CHECKING
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .motor import Motor
+    from robot_hat.motor.motor import Motor
 
 
-class MotorController:
+class MotorService:
     """
-    Controller for managing a pair of motors (left and right).
+    The service for managing a pair of motors (left and right).
 
-    The MotorController provides methods for controlling both motors together, handling speed, direction, calibration, and steering.
+    The MotorService provides methods for controlling both motors together, handling speed, direction, calibration, and steering.
 
     Attributes:
     - left_motor (Motor): Instance of the motor controlling the left side.
@@ -21,65 +21,37 @@ class MotorController:
     Simple exampe:
     --------------
     ```python
-    from robot_hat.motor.motor import Motor
-    from robot_hat.motor.motor_controller import MotorController
+    from robot_hat import MotorConfig, MotorService, MotorFabric
 
-    # Create Motor instances for left and right motors.
-    left_motor = Motor(dir_pin="P1", pwm_pin="P3", calibration_direction=1, name="LeftMotor")
-    right_motor = Motor(dir_pin="P2", pwm_pin="P4", calibration_direction=-1, name="RightMotor")
-
-    # Initialize the MotorController.
-    controller = MotorController(left_motor, right_motor)
-
-    # Set speeds for both motors.
-    controller.set_speeds(50, 70)
-
-    # Move forward with a slight right turn.
-    controller.move(speed=80, direction=1, current_angle=20)
-
-    # Stop all motors safely.
-    controller.stop_all()
-
-    # Calibrate the motor speed offsets.
-    controller.update_left_motor_calibration_speed(5, persist=True)
-    controller.update_right_motor_calibration_speed(-3, persist=False)
-
-    # Reset all calibrations to defaults.
-    controller.reset_calibration()
-    ```
-
-    Example with MotorFabric:
-    --------------
-    ```python
-    from robot_hat.motor.motor_controller import MotorController
-    from robot_hat.motor.motor_fabric import MotorFabric
-    from robot_hat.motor.config import MotorConfig
-
-    # Define configurations.
-    left_motor_config = MotorConfig(
-        dir_pin="P1", pwm_pin="P3", calibration_direction=1, name="LeftMotor"
+    left_motor, right_motor = MotorFabric.create_motor_pair(
+        MotorConfig(
+            dir_pin="D4",
+            pwm_pin="P12",
+            name="LeftMotor",
+        ),
+        MotorConfig(
+            dir_pin="D5",
+            pwm_pin="P13",
+            name="RightMotor",
+        ),
     )
-    right_motor_config = MotorConfig(
-        dir_pin="P2", pwm_pin="P4", calibration_direction=-1, name="RightMotor"
-    )
+    motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
 
-    # Create motor instances using MotorFabric.
-    fabric = MotorFabric()
-    left_motor, right_motor = fabric.create_motor_pair(left_motor_config, right_motor_config)
+    # move forward
+    speed = 40
+    motor_service.move(speed, 1)
 
-    # Initialize the MotorController with the created motors.
-    controller = MotorController(left_motor, right_motor)
+    # move backward
+    motor_service.move(speed, -1)
 
-    # Example control operations.
-    controller.set_speeds(50, 70)
-    controller.move(speed=80, direction=1, current_angle=20)
-    controller.stop_all()
+    # stop
+    motor_service.stop_all()
     ```
     """
 
     def __init__(self, left_motor: "Motor", right_motor: "Motor"):
         """
-        Initialize the MotorController.
+        Initialize the MotorService.
         """
         self.left_motor = left_motor
         self.right_motor = right_motor

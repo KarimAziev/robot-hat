@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from robot_hat.motor.motor_controller import MotorController
+from robot_hat.services.motor_service import MotorService
 
 
 class TestMotorController(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestMotorController(unittest.TestCase):
         self.left_motor = MagicMock()
         self.right_motor = MagicMock()
 
-        self.controller = MotorController(self.left_motor, self.right_motor)
+        self.controller = MotorService(self.left_motor, self.right_motor)
 
     def test_set_speeds(self):
 

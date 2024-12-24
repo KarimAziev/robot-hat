@@ -50,10 +50,10 @@ pip install robot-hat
 
 ### Motor Control
 
-Control dual motors using the `MotorController` modules.
+Control dual motors using the `MotorService` modules.
 
 ```python
-from robot_hat import MotorConfig, MotorController, MotorFabric
+from robot_hat import MotorConfig, MotorService, MotorFabric
 
 left_motor, right_motor = MotorFabric.create_motor_pair(
     MotorConfig(
@@ -67,17 +67,17 @@ left_motor, right_motor = MotorFabric.create_motor_pair(
         name="RightMotor",
     ),
 )
-motor_controller = MotorController(left_motor=left_motor, right_motor=right_motor)
+motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
 
 # move forward
 speed = 40
-motor_controller.move(speed, 1)
+motor_service.move(speed, 1)
 
 # move backward
-motor_controller.move(speed, -1)
+motor_service.move(speed, -1)
 
 # stop
-motor_controller.stop_all()
+motor_service.stop_all()
 
 ```
 

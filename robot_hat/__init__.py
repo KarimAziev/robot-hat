@@ -23,13 +23,13 @@ from .i2c import I2C
 from .mock.ultrasonic import Ultrasonic as UltrasonicMock
 from .motor.config import MotorConfig
 from .motor.motor import Motor
-from .motor.motor_controller import MotorController
 from .motor.motor_fabric import MotorFabric
 from .music import Music
 from .pin import Pin
 from .pin_descriptions import pin_descriptions
 from .pwm import PWM
 from .robot import Robot
+from .services.motor_service import MotorService
 from .servo import Servo
 from .ultrasonic import Ultrasonic
 from .utils import (
@@ -59,7 +59,7 @@ __all__ = [
     "Motor",
     "MotorConfig",
     "MotorFabric",
-    "MotorController",
+    "MotorService",
     "reset_mcu_sync",
     "run_command",
     "is_raspberry_pi",
