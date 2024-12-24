@@ -5,6 +5,7 @@ from .battery import Battery
 from .exceptions import (
     ADCAddressNotFound,
     FileDBValidationError,
+    InvalidCalibrationModeError,
     InvalidChannel,
     InvalidChannelName,
     InvalidChannelNumber,
@@ -30,6 +31,8 @@ from .pin_descriptions import pin_descriptions
 from .pwm import PWM
 from .robot import Robot
 from .services.motor_service import MotorService
+from .services.servo_service import CalibrationMode as ServoCalibrationMode
+from .services.servo_service import ServoService
 from .servo import Servo
 from .ultrasonic import Ultrasonic
 from .utils import (
@@ -55,24 +58,15 @@ __all__ = [
     "Music",
     "Pin",
     "PWM",
-    "Servo",
     "Motor",
     "MotorConfig",
     "MotorFabric",
     "MotorService",
-    "reset_mcu_sync",
-    "run_command",
-    "is_raspberry_pi",
-    "ADCAddressNotFound",
-    "get_address_description",
-    "ADCAddressNotFound",
-    "get_firmware_version",
-    "get_value_description",
-    "pin_descriptions",
-    "compose",
-    "constrain",
-    "mapping",
+    "Servo",
+    "ServoCalibrationMode",
+    "ServoService",
     "UltrasonicMock",
+    "FileDBValidationError",
     "InvalidPin",
     "InvalidPinInterruptTrigger",
     "InvalidPinMode",
@@ -83,7 +77,19 @@ __all__ = [
     "InvalidChannel",
     "InvalidChannelName",
     "InvalidChannelNumber",
+    "InvalidCalibrationModeError",
     "UltrasonicEchoPinError",
-    "FileDBValidationError",
+    "compose",
+    "constrain",
+    "mapping",
+    "reset_mcu_sync",
+    "run_command",
+    "is_raspberry_pi",
+    "ADCAddressNotFound",
+    "get_address_description",
+    "ADCAddressNotFound",
+    "get_firmware_version",
+    "get_value_description",
+    "pin_descriptions",
     "version",
 ]

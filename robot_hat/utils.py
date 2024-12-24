@@ -1,24 +1,52 @@
 import time
 from functools import reduce
-from typing import Any, Callable, Tuple, TypeVar
+from typing import Callable, Tuple, TypeVar
 
 T = TypeVar("T", int, float)
 
 
-def compose(*functions: Callable[[Any], Any]) -> Callable[[Any], Any]:
+def compose(*functions: Callable) -> Callable:
     """
     Compose functions in reverse order (right-to-left).
 
     The output of one function is passed as the input to the next.
-    Functions are executed from right to left (last to first).
+    The right-most function can accept any number of arguments.
+    All subsequent functions should accept a single argument.
 
     Args:
         *functions: Functions to compose.
 
     Returns:
         A composed function that applies all the functions in sequence.
+
+    Example:
+    ```python
+    def add(a, b):
+        return a + b
+
+    def double(x):
+        return x * 2
+
+    def to_string(x):
+        return f"Result: {x}"
+
+    # Compose functions
+    composed = compose(to_string, double, add)
+    result = composed(3, 7)  # add(3, 7) -> double(10) -> to_string(20)
+    print(result)  # Output: "Result: 20"
+    ```
     """
-    return reduce(lambda f, g: lambda x: f(g(x)), functions, lambda x: x)
+
+    if not functions:
+        return lambda *args, **kwargs: args[0] if len(args) == 1 else args
+
+    *rest, last = functions
+
+    return lambda *args, **kwargs: reduce(
+        lambda acc, func: func(acc),
+        reversed(rest),
+        last(*args, **kwargs),
+    )
 
 
 def run_command(cmd) -> Tuple[int | None, str]:
