@@ -36,22 +36,27 @@ class TestMotor(unittest.TestCase):
         self.motor.set_speed(50)
         self.mock_dir_pin.low.assert_called_once()
         self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(75)
+        self.assertEqual(self.motor.speed, 50)
 
     def test_set_speed_reverse(self):
         self.motor.set_speed(-50)
         self.mock_dir_pin.high.assert_called_once()
         self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(75)
+        self.assertEqual(self.motor.speed, -50)
 
     def test_set_speed_with_calibration(self):
         self.motor.update_calibration_speed(10, persist=True)
         self.motor.set_speed(50)
         self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(65)
+        self.assertEqual(self.motor.speed, 50)
 
     def test_set_speed_constraints(self):
         self.motor.set_speed(120)
         self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(100)
+        self.assertEqual(self.motor.speed, 100)
         self.motor.set_speed(-120)
         self.mock_pwm_pin.pulse_width_percent.assert_called_with(100)
+        self.assertEqual(self.motor.speed, -100)
 
     def test_update_calibration_speed(self):
         initial_speed_offset = self.motor.calibration_speed_offset
@@ -111,14 +116,26 @@ class TestMotor(unittest.TestCase):
     def test_stop(self):
         self.motor.stop()
         self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(0)
+        self.assertEqual(self.motor.speed, 0)
 
     def test_pwm_conversion(self):
         pwm_value = self.motor._convert_speed_to_pwm(50)
         self.assertEqual(pwm_value, 75)
+        self.assertEqual(self.motor._convert_speed_to_pwm(-50), 75)
 
     def test_constraints_on_pwm(self):
         constrained_pwm = self.motor._apply_pwm_constraints(150)
         self.assertEqual(constrained_pwm, 100)
+
+    def test_speed_to_pwm_formula(self):
+        self.assertEqual(self.motor.speed_to_pwm_formula(100), 100)
+        self.assertEqual(self.motor.speed_to_pwm_formula(-100), 100)
+        self.assertEqual(self.motor.speed_to_pwm_formula(10), 55)
+        self.assertEqual(self.motor.speed_to_pwm_formula(-10), 55)
+        self.assertEqual(self.motor.speed_to_pwm_formula(-40), 70)
+        self.assertEqual(self.motor.speed_to_pwm_formula(40), 70)
+        self.assertEqual(self.motor.speed_to_pwm_formula(50), 75)
+        self.assertEqual(self.motor.speed_to_pwm_formula(55), 77)
 
     def test_repr(self):
         representation = repr(self.motor)

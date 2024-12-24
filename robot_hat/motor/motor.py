@@ -63,8 +63,8 @@ class Motor:
             self._apply_pwm_constraints,
             self._apply_pwm_speed_correction,
             self._convert_speed_to_pwm,
-            self._apply_speed_correction,
         )
+        self.speed: float = 0
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -127,6 +127,7 @@ class Motor:
         """
 
         logger.debug(self._log_prefix + "setting speed %s", speed)
+        speed = self._apply_speed_correction(speed)
         pwm_speed = self.speed_to_pwm_formula(speed)
         direction = self.direction if speed >= 0 else -self.direction
 
@@ -141,6 +142,18 @@ class Motor:
             f"{self._log_prefix} set PWM speed {pwm_speed}, "
             f"direction: {'reverse' if direction == -1 else 'forward'}"
         )
+
+        self.speed = speed
+
+    def stop(self):
+        """
+        Stop the motor by setting the speed to zero.
+
+        Ensures the PWM output is set to 0, bringing the motor to a halt.
+        """
+        self.speed_pin.pulse_width_percent(0)
+        self.speed = 0
+        logger.debug(self._log_prefix + "stopped")
 
     def update_calibration_speed(self, value: float, persist=False) -> float:
         """
@@ -218,12 +231,3 @@ class Motor:
             f"calibration_direction={self.calibration_direction}, "
             f"calibration_speed_offset={self.calibration_speed_offset})>"
         )
-
-    def stop(self):
-        """
-        Stop the motor by setting the speed to zero.
-
-        Ensures the PWM output is set to 0, bringing the motor to a halt.
-        """
-        self.speed_pin.pulse_width_percent(0)
-        logger.debug(self._log_prefix + "stopped")
