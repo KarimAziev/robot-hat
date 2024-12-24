@@ -29,13 +29,15 @@ class MotorFabric:
         Returns:
             Motor: A new motor instance configured as per the MotorConfig.
 
-        Usage:
-            >>> from robot_hat.motor.motor_fabric import MotorFabric
-            >>> from robot_hat.motor.config import MotorConfig
+        Example:
+        --------------
+        ```python
+        from robot_hat.motor.motor_fabric import MotorFabric
+        from robot_hat.motor.config import MotorConfig
 
-            >>> motor_config = MotorConfig(dir_pin="P1", pwm_pin="P3", name="LeftMotor")
-            >>> fabric = MotorFabric()
-            >>> motor = fabric.create_motor(motor_config)
+        motor_config = MotorConfig(dir_pin="P1", pwm_pin="P3", name="LeftMotor")
+        motor = MotorFabric.create_motor(motor_config)
+        ```
         """
         return Motor(
             dir_pin=Pin(config.dir_pin),
@@ -65,11 +67,24 @@ class MotorFabric:
         Returns:
             Tuple[Motor, Motor]: A tuple containing the `left_motor` and `right_motor` instances.
 
-        Usage:
-            >>> left_motor_config = MotorConfig(dir_pin="P1", pwm_pin="P3", name="LeftMotor")
-            >>> right_motor_config = MotorConfig(dir_pin="P2", pwm_pin="P4", name="RightMotor")
-            >>> fabric = MotorFabric()
-            >>> left_motor, right_motor = fabric.create_motor_pair(left_motor_config, right_motor_config)
+        Example:
+        --------------
+        ```python
+        from robot_hat import MotorConfig, MotorService, MotorFabric
+
+        left_motor, right_motor = MotorFabric.create_motor_pair(
+            MotorConfig(
+                dir_pin="D4",
+                pwm_pin="P12",
+                name="LeftMotor",
+            ),
+            MotorConfig(
+                dir_pin="D5",
+                pwm_pin="P13",
+                name="RightMotor",
+            ),
+        )
+        ```
         """
         return (
             MotorFabric.create_motor(left_config),

@@ -21,10 +21,15 @@ Unlike the aforementioned libraries:
 >   - [Installation](#installation)
 >   - [Usage Examples](#usage-examples)
 >     - [Motor Control](#motor-control)
+>     - [Controlling a Servo Motor with ServoCalibrationMode](#controlling-a-servo-motor-with-servocalibrationmode)
+>       - [Available Modes](#available-modes)
+>       - [Configuring the `ServoService`](#configuring-the-servoservice)
+>         - [Example 1: Steering Servo Using `ServoCalibrationMode.SUM`](#example-1-steering-servo-using-servocalibrationmodesum)
+>         - [Example 2: Head Servos Using `ServoCalibrationMode.NEGATIVE`](#example-2-head-servos-using-servocalibrationmodenegative)
+>       - [Custom Calibration Mode](#custom-calibration-mode)
 >     - [I2C Example](#i2c-example)
 >     - [Ultrasonic Sensor for Distance Measurement](#ultrasonic-sensor-for-distance-measurement)
 >     - [Reading Battery Voltage](#reading-battery-voltage)
->     - [Controlling a Servo Motor](#controlling-a-servo-motor)
 >   - [Comparison with Other Libraries](#comparison-with-other-libraries)
 >     - [No sudo](#no-sudo)
 >     - [Type Hints](#type-hints)
@@ -81,6 +86,98 @@ motor_service.stop_all()
 
 ```
 
+### Controlling a Servo Motor with ServoCalibrationMode
+
+The `ServoCalibrationMode` is an enum used to define how the calibration offsets are applied to the servo's angle. It supports two predefined modes and also allows for custom calibration functions for advanced use cases.
+
+#### Available Modes
+
+1. **SUM**: Adds a constant offset (`calibration_offset`) to the input angle. This is generally used for steering operations, like managing front wheels in a robotics car.
+   - Formula:
+     \( \text{calibrated_angle} = \text{input_angle} + \text{calibration_offset} \)
+2. **NEGATIVE**: Subtracts the constant offset after inverting the input angle. This mode may be helpful for servos that require an inverted adjustment, like a camera tilt mechanism.
+   - Formula:
+     \( \text{calibrated_angle} = -1 \times (\text{input_angle} + (-1 \times \text{calibration_offset})) \)
+
+#### Configuring the `ServoService`
+
+The `ServoService` provides a high-level abstraction for managing servo operations. It allows for easy configuration of the calibration mode, constraints for the servo's movement bounds, and custom calibration logic if needed.
+
+Here's how to use `ServoCalibrationMode` in your servo configuration:
+
+##### Example 1: Steering Servo Using `ServoCalibrationMode.SUM`
+
+For steering purposes (e.g., controlling front wheels of a robotics car):
+
+```python
+from robot_hat import ServoCalibrationMode, ServoService
+
+steering_servo = ServoService(
+    servo_pin="P2",
+    min_angle=-30,  # Maximum left turn
+    max_angle=30,   # Maximum right turn
+    calibration_mode=ServoCalibrationMode.SUM,  # Adds offset directly
+    calibration_offset=-14.4,  # Adjust servo position for centered alignment
+)
+
+# Turn left
+steering_servo.set_angle(-30)
+
+# Turn slightly right
+steering_servo.set_angle(15)
+
+# Center position
+steering_servo.reset()
+```
+
+##### Example 2: Head Servos Using `ServoCalibrationMode.NEGATIVE`
+
+For tilting a camera head (e.g., up-and-down movement):
+
+```python
+from robot_hat import ServoCalibrationMode, ServoService
+
+cam_tilt_servo = ServoService(
+    servo_pin="P1",
+    min_angle=-35,  # Maximum downward tilt
+    max_angle=65,   # Maximum upward tilt
+    calibration_mode=ServoCalibrationMode.NEGATIVE,  # Inverted adjustment
+    calibration_offset=1.4,  # Adjust alignment for neutral center
+)
+
+# Tilt down
+cam_tilt_servo.set_angle(-20)
+
+# Tilt up
+cam_tilt_servo.set_angle(25)
+
+# Center position
+cam_tilt_servo.reset()
+```
+
+---
+
+#### Custom Calibration Mode
+
+If the predefined modes (`SUM` or `NEGATIVE`) don’t meet your requirements, you can provide a custom calibration function. The function should accept the `angle` and `calibration_offset` as inputs and return the calibrated angle.
+
+Example:
+
+```python
+def custom_calibration_function(angle: float, offset: float) -> float:
+    # Example: Scale angle by 2 and add offset to fine-tune servo position
+    return (angle * 2) + offset
+
+servo = ServoService(
+    servo_pin="P3",
+    calibration_mode=custom_calibration_function,
+    calibration_offset=5.0,
+    min_angle=-35,
+    max_angle=65,
+)
+servo.set_angle(10)  # Custom logic will process the input angle
+```
+
 ### I2C Example
 
 Scan and communicate with connected I2C devices.
@@ -134,22 +231,6 @@ battery = Battery(channel="A4")
 # Get battery voltage
 voltage = battery.get_battery_voltage()
 print(f"Battery Voltage: {voltage} V")
-```
-
-### Controlling a Servo Motor
-
-Control the angle of a servo motor using PWM.
-
-```python
-from robot_hat.servo import Servo
-
-# Initialize Servo motor
-servo = Servo(channel="P0")
-
-# Control servo angle
-servo.angle(-90)  # Set angle to -90 degrees
-servo.angle(45)   # Set angle to 45 degrees
-servo.angle(0)    # Center position
 ```
 
 ## Comparison with Other Libraries

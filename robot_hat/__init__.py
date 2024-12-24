@@ -31,8 +31,7 @@ from .pin_descriptions import pin_descriptions
 from .pwm import PWM
 from .robot import Robot
 from .services.motor_service import MotorService
-from .services.servo_service import CalibrationMode as ServoCalibrationMode
-from .services.servo_service import ServoService
+from .services.servo_service import ServoCalibrationMode, ServoService
 from .servo import Servo
 from .ultrasonic import Ultrasonic
 from .utils import (

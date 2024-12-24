@@ -9,7 +9,7 @@ from robot_hat.utils import constrain
 logger = logging.getLogger(__name__)
 
 
-class CalibrationMode(Enum):
+class ServoCalibrationMode(Enum):
     NEGATIVE = "negative"
     SUM = "sum"
 
@@ -32,8 +32,8 @@ class ServoService:
         calibration_offset=0.0,
         name: Optional[str] = None,
         calibration_mode: Optional[
-            Union[CalibrationMode, Callable[[float, float], float]]
-        ] = CalibrationMode.SUM,
+            Union[ServoCalibrationMode, Callable[[float, float], float]]
+        ] = ServoCalibrationMode.SUM,
     ):
         """
         Initialize the ServoService with the specified configuration.
@@ -45,16 +45,68 @@ class ServoService:
         - calibration_offset: A calibration offset for fine-tuning servo angles. Default is 0.0.
         - name: A name for the servo (useful for debugging/logging). Defaults to the servo pin if not provided.
         - calibration_mode: Specifies how calibration offsets are applied. Options include:
-            - `CalibrationMode.NEGATIVE`: Subtracts calibration, with adjustment multiplied by -1.
-            - `CalibrationMode.SUM`: Adds calibration directly to the input angle (default).
+            - `ServoCalibrationMode.NEGATIVE`: Subtracts calibration, with adjustment multiplied by -1.
+            - `ServoCalibrationMode.SUM`: Adds calibration directly to the input angle (default).
             - A custom calibration function: A callable function that takes `(angle, calibration_offset)`
               and returns a calibrated angle for more advanced customization.
             - `None`: Disables calibration entirely. Only the constrained angle value
               (within `min_angle` and `max_angle`) is passed directly to the hardware
 
         Raises:
+        --------------
         - InvalidCalibrationModeError: If a provided `calibration_mode` is
-          invalid (e.g., a non-callable that's not a `CalibrationMode`).
+          invalid (e.g., a non-callable that's not a `ServoCalibrationMode`).
+
+
+        Example with `ServoCalibrationMode.SUM`, often suitable for steering servos (front wheels) in a robotics car.
+        --------------
+        ```python
+        from robot_hat import ServoCalibrationMode, ServoService
+
+        steering_servo = ServoService(
+            servo_pin="P2",
+            min_angle=-30,  # Maximum left turn
+            max_angle=30,   # Maximum right turn
+            calibration_mode=ServoCalibrationMode.SUM,  # Adds offset directly
+            calibration_offset=-14.4,  # Adjust servo position for centered alignment
+        )
+
+        # Turn left
+        steering_servo.set_angle(-30)
+
+        # Turn slightly right
+        steering_servo.set_angle(15)
+
+        # Center position
+        steering_servo.reset()
+        # or
+        steering_servo.reset()
+
+        ```
+
+        Example with `ServoCalibrationMode.NEGATIVE`, often suitable in the head servos.
+        --------------
+        ```python
+        from robot_hat import ServoCalibrationMode, ServoService
+
+        cam_tilt_servo = ServoService(
+            servo_pin="P1",
+            min_angle=-35,  # Maximum downward tilt
+            max_angle=65,   # Maximum upward tilt
+            calibration_mode=ServoCalibrationMode.NEGATIVE,  # Inverted adjustment
+            calibration_offset=1.4,  # Adjust alignment for neutral center
+        )
+
+        # Tilt down
+        cam_tilt_servo.set_angle(-20)
+
+        # Tilt up
+        cam_tilt_servo.set_angle(25)
+
+        # Center position
+        cam_tilt_servo.reset()
+        ```
+
         """
         self.servo = Servo(servo_pin)
         self.min_angle = min_angle
@@ -71,13 +123,13 @@ class ServoService:
 
         self.calibration_function = (
             self._get_default_calibration_function(calibration_mode)
-            if isinstance(calibration_mode, CalibrationMode)
+            if isinstance(calibration_mode, ServoCalibrationMode)
             else calibration_mode
         )
         self.servo.angle(self.calibration_offset)
 
     def _get_default_calibration_function(
-        self, calibration_mode: CalibrationMode
+        self, calibration_mode: ServoCalibrationMode
     ) -> Callable[[float, float], float]:
         """
         Return the default calibration function based on the specified mode.
@@ -91,9 +143,9 @@ class ServoService:
         Raises:
         - InvalidCalibrationModeError: If the calibration mode is unsupported.
         """
-        if calibration_mode == CalibrationMode.SUM:
+        if calibration_mode == ServoCalibrationMode.SUM:
             return self.apply_sum_calibration
-        elif calibration_mode == CalibrationMode.NEGATIVE:
+        elif calibration_mode == ServoCalibrationMode.NEGATIVE:
             return self.apply_negative_calibration
         raise InvalidCalibrationModeError(calibration_mode)
 
@@ -157,7 +209,7 @@ class ServoService:
         - angle (float): The desired input angle to set.
 
         Example Usage:
-        >>> servo_service = ServoService("P2", min_angle=-45, max_angle=45, calibration_mode=CalibrationMode.NEGATIVE)
+        >>> servo_service = ServoService("P1", min_angle=-45, max_angle=45, calibration_mode=ServoCalibrationMode.NEGATIVE)
         >>> servo_service.set_angle(30)
         """
         constrained_value = constrain(angle, self.min_angle, self.max_angle)
