@@ -20,6 +20,7 @@ dependencies = [
     "smbus2",
     "gpiozero",
     "RPi.GPIO",
+    "tenacity",
 ]
 keywords = ["i2c", "raspberrypi"]
 dynamic = ["version"]

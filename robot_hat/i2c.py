@@ -19,11 +19,30 @@ import logging
 import os
 from typing import Any, List, Optional, Union
 
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
+)
+
 from robot_hat.address_descriptions import (
     get_address_description,
     get_value_description,
 )
 from robot_hat.exceptions import ADCAddressNotFound
+
+RETRY_ATTEMPTS = 5
+INITIAL_WAIT = 0.01  # Initial wait time (10ms)
+MAX_WAIT = 0.2  # Maximum wait time (200ms)
+JITTER = 0.05  # Random jitter (up to 50ms)
+
+RETRY_DECORATOR = retry(
+    stop=stop_after_attempt(RETRY_ATTEMPTS),
+    wait=wait_exponential_jitter(initial=INITIAL_WAIT, max=MAX_WAIT, jitter=JITTER),
+    retry=retry_if_exception_type((OSError, TimeoutError)),
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -33,21 +52,6 @@ if USE_MOCK == "1":
     from .mock.smbus2 import MockSMBus as SMBus
 else:
     from smbus2 import SMBus
-
-
-def _retry_wrapper(func):
-    def wrapper(self: "I2C", *args: Any, **kwargs: Any) -> Any:
-        for i in range(self.RETRY):
-            is_last = i == self.RETRY - 1
-            if is_last:
-                return func(self, *args, **kwargs)
-            try:
-                return func(self, *args, **kwargs)
-            except OSError as err:
-                logger.debug("OSError: %s %s", func.__name__, err)
-                continue
-
-    return wrapper
 
 
 class I2C(object):
@@ -166,7 +170,7 @@ class I2C(object):
             logger.error("Unexpected error at I2C address 0x%02x: %s", addr, e)
             return None
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _write_byte(self, data: int) -> None:
         """
         Write a single byte to the I2C device.
@@ -187,7 +191,7 @@ class I2C(object):
         )
         self._smbus.write_byte(self.address, data)
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _write_byte_data(self, reg: int, data: int) -> None:
         """
         Write a byte of data to a specific register.
@@ -211,7 +215,7 @@ class I2C(object):
         )
         return self._smbus.write_byte_data(self.address, reg, data)
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _write_word_data(self, reg: int, data: int) -> None:
         """
         Write a word of data to a specific register.
@@ -236,7 +240,7 @@ class I2C(object):
         )
         return self._smbus.write_word_data(self.address, reg, data)
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _write_i2c_block_data(self, reg: int, data: List[int]) -> None:
         """
         Write blocks of data to a specific register.
@@ -260,7 +264,7 @@ class I2C(object):
         )
         return self._smbus.write_i2c_block_data(self.address, reg, data)
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _read_byte(self) -> int:
         """
         Read a single byte from the I2C device.
@@ -279,7 +283,7 @@ class I2C(object):
         )
         return result
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _read_byte_data(self, reg: int) -> int:
         """
         Read a byte of data from a specific register.
@@ -303,7 +307,7 @@ class I2C(object):
         )
         return result
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _read_word_data(self, reg: int) -> List[int]:
         """
         Read a word of data from a specific register.
@@ -330,7 +334,7 @@ class I2C(object):
         )
         return result_list
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def _read_i2c_block_data(self, reg: int, num: int) -> List[int]:
         """
         Read blocks of data from a specific register.
@@ -355,7 +359,7 @@ class I2C(object):
         )
         return result
 
-    @_retry_wrapper
+    @RETRY_DECORATOR
     def is_ready(self) -> bool:
         """
         Check if the I2C device is ready.
