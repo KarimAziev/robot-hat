@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Literal, Optional
 
 from robot_hat.exceptions import MotorValidationError
 from robot_hat.utils import compose, constrain
@@ -24,7 +24,7 @@ class Motor:
         self,
         dir_pin: "Pin",
         pwm_pin: "PWM",
-        calibration_direction: int = 1,
+        calibration_direction: Literal[1, -1] = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         period=4095,

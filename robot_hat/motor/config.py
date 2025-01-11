@@ -1,4 +1,6 @@
-from typing import Optional, Union
+from typing import Literal, Optional, Union
+
+from robot_hat.exceptions import MotorValidationError
 
 
 class MotorConfig:
@@ -13,7 +15,7 @@ class MotorConfig:
         self,
         dir_pin: Union[str, int],
         pwm_pin: Union[str, int],
-        calibration_direction: int = 1,
+        calibration_direction: Literal[1, -1] = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         period: int = 4095,
@@ -35,7 +37,7 @@ class MotorConfig:
         """
         self.dir_pin = dir_pin
         self.pwm_pin = pwm_pin
-        self.calibration_direction = calibration_direction
+        self.calibration_direction: Literal[1, -1] = calibration_direction
         self.calibration_speed_offset = calibration_speed_offset
         self.max_speed = max_speed
         self.period = period
@@ -49,11 +51,11 @@ class MotorConfig:
         Validate the configuration parameters.
         """
         if self.calibration_direction not in (-1, 1):
-            raise ValueError(
+            raise MotorValidationError(
                 f"Invalid calibration_direction: {self.calibration_direction}. Must be 1 or -1."
             )
         if self.max_speed < 0:
-            raise ValueError(
+            raise MotorValidationError(
                 f"Invalid max_speed {self.max_speed}. Must be non-negative."
             )
 
