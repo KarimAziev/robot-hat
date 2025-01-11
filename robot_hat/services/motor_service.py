@@ -2,6 +2,8 @@ import logging
 import time
 from typing import TYPE_CHECKING
 
+from robot_hat.motor.config import MotorDirection
+
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
@@ -131,8 +133,8 @@ class MotorService:
         return self.right_motor.update_calibration_speed(value, persist)
 
     def update_right_motor_calibration_direction(
-        self, value: int, persist=False
-    ) -> int:
+        self, value: MotorDirection, persist=False
+    ) -> MotorDirection:
         """
         Update the direction calibration for the left motor.
 
@@ -148,7 +150,9 @@ class MotorService:
         """
         return self.right_motor.update_calibration_direction(value, persist)
 
-    def update_left_motor_calibration_direction(self, value: int, persist=False) -> int:
+    def update_left_motor_calibration_direction(
+        self, value: MotorDirection, persist=False
+    ) -> MotorDirection:
         """
         Update the direction calibration for the right motor.
 
