@@ -1,6 +1,8 @@
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, TypeAlias, Union
 
 from robot_hat.exceptions import MotorValidationError
+
+MotorDirection: TypeAlias = Literal[1, -1]
 
 
 class MotorConfig:
@@ -15,7 +17,7 @@ class MotorConfig:
         self,
         dir_pin: Union[str, int],
         pwm_pin: Union[str, int],
-        calibration_direction: Literal[1, -1] = 1,
+        calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         period: int = 4095,
@@ -37,7 +39,7 @@ class MotorConfig:
         """
         self.dir_pin = dir_pin
         self.pwm_pin = pwm_pin
-        self.calibration_direction: Literal[1, -1] = calibration_direction
+        self.calibration_direction: MotorDirection = calibration_direction
         self.calibration_speed_offset = calibration_speed_offset
         self.max_speed = max_speed
         self.period = period

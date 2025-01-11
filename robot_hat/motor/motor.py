@@ -1,7 +1,8 @@
 import logging
-from typing import TYPE_CHECKING, Literal, Optional
+from typing import TYPE_CHECKING, Optional
 
 from robot_hat.exceptions import MotorValidationError
+from robot_hat.motor.config import MotorDirection
 from robot_hat.utils import compose, constrain
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ class Motor:
         self,
         dir_pin: "Pin",
         pwm_pin: "PWM",
-        calibration_direction: Literal[1, -1] = 1,
+        calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         period=4095,
@@ -48,8 +49,8 @@ class Motor:
         self.speed_pin = pwm_pin
         self.period = period
         self.prescaler = prescaler
-        self.direction = calibration_direction
-        self.calibration_direction = calibration_direction
+        self.direction: MotorDirection = calibration_direction
+        self.calibration_direction: MotorDirection = calibration_direction
         self.calibration_speed_offset = calibration_speed_offset
         self.speed_offset = calibration_speed_offset
 
@@ -181,7 +182,9 @@ class Motor:
         self.speed_offset = self.calibration_speed_offset
         return self.speed_offset
 
-    def update_calibration_direction(self, value: int, persist=False) -> int:
+    def update_calibration_direction(
+        self, value: MotorDirection, persist=False
+    ) -> MotorDirection:
         """
         Update the temporary or permanent direction calibration for the motor.
 
@@ -201,7 +204,7 @@ class Motor:
             self.calibration_direction = value
         return self.direction
 
-    def reset_calibration_direction(self) -> int:
+    def reset_calibration_direction(self) -> MotorDirection:
         """
         Restore the direction calibration to its default state.
 
