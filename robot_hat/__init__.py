@@ -34,15 +34,10 @@ from .services.motor_service import MotorService
 from .services.servo_service import ServoCalibrationMode, ServoService
 from .servo import Servo
 from .ultrasonic import Ultrasonic
-from .utils import (
-    compose,
-    constrain,
-    get_firmware_version,
-    is_raspberry_pi,
-    mapping,
-    reset_mcu_sync,
-    run_command,
-)
+from .utils import compose, constrain, get_firmware_version, is_raspberry_pi, mapping
+from .utils import reset_mcu_sync
+from .utils import reset_mcu_sync as reset_mcu
+from .utils import run_command
 from .version import version
 
 __all__ = [
@@ -82,6 +77,7 @@ __all__ = [
     "compose",
     "constrain",
     "mapping",
+    "reset_mcu",
     "reset_mcu_sync",
     "run_command",
     "is_raspberry_pi",
