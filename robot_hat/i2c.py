@@ -32,15 +32,23 @@ from robot_hat.address_descriptions import (
 )
 from robot_hat.exceptions import ADCAddressNotFound
 
+# Number of retry attempts for I2C communication
 RETRY_ATTEMPTS = 5
-INITIAL_WAIT = 0.01  # Initial wait time (10ms)
-MAX_WAIT = 0.2  # Maximum wait time (200ms)
-JITTER = 0.05  # Random jitter (up to 50ms)
+
+# Initial wait time (in seconds) before retry
+INITIAL_WAIT = 0.01  # 10ms
+
+# Maximum wait time (in seconds) for retry
+MAX_WAIT = 0.2  # 200ms
+
+# Random jitter (in seconds) to add randomness to retry timing
+JITTER = 0.05  # 50ms
 
 RETRY_DECORATOR = retry(
     stop=stop_after_attempt(RETRY_ATTEMPTS),
     wait=wait_exponential_jitter(initial=INITIAL_WAIT, max=MAX_WAIT, jitter=JITTER),
     retry=retry_if_exception_type((OSError, TimeoutError)),
+    reraise=True,
 )
 
 
@@ -94,9 +102,6 @@ class I2C(object):
     In the above scan, devices were found at addresses `0x15` and `0x17`.
 
     """
-
-    RETRY = 5
-    """Number of retry attempts for I2C communication"""
 
     def __init__(
         self,
