@@ -1,8 +1,8 @@
-from typing import Literal, Optional, TypeAlias, Union
+from typing import Literal, Optional, Union
 
 from robot_hat.exceptions import MotorValidationError
 
-MotorDirection: TypeAlias = Literal[1, -1]
+MotorDirection = Literal[1, -1]
 
 
 class MotorConfig:
