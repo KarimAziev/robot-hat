@@ -1,6 +1,6 @@
 import time
 from functools import reduce
-from typing import Callable, Tuple, TypeVar
+from typing import Callable, Tuple, TypeVar, Union
 
 T = TypeVar("T", int, float)
 
@@ -49,7 +49,7 @@ def compose(*functions: Callable) -> Callable:
     )
 
 
-def run_command(cmd) -> Tuple[int | None, str]:
+def run_command(cmd) -> Tuple[Union[int, None], str]:
     """
     Run command and return status and output
 
