@@ -156,7 +156,7 @@ class I2C(object):
         elif address is not None and self.check_address(address):
             return address
 
-    def check_address(self, addr: int):
+    def check_address(self, addr: int) -> Union[int, None]:
         """
         Check if an I2C address is valid and acknowledged by the device.
         """
@@ -387,6 +387,10 @@ class I2C(object):
         """
         addresses = []
         logger.debug(f"Scanning I2C bus {self._bus} for devices")
+
+        if not self._smbus:
+            logger.warning("SMBus not initialized. Unable to scan for I2C devices.")
+            return addresses
 
         for address in range(
             0x03, 0x78
@@ -679,3 +683,16 @@ class I2C(object):
         """
 
         return True if self.check_address(self.address) else False
+
+    def close(self):
+        """
+        Closes the SMBus connection to free system resources.
+        """
+        if self._smbus is not None:
+            self._smbus.close()
+
+    def __del__(self) -> None:
+        """
+        Destructor: Closes the SMBus connection to free system resources when the I2C instance is deleted.
+        """
+        self.close()
