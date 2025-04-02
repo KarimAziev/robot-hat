@@ -47,7 +47,7 @@ jobs:
       - name: Lint code
         run: |
           black --check .
-          isort --profile black --check-only .
+          isort -v --profile black --check-only -s version.py .
 
       - name: Run tests with unittest and measure coverage
         run: |
