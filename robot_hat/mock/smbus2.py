@@ -1,9 +1,7 @@
 import errno
 import logging
 import os
-from typing import List, Optional, Sequence, Union
-
-from typing_extensions import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional, Sequence, Union
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg
