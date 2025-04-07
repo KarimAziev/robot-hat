@@ -63,7 +63,7 @@ def generate_discharge_sequence(
     return discharge_sequence
 
 
-class MockSMBus:
+class MockSMBus(object):
     def __init__(self, bus: Union[None, int, str], force: bool = False):
         self.bus = bus
         self.force = force
@@ -88,10 +88,6 @@ class MockSMBus:
 
     def close(self) -> None:
         self.fd = None
-
-    def _set_address(self, address: int, force: Optional[bool] = None):
-        self.address = address
-        self._force_last = force or self.force
 
     def write_quick(self, i2c_addr: int, force: Optional[bool] = None) -> None:
         self._set_address(i2c_addr, force)
@@ -210,6 +206,41 @@ class MockSMBus:
 
     def enable_pec(self, enable=True) -> None:
         self.pec = int(enable)  # Simulate enabling PEC
+
+    def __enter__(self):
+        """Enter handler."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit handler."""
+        self.close()
+
+    def _set_address(self, address: int, force: Optional[bool] = None):
+        """
+        Set i2c slave address to use for subsequent calls.
+
+        :param address:
+        :type address: int
+        :param force:
+        :type force: Boolean
+        """
+        force = force if force is not None else self.force
+        if self.address != address or self._force_last != force:
+            if force is True:
+                logger.debug("ioctl(self.fd, I2C_SLAVE_FORCE, address)")
+            else:
+                logger.debug("ioctl(self.fd, I2C_SLAVE, address)")
+            self.address = address
+            self._force_last = force
+
+    def _get_funcs(self) -> int:
+        """
+        Returns a 32-bit value stating supported I2C functions.
+
+        :rtype: int
+        """
+
+        return 0x03660001
 
 
 if __name__ == "__main__":

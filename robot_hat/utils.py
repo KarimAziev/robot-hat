@@ -98,7 +98,6 @@ def reset_mcu_sync() -> None:
     time.sleep(0.01)
     mcu_reset.on()
     time.sleep(0.01)
-
     mcu_reset.close()
 
 
@@ -155,6 +154,22 @@ def constrain(x: T, min_val: T, max_val: T):
     Constrains value to be within a range.
     """
     return max(min_val, min(max_val, x))
+
+
+def validate_pwm_channel_name(channel_str: str):
+    """
+    Validates whether the provided PWM channel name is in the correct format.
+
+    The channel name must start with 'P' followed by one or more digits.
+
+    Returns True if the format is valid; otherwise, returns False.
+    """
+    import re
+
+    pattern = r"^P\d+$"
+    if re.match(pattern, channel_str):
+        return True
+    return False
 
 
 if __name__ == "main":

@@ -32,7 +32,7 @@ from .pwm import PWM
 from .robot import Robot
 from .services.motor_service import MotorService
 from .services.servo_service import ServoCalibrationMode, ServoService
-from .servo import Servo
+from .servos.sunfounder_servo import Servo
 from .ultrasonic import Ultrasonic
 from .utils import compose, constrain, get_firmware_version, is_raspberry_pi, mapping
 from .utils import reset_mcu_sync

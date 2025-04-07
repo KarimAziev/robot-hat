@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Union
 from robot_hat.exceptions import InvalidChannelName, InvalidChannelNumber
 from robot_hat.i2c import I2C
 from robot_hat.pin_descriptions import pin_descriptions
+from robot_hat.utils import validate_pwm_channel_name
 
 logger = logging.getLogger(__name__)
 
@@ -121,12 +122,12 @@ class PWM(I2C):
         )
 
         if isinstance(channel, str):
-            if channel.startswith("P"):
-                channel = int(channel[1:])
-            else:
-                msg = f'PWM channel should be between [P0, P19], not "{channel}"'
-                logger.error(msg)
-                raise InvalidChannelName(msg)
+            if not validate_pwm_channel_name(channel):
+                raise InvalidChannelName(
+                    f"Invalid PWM channel's name {channel}. "
+                    "The channel name must start with 'P' followed by one or more digits."
+                )
+            channel = int(channel[1:])
         if isinstance(channel, int):
             if channel > 19 or channel < 0:
                 msg = f'channel must be in range of 0-19, not "{channel}"'

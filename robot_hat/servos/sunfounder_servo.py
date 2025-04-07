@@ -1,5 +1,5 @@
 """
-A module to manage Servo motors using PWM (Pulse Width Modulation) control.
+A module to manage Servo motors using PWM (Pulse Width Modulation) control for Sunfounder's robot-hat.
  - Control the angle of the servo motor.
  - Set the pulse width for precise control.
 """
@@ -10,12 +10,13 @@ from typing import List, Optional, Union
 from robot_hat.exceptions import InvalidServoAngle
 from robot_hat.pin_descriptions import pin_descriptions
 from robot_hat.pwm import PWM
+from robot_hat.servos.servo_abc import ServoABC
 from robot_hat.utils import mapping
 
 logger = logging.getLogger(__name__)
 
 
-class Servo(PWM):
+class Servo(PWM, ServoABC):
     """
     A class to manage Servo motors using PWM control.
 
@@ -86,8 +87,8 @@ class Servo(PWM):
         Initialize the servo motor class.
 
         Args:
-            channel (int or str): PWM channel number (0-14 or P0-P14).
-            address (Optional[List[int]]): I2C device address or list of addresses.
+            channel: PWM channel number (0-14 or P0-P14).
+            address: I2C device address or list of addresses.
         """
         super().__init__(channel, address, *args, **kwargs)
         self.channel_description = pin_descriptions.get(
@@ -104,18 +105,18 @@ class Servo(PWM):
         prescaler = self.CLOCK / self.FREQ / self.PERIOD
         self.prescaler(prescaler)
 
-    def angle(self, angle: Union[float, int]) -> None:
+    def angle(self, angle: float) -> None:
         """
         Set the angle of the servo motor.
 
         Args:
-            angle (float or int): Desired angle (-90 to 90 degrees).
+            angle: Desired angle (-90 to 90 degrees).
 
         Raises:
             InvalidServoAngle: If the angle is not an int or float.
         """
-        if not (isinstance(angle, int) or isinstance(angle, float)):
-            msg = "Angle value should be int or float value, not %s" % type(angle)
+        if not isinstance(angle, float):
+            msg = "Angle value should be float value, not %s" % type(angle)
             logger.error(msg)
             raise InvalidServoAngle(msg)
         logger.debug(f"[{self.channel_description}]: Setting angle {angle} ")
@@ -131,7 +132,7 @@ class Servo(PWM):
         Set the pulse width of the servo motor.
 
         Args:
-            pulse_width_time (float): Pulse width time in microseconds (500 to 2500).
+            pulse_width_time: Pulse width time in microseconds (500 to 2500).
         """
         if pulse_width_time > self.MAX_PW:
             pulse_width_time = self.MAX_PW
@@ -142,3 +143,15 @@ class Servo(PWM):
         value = int(pwr * self.PERIOD)
         logger.debug(f"[{self.channel_description}]: setting pulse width: {value}")
         self.pulse_width(value)
+
+    def reset(self) -> None:
+        """
+        Reset the servo to its default position.
+        """
+        self.angle(0)
+
+    def close(self) -> None:
+        """
+        Close and release any resources.
+        """
+        super().close()

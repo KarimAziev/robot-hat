@@ -232,6 +232,7 @@ class Pin(object):
         )
         if self.gpio:
             self.gpio.close()
+            self.gpio = None
 
     def deinit(self) -> None:
         """

@@ -31,6 +31,7 @@ from robot_hat.address_descriptions import (
     get_value_description,
 )
 from robot_hat.exceptions import ADCAddressNotFound
+from robot_hat.smbus_singleton import SMBus as SMBusSingleton
 
 # Number of retry attempts for I2C communication
 RETRY_ATTEMPTS = 5
@@ -106,7 +107,7 @@ class I2C(object):
     def __init__(
         self,
         address: Union[int, List[int]],
-        bus: int = 1,
+        bus: Union[int, SMBus, SMBusSingleton] = 1,
         *args: Any,
         **kwargs: Any,
     ):
@@ -119,8 +120,15 @@ class I2C(object):
         """
 
         super().__init__(*args, **kwargs)
-        self._bus = bus
-        self._smbus = SMBus(self._bus)
+
+        if isinstance(bus, int):
+            self._smbus = SMBus(bus)
+            self._own_bus: bool = True
+            logger.debug("Created own SMBus on bus %d", bus)
+        else:
+            self._smbus = bus
+            self._own_bus = False
+            logger.debug("Using injected SMBus instance")
 
         addr = self.find_address(address)
 
@@ -130,8 +138,7 @@ class I2C(object):
 
         self.address: int = addr
         logger.debug(
-            "I2C bus %s opened successfully at device address %s",
-            self._bus,
+            "I2C bus opened successfully at device address %s",
             self.address,
         )
 
@@ -160,7 +167,7 @@ class I2C(object):
         """
         Check if an I2C address is valid and acknowledged by the device.
         """
-        logger.debug("Scanning I2C bus %s for address %s", self._bus, addr)
+        logger.debug("Scanning I2C bus for address %s", addr)
         try:
             self._smbus.write_byte(
                 addr, 0
@@ -386,7 +393,7 @@ class I2C(object):
             List[int]: List of I2C addresses of devices found.
         """
         addresses = []
-        logger.debug(f"Scanning I2C bus {self._bus} for devices")
+        logger.debug(f"Scanning I2C bus for devices")
 
         if not self._smbus:
             logger.warning("SMBus not initialized. Unable to scan for I2C devices.")
@@ -686,13 +693,15 @@ class I2C(object):
 
     def close(self):
         """
-        Closes the SMBus connection to free system resources.
+        Close the I2C bus connection if this instance owns the SMBus object.
+
+        For external SMBus instances, no closure is performed.
         """
-        if self._smbus is not None:
+        if self._own_bus and self._smbus is not None:
             self._smbus.close()
 
     def __del__(self) -> None:
         """
-        Destructor: Closes the SMBus connection to free system resources when the I2C instance is deleted.
+        Destructor method. Closes the I2C bus connection if this instance owns it.
         """
         self.close()

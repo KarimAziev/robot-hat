@@ -2,7 +2,7 @@ import time
 from typing import List, Optional, TypeVar
 
 from robot_hat.filedb import FileDB
-from robot_hat.servo import Servo
+from robot_hat.servos.sunfounder_servo import Servo
 
 T = TypeVar("T", int, float, str)
 
@@ -68,7 +68,6 @@ class Robot:
 
         if init_order == None:
             init_order = range(self.pin_num)
-
         for i, pin in enumerate(pin_list):
             self.servo_list.append(Servo(pin))
             self.servo_positions[i] = init_angles[i]

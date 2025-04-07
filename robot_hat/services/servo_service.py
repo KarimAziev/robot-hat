@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Callable, Optional, Union
 
 from robot_hat.exceptions import InvalidCalibrationModeError
-from robot_hat.servo import Servo
+from robot_hat.servos.servo_abc import ServoABC
 from robot_hat.utils import constrain
 
 logger = logging.getLogger(__name__)
@@ -26,11 +26,11 @@ class ServoService:
 
     def __init__(
         self,
-        servo_pin: Union[str, int],
+        servo: ServoABC,
+        name: str,
         min_angle=-90,
         max_angle=90,
         calibration_offset=0.0,
-        name: Optional[str] = None,
         calibration_mode: Optional[
             Union[ServoCalibrationMode, Callable[[float, float], float]]
         ] = ServoCalibrationMode.SUM,
@@ -39,11 +39,11 @@ class ServoService:
         Initialize the ServoService with the specified configuration.
 
         Args:
-        - servo_pin: The servo's pin name or number.
+        - servo: The servo intance.
         - min_angle: Minimum allowable angle for the servo. Default is -90.
         - max_angle: Maximum allowable angle for the servo. Default is 90.
         - calibration_offset: A calibration offset for fine-tuning servo angles. Default is 0.0.
-        - name: A name for the servo (useful for debugging/logging). Defaults to the servo pin if not provided.
+        - name: A human readable name for the servo (useful for debugging/logging).
         - calibration_mode: Specifies how calibration offsets are applied. Options include:
             - `ServoCalibrationMode.NEGATIVE`: Subtracts calibration, with adjustment multiplied by -1.
             - `ServoCalibrationMode.SUM`: Adds calibration directly to the input angle (default).
@@ -64,7 +64,7 @@ class ServoService:
         from robot_hat import ServoCalibrationMode, ServoService
 
         steering_servo = ServoService(
-            servo_pin="P2",
+            servo=my_servo_instance,
             min_angle=-30,  # Maximum left turn
             max_angle=30,   # Maximum right turn
             calibration_mode=ServoCalibrationMode.SUM,  # Adds offset directly
@@ -90,7 +90,7 @@ class ServoService:
         from robot_hat import ServoCalibrationMode, ServoService
 
         cam_tilt_servo = ServoService(
-            servo_pin="P1",
+            servo=my_servo_instance,
             min_angle=-35,  # Maximum downward tilt
             max_angle=65,   # Maximum upward tilt
             calibration_mode=ServoCalibrationMode.NEGATIVE,  # Inverted adjustment
@@ -108,17 +108,13 @@ class ServoService:
         ```
 
         """
-        self.servo = Servo(servo_pin)
+        self.name = name
+        self.servo = servo
         self.min_angle = min_angle
         self.max_angle = max_angle
         self._persisted_calibration_offset = calibration_offset or 0.0
         self.calibration_offset = calibration_offset or 0.0
         self._current_angle = 0.0
-        self.name = (
-            name
-            if name
-            else servo_pin if isinstance(servo_pin, str) else f"{servo_pin}"
-        )
         self._log_prefix = f"Servo {self.name or ''}".strip() + ": "
 
         self.calibration_function = (
@@ -138,7 +134,7 @@ class ServoService:
         - calibration_mode: The calibration mode to apply (`NEGATIVE` or `SUM`).
 
         Returns:
-        - Callable[[float, float], float]: The appropriate calibration function.
+        - The appropriate calibration function.
 
         Raises:
         - InvalidCalibrationModeError: If the calibration mode is unsupported.
@@ -155,7 +151,7 @@ class ServoService:
         Get the current constrained angle of the servo (the value before applying calibration).
 
         Returns:
-        - float: The current angle stored in the service.
+        - The current angle stored in the service.
         """
         return self._current_angle
 
@@ -176,7 +172,7 @@ class ServoService:
         - calibration_value (float): The calibration offset to use.
 
         Returns:
-        - float: The adjusted value.
+        - The adjusted value.
         """
         return -1 * (value + -1 * calibration_value)
 
@@ -193,7 +189,7 @@ class ServoService:
         - calibration_value (float): The calibration offset to use.
 
         Returns:
-        - float: The adjusted value.
+        - The adjusted value.
         """
         return value + calibration_value
 
@@ -206,7 +202,7 @@ class ServoService:
         3. Update and store the calibrated angle.
 
         Args:
-        - angle (float): The desired input angle to set.
+        - The desired input angle to set.
 
         Example Usage:
         >>> servo_service = ServoService("P1", min_angle=-45, max_angle=45, calibration_mode=ServoCalibrationMode.NEGATIVE)
