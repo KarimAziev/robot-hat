@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Tuple
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from robot_hat.pin import Pin
 from robot_hat.pwm import PWM
@@ -15,7 +15,11 @@ class MotorFabric:
     """
 
     @staticmethod
-    def create_motor(config: "MotorConfig") -> Motor:
+    def create_motor(
+        config: "MotorConfig",
+        pwm_pin: Optional[PWM] = None,
+        dir_pin: Optional[Pin] = None,
+    ) -> Motor:
         """
         Create a motor instance from a MotorConfig.
 
@@ -40,8 +44,8 @@ class MotorFabric:
         ```
         """
         return Motor(
-            dir_pin=Pin(config.dir_pin),
-            pwm_pin=PWM(config.pwm_pin),
+            dir_pin=dir_pin or Pin(config.dir_pin),
+            pwm_pin=pwm_pin or PWM(config.pwm_pin),
             calibration_direction=config.calibration_direction,
             calibration_speed_offset=config.calibration_speed_offset,
             max_speed=config.max_speed,
