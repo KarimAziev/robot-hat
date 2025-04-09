@@ -6,7 +6,7 @@ detection of line status or intensity using three individual ADC channels.
 import logging
 from typing import List, Optional
 
-from .adc import ADC
+from .drivers.adc.sunfounder_adc import ADC
 from .exceptions import GrayscaleTypeError
 
 logger = logging.getLogger(__name__)

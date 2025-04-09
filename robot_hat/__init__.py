@@ -1,7 +1,6 @@
 from .accelerometer import ADXL345
-from .adc import ADC
 from .address_descriptions import get_address_description, get_value_description
-from .battery import Battery
+from .drivers.adc.sunfounder_adc import ADC
 from .exceptions import (
     ADCAddressNotFound,
     FileDBValidationError,
@@ -30,6 +29,7 @@ from .pin import Pin
 from .pin_descriptions import pin_descriptions
 from .pwm import PWM
 from .robot import Robot
+from .services.battery.sunfounder_battery import Battery
 from .services.motor_service import MotorService
 from .services.servo_service import ServoCalibrationMode, ServoService
 from .servos.servo import Servo
