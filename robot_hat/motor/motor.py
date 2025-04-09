@@ -1,8 +1,9 @@
 import logging
 from typing import TYPE_CHECKING, Optional
 
-from robot_hat.exceptions import MotorValidationError
 from robot_hat.motor.config import MotorDirection
+from robot_hat.motor.motor_abc import MotorABC
+from robot_hat.motor.motor_calibration import MotorCalibration
 from robot_hat.utils import compose, constrain
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class Motor:
+class Motor(MotorCalibration, MotorABC):
     """
     Represents a single motor with speed and direction control.
 
@@ -45,15 +46,15 @@ class Motor:
             prescaler: Prescaler value for PWM.
             name: Optional identifier for the motor for logging and debugging.
         """
+        super().__init__(
+            calibration_direction=calibration_direction,
+            calibration_speed_offset=calibration_speed_offset,
+        )
+
         self.direction_pin = dir_pin
         self.speed_pin = pwm_pin
         self.period = period
         self.prescaler = prescaler
-        self.direction: MotorDirection = calibration_direction
-        self.calibration_direction: MotorDirection = calibration_direction
-        self.calibration_speed_offset = calibration_speed_offset
-        self.speed_offset = calibration_speed_offset
-
         self.max_speed = max_speed
         self.name = name
         self._log_prefix = f"Motor {self.name or ''}".strip() + ": "
@@ -116,7 +117,7 @@ class Motor:
         """
         return int(constrain(pwm, 0, 100))
 
-    def set_speed(self, speed: float):
+    def set_speed(self, speed: float) -> None:
         """
         Set the motor's speed and direction after applying calibration.
 
@@ -146,7 +147,7 @@ class Motor:
 
         self.speed = speed
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the motor by setting the speed to zero.
 
@@ -156,70 +157,12 @@ class Motor:
         self.speed = 0
         logger.debug(self._log_prefix + "stopped")
 
-    def update_calibration_speed(self, value: float, persist=False) -> float:
+    def close(self) -> None:
         """
-        Update the temporary or permanent speed calibration offset for the motor.
-
-        Args:
-            value: New speed offset for calibration.
-            persist: Whether the change should persist across resets.
-
-        Returns:
-            The updated speed offset.
+        Close the underlying resources.
         """
-        self.speed_offset = value
-        if persist:
-            self.calibration_speed_offset = value
-        return self.speed_offset
-
-    def reset_calibration_speed(self) -> float:
-        """
-        Restore the speed calibration offset to its default state.
-
-        Returns:
-            The reset speed offset.
-        """
-        self.speed_offset = self.calibration_speed_offset
-        return self.speed_offset
-
-    def update_calibration_direction(
-        self, value: MotorDirection, persist=False
-    ) -> MotorDirection:
-        """
-        Update the temporary or permanent direction calibration for the motor.
-
-        Args:
-            value: New calibration direction (+1 or -1).
-            persist: Whether the change should persist across resets.
-
-        Returns:
-            The updated direction calibration.
-        """
-        if value not in (1, -1):
-            raise MotorValidationError("Calibration value must be 1 or -1.")
-
-        self.direction = value
-
-        if persist:
-            self.calibration_direction = value
-        return self.direction
-
-    def reset_calibration_direction(self) -> MotorDirection:
-        """
-        Restore the direction calibration to its default state.
-
-        Returns:
-            The reset direction calibration.
-        """
-        self.direction = self.calibration_direction
-        return self.calibration_direction
-
-    def reset_calibration(self) -> None:
-        """
-        Reset both the speed and direction calibrations to their default states.
-        """
-        self.reset_calibration_direction()
-        self.reset_calibration_speed()
+        self.speed_pin.close()
+        self.direction_pin.close()
 
     def __repr__(self):
         """

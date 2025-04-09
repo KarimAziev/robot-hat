@@ -1,13 +1,10 @@
 import logging
 import time
-from typing import TYPE_CHECKING
 
 from robot_hat.motor.config import MotorDirection
+from robot_hat.motor.motor_abc import MotorABC
 
 logger = logging.getLogger(__name__)
-
-if TYPE_CHECKING:
-    from robot_hat.motor.motor import Motor
 
 
 class MotorService:
@@ -51,7 +48,7 @@ class MotorService:
     ```
     """
 
-    def __init__(self, left_motor: "Motor", right_motor: "Motor"):
+    def __init__(self, left_motor: "MotorABC", right_motor: "MotorABC"):
         """
         Initialize the MotorService.
         """
