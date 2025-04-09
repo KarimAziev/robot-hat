@@ -75,13 +75,13 @@ class PCA9685(PWMDriverABC):
 
         self._write(PCA9685Register.MODE1, 0x00)
 
-    def _write(self, reg: PCA9685Register, value: int) -> None:
+    def _write(self, reg: int, value: int) -> None:
         """
         Write an 8-bit value to the specified register.
 
         Args:
 
-        `reg`:    The register (from PCA9685Register enum).
+        `reg`:    The register.
         `value`:  The 8-bit value to write.
         """
         try:
@@ -153,10 +153,10 @@ class PCA9685(PWMDriverABC):
         `off`:      The count when the signal turns off.
         """
         base_addr: int = int(PCA9685Register.LED0_ON_L) + 4 * channel
-        self._write(PCA9685Register(base_addr), on & 0xFF)
-        self._write(PCA9685Register(base_addr + 1), on >> 8)
-        self._write(PCA9685Register(base_addr + 2), off & 0xFF)
-        self._write(PCA9685Register(base_addr + 3), off >> 8)
+        self._write(base_addr, on & 0xFF)
+        self._write(base_addr + 1, on >> 8)
+        self._write(base_addr + 2, off & 0xFF)
+        self._write(base_addr + 3, off >> 8)
         logger.debug("Channel: %d, LED_ON: %d, LED_OFF: %d", channel, on, off)
 
     def set_servo_pulse(self, channel: int, pulse: int) -> None:
