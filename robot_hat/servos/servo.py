@@ -186,14 +186,12 @@ if __name__ == "__main__":
     )
 
     try:
-        # Initialize the PCA9685 driver as a context manager.
+
         with PCA9685(address=args.address, bus_num=args.bus) as pwm_driver:
             # Set the PWM frequency.
             pwm_driver.set_pwm_freq(args.frequency)
-            # Create a Servo instance on the specified channel.
-            servo = Servo(driver=pwm_driver, channel=args.channel)
 
-            # Continuously sweep the servo between the two angle limits.
+            servo = Servo(driver=pwm_driver, channel=args.channel)
             while True:
                 # Sweep from min_angle to max_angle
                 for angle in range(args.min_angle, args.max_angle + 1, args.step):

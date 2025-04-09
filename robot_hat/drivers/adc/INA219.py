@@ -105,10 +105,10 @@ class INA219:
 
     def __init__(
         self,
-        i2c_bus: int = 1,
+        bus_num: int = 1,
         address: int = 0x41,
         config: Optional[INA219Config] = None,
-        bus_instance: Union[SMBusSingleton, SMBus, None] = None,
+        bus: Union[SMBusSingleton, SMBus, None] = None,
     ) -> None:
         """
         Initialize the INA219 sensor.
@@ -121,7 +121,16 @@ class INA219:
         """
         self.addr = address
         self.config = config if config is not None else INA219Config()
-        self.bus = bus_instance if bus_instance is not None else SMBus(i2c_bus)
+
+        self._bus_num: int = bus_num
+        if bus is None:
+            self.bus = SMBus(bus_num)
+            self._own_bus: bool = True
+            logger.debug("Created own SMBus on bus %d", bus_num)
+        else:
+            self.bus = bus
+            self._own_bus = False
+            logger.debug("Using injected SMBus instance")
 
         # Calibration parameters:
         self._current_lsb: float = self.config.current_lsb  # in mA per bit.
@@ -253,6 +262,14 @@ class INA219:
         self._power_lsb = new_config.power_lsb
 
         self._apply_configuration()
+
+    def close(self) -> None:
+        """
+        Close the underlying resources.
+        """
+        if self._own_bus:
+            logger.debug("Closing SMBus on bus %d", self._bus_num)
+            self.bus.close()
 
 
 if __name__ == "__main__":

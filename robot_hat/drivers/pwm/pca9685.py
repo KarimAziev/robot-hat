@@ -10,9 +10,10 @@ import os
 import time
 from enum import IntEnum
 from types import TracebackType
-from typing import Optional, Type
+from typing import Optional, Type, Union
 
 from robot_hat.drivers.pwm.pwm_driver_abc import PWMDriverABC
+from robot_hat.smbus_singleton import SMBus as SMBusSingleton
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,10 @@ class PCA9685(PWMDriverABC):
     """
 
     def __init__(
-        self, address: int, bus_num: int = 1, bus: Optional[SMBus] = None
+        self,
+        address: int,
+        bus_num: int = 1,
+        bus: Optional[Union[SMBusSingleton, SMBus]] = None,
     ) -> None:
         """
         Initialize the PCA9685.

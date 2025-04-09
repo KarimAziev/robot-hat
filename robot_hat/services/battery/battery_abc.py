@@ -8,3 +8,10 @@ class BatteryABC(ABC):
         Get the battery voltage in volts.
         """
         pass
+
+    @abstractmethod
+    def close(self) -> None:
+        """
+        Close the underlying resources.
+        """
+        pass

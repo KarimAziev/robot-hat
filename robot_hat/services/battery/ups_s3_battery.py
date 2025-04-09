@@ -16,10 +16,10 @@ class Battery(INA219, BatteryABC):
 
     def __init__(
         self,
-        i2c_bus: int = 1,
+        bus_num: int = 1,
         address: int = 0x41,
         config: Optional[INA219Config] = None,
-        bus_instance: Union[SMBusSingleton, SMBus, None] = None,
+        bus: Union[SMBusSingleton, SMBus, None] = None,
         *args,
         **kwargs,
     ):
@@ -27,10 +27,10 @@ class Battery(INA219, BatteryABC):
         Initialize the Battery object.
         """
         super().__init__(
-            i2c_bus=i2c_bus,
+            bus_num=bus_num,
             address=address,
             config=config,
-            bus_instance=bus_instance,
+            bus=bus,
             *args,
             **kwargs,
         )
