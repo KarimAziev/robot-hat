@@ -42,14 +42,18 @@ class DCMotor(MotorCalibration, MotorABC):
             calibration_speed_offset=calibration_speed_offset,
         )
         self.max_speed = max_speed
-        self.speed: float = 0
         self.name = name or f"F{forward_pin}-B{backward_pin}-P{pwm_pin}"
+        self._speed: float = 0
         self._motor = Motor(
             forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=True
         )
         logger.debug(
             f"Initialized motor {self.name} with forward_pin={forward_pin}, backward_pin={backward_pin}, pwm_pin={pwm_pin}"
         )
+
+    @property
+    def speed(self) -> float:
+        return self._speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -84,7 +88,7 @@ class DCMotor(MotorCalibration, MotorABC):
         else:
             self.stop()
 
-        self.speed = speed
+        self._speed = speed
 
     def stop(self):
         """
@@ -92,7 +96,7 @@ class DCMotor(MotorCalibration, MotorABC):
         """
         logger.debug("Motor stopped.")
         self._motor.stop()
-        self.speed = 0
+        self._speed = 0
 
     def close(self):
         """

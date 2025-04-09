@@ -66,7 +66,11 @@ class Motor(MotorCalibration, MotorABC):
             self._apply_pwm_speed_correction,
             self._convert_speed_to_pwm,
         )
-        self.speed: float = 0
+        self._speed: float = 0
+
+    @property
+    def speed(self) -> float:
+        return self._speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -145,7 +149,7 @@ class Motor(MotorCalibration, MotorABC):
             f"direction: {'reverse' if direction == -1 else 'forward'}"
         )
 
-        self.speed = speed
+        self._speed = speed
 
     def stop(self) -> None:
         """
@@ -154,7 +158,7 @@ class Motor(MotorCalibration, MotorABC):
         Ensures the PWM output is set to 0, bringing the motor to a halt.
         """
         self.speed_pin.pulse_width_percent(0)
-        self.speed = 0
+        self._speed = 0
         logger.debug(self._log_prefix + "stopped")
 
     def close(self) -> None:
