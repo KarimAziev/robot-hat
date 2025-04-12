@@ -49,8 +49,9 @@ class PCA9685(PWMDriverABC):
     def __init__(
         self,
         address: int,
-        bus_num: int = 1,
-        bus: Optional[Union[SMBusSingleton, SMBus]] = None,
+        bus: Union[int, SMBus, SMBusSingleton] = 1,
+        period: int = 4096,
+        frame_width: Optional[int] = 20000,
     ) -> None:
         """
         Initialize the PCA9685.
@@ -58,15 +59,18 @@ class PCA9685(PWMDriverABC):
         Args:
 
         `address`:  I2C address of the PCA9685.
-        `bus_num`:  The I2C bus number (default is 1). Only used if bus is not provided.
-        `bus`:      An already created instance of SMBus. If None, a new bus is created.
+        `bus`:      The I2C bus number (default is 1) or an already created instance of SMBus.
+        `frame_width`: The length of time in microseconds (µs) between servo control pulses.
+        `period`: The number of discrete steps per PWM cycle, determining the resolution of the PWM signal.
         """
         self._address: int = address
-        self._bus_num: int = bus_num
-        if bus is None:
-            self._bus = SMBus(bus_num)
+        self._period = period
+        self._frame_width = frame_width if frame_width is not None else 20000
+        if isinstance(bus, int):
+            self._bus_num = bus
+            self._bus = SMBus(bus)
             self._own_bus: bool = True
-            logger.debug("Created own SMBus on bus %d", bus_num)
+            logger.debug("Created own SMBus on bus %d", bus)
         else:
             self._bus = bus
             self._own_bus = False
@@ -125,7 +129,7 @@ class PCA9685(PWMDriverABC):
         """
         # Calculate and set the prescaler.
         prescaleval: float = 25000000.0  # 25MHz oscillator
-        prescaleval /= 4096.0  # 12-bit
+        prescaleval /= self._period  # 12-bit
         prescaleval /= float(freq)
         prescaleval -= 1.0
         logger.debug("Setting PWM frequency to %d Hz", freq)
@@ -167,7 +171,7 @@ class PCA9685(PWMDriverABC):
         `pulse`    The pulse length in microseconds.
         """
         # With a 50Hz PWM frequency, the period is 20000 µs.
-        pulse_val: float = pulse * 4096 / 20000
+        pulse_val: float = pulse * self._period / self._frame_width
         self.set_pwm(channel, 0, int(pulse_val))
 
     def close(self) -> None:
@@ -213,7 +217,7 @@ if __name__ == "__main__":
     )
     # Example usage: sweep servo on channel 0
     try:
-        with PCA9685(0x40, bus_num=1) as pwm:
+        with PCA9685(0x40, bus=1) as pwm:
             pwm.set_pwm_freq(50)
             while True:
                 # Increase pulse width from 500µs to 2500µs.

@@ -114,6 +114,13 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(
             description="Demo: Sweep a servo using a PCA9685 driver."
         )
+
+        parser.add_argument(
+            "--driver",
+            default="PCA9685",
+            choices=["PCA9685", "Sunfounder"],
+            help="PWM driver to use.",
+        )
         parser.add_argument(
             "--address",
             type=lambda x: int(x, 0),
@@ -166,12 +173,24 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
-    # Example with PCA9685 driver, but any driver meeting the PWMDriverABC contract can be substituted
+    from typing import Dict, Type
+
     from robot_hat.drivers.pwm.pca9685 import PCA9685
+    from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
+
+    drivers: Dict[str, Union[Type[PCA9685], Type[SunfounderPWM]]] = {
+        "PCA9685": PCA9685,
+        "Sunfounder": SunfounderPWM,
+    }
+
+    driver_name: str = args.driver
+
+    driver = drivers[driver_name]
 
     logging.info("Starting servo sweep demo with the following parameters:")
     logging.info(
-        "I2C address: 0x%x, Bus: %d, Frequency: %0.1f Hz, Channel: %d",
+        "Driver: %s, I2C address: 0x%x, Bus: %d, Frequency: %0.1f Hz, Channel: %d",
+        driver_name,
         args.address,
         args.bus,
         args.frequency,
@@ -187,8 +206,7 @@ if __name__ == "__main__":
 
     try:
 
-        with PCA9685(address=args.address, bus_num=args.bus) as pwm_driver:
-            # Set the PWM frequency.
+        with driver(address=args.address, bus=args.bus) as pwm_driver:
             pwm_driver.set_pwm_freq(args.frequency)
 
             servo = Servo(driver=pwm_driver, channel=args.channel)
