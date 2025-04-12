@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, cast
+from typing import Optional, Union, cast
 
 from gpiozero import Motor
 
@@ -18,9 +18,9 @@ class DCMotor(MotorCalibration, MotorABC):
 
     def __init__(
         self,
-        forward_pin: int,
-        backward_pin: int,
-        pwm_pin: int,
+        forward_pin: Union[int, str],
+        backward_pin: Union[int, str],
+        pwm_pin: Union[int, str, None],
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
