@@ -1,8 +1,6 @@
 import logging
 from typing import Optional, Union, cast
 
-from gpiozero import Motor
-
 from robot_hat.motor.config import MotorDirection
 from robot_hat.motor.motor_abc import MotorABC
 from robot_hat.motor.motor_calibration import MotorCalibration
@@ -21,6 +19,7 @@ class DCMotor(MotorCalibration, MotorABC):
         forward_pin: Union[int, str],
         backward_pin: Union[int, str],
         pwm_pin: Union[int, str, None],
+        pwm=True,
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
@@ -33,19 +32,24 @@ class DCMotor(MotorCalibration, MotorABC):
             forward_pin: GPIO pin for forward direction.
             backward_pin: GPIO pin for reverse direction.
             pwm_pin: PWM (enable) pin for speed control.
+            pwm: Whether to construct PWM Output Device instances, allowing both direction
+                 and speed control.
             calibration_direction: Initial calibration for the motor direction (+1 or -1).
             calibration_speed_offset: Adjustment for the motor speed calibration.
             name: Optional identifier for the motor for logging and debugging.
         """
+        from gpiozero import Motor
+
         super().__init__(
             calibration_direction=calibration_direction,
             calibration_speed_offset=calibration_speed_offset,
         )
+        self._pwm = pwm
         self.max_speed = max_speed
         self.name = name or f"F{forward_pin}-B{backward_pin}-P{pwm_pin}"
         self._speed: float = 0
         self._motor = Motor(
-            forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=True
+            forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=pwm
         )
         logger.debug(
             f"Initialized motor {self.name} with forward_pin={forward_pin}, backward_pin={backward_pin}, pwm_pin={pwm_pin}"
@@ -69,22 +73,33 @@ class DCMotor(MotorCalibration, MotorABC):
 
     def set_speed(self, speed: float):
         """
-        Set the motor's speed and direction. Accepts values in the interval [-100, 100].
-        A positive value makes the motor rotate forward, a negative value in reverse,
-        and 0 stops the motor.
+        Set the motor's speed and direction. Accepts any speed in the interval
+        [-max_speed, max_speed] and converts the value to a 0.0 to 1.0 range for gpiozero.
+        If PWM is disabled, the motor is simply set to full forward (1), full backward (-1)
+        or stopped (0).
 
         Args:
-            speed: Target speed percentage within the range [-100, 100].
+            speed: Target speed percentage within [-max_speed, max_speed].
         """
         speed = self._apply_speed_correction(speed)
         if speed > 0:
-            adj = speed / 100
-            logger.debug(f"Motor set forward with speed {speed}% ({adj}).")
-            self._motor.forward(cast(int, adj))
+            if self._pwm:
+                scale = speed / self.max_speed
+                logger.debug(f"Motor set forward: {speed} (scaled {scale:.2f}).")
+                self._motor.forward(cast(int, scale))
+            else:
+                logger.debug(f"Motor set full forward (digital).")
+                speed = self.max_speed
+                self._motor.forward(1)
         elif speed < 0:
-            adj = abs(speed) / 100
-            logger.debug(f"Motor set backward with speed {speed}% ({adj}).")
-            self._motor.backward(cast(int, adj))
+            if self._pwm:
+                scale = abs(speed) / self.max_speed
+                logger.debug(f"Motor set backward: {speed} (scaled {scale:.2f}).")
+                self._motor.backward(cast(int, scale))
+            else:
+                logger.debug(f"Motor set full backward (digital).")
+                speed = self.max_speed
+                self._motor.backward(1)
         else:
             self.stop()
 
@@ -109,8 +124,25 @@ def main():
     import argparse
     from time import sleep
 
+    from robot_hat.utils import setup_env_vars
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
+    is_raspberry = setup_env_vars()
+    default_left_pwm = 12 if is_raspberry else None
+    right_default_pwm = 26 if is_raspberry else None
+
     parser = argparse.ArgumentParser(
         description="DCMotor test sequence using configurable GPIO pins and test parameters."
+    )
+
+    parser.add_argument(
+        "--left-pwm",
+        action="store_true",
+        help="Enable PWM",
     )
 
     parser.add_argument(
@@ -126,10 +158,10 @@ def main():
         help="GPIO pin for backward direction for left motor (default: 13)",
     )
     parser.add_argument(
-        "--left-pwm",
+        "--left-pwm-pin",
         type=int,
-        default=12,
-        help="GPIO PWM (enable) pin for left motor (default: 12)",
+        default=default_left_pwm,
+        help="GPIO PWM (enable) pin for left motor",
     )
 
     parser.add_argument(
@@ -146,9 +178,14 @@ def main():
     )
     parser.add_argument(
         "--right-pwm",
+        action="store_true",
+        help="Enable PWM",
+    )
+    parser.add_argument(
+        "--right-pwm-pin",
         type=int,
-        default=26,
-        help="GPIO PWM (enable) pin for right motor (default: 26)",
+        default=right_default_pwm,
+        help="GPIO PWM (enable) pin for right motor",
     )
 
     parser.add_argument(
@@ -193,47 +230,51 @@ def main():
     motorA = DCMotor(
         forward_pin=args.left_forward,
         backward_pin=args.left_backward,
-        pwm_pin=args.left_pwm,
+        pwm_pin=args.left_pwm_pin,
+        pwm=args.left_pwm,
         name="left",
     )
     motorB = DCMotor(
         forward_pin=args.right_forward,
         backward_pin=args.right_backward,
-        pwm_pin=args.right_pwm,
+        pwm_pin=args.right_pwm_pin,
+        pwm=args.right_pwm,
         name="right",
     )
 
-    print("Motor test sequence starting. Press CTRL+C to exit.")
+    logger.info("Motor test sequence starting. Press CTRL+C to exit.")
 
     try:
         while True:
-            print(f"Motors running forward at {args.forward_speed1}% speed.")
+            logger.info(f"Motors running forward at {args.forward_speed1}% speed.")
             motorA.set_speed(args.forward_speed1)
             motorB.set_speed(args.forward_speed1)
             sleep(args.forward_duration)
 
-            print(f"Motors running forward at {args.forward_speed2}% speed.")
+            logger.info(f"Motors running forward at {args.forward_speed2}% speed.")
             motorA.set_speed(args.forward_speed2)
             motorB.set_speed(args.forward_speed2)
             sleep(args.forward_duration)
 
-            print("Stopping motors.")
+            logger.info("Stopping motors.")
             motorA.stop()
             motorB.stop()
             sleep(args.pause)
 
-            print(f"Motors running backward at {abs(args.backward_speed)}% speed.")
+            logger.info(
+                f"Motors running backward at {abs(args.backward_speed)}% speed."
+            )
             motorA.set_speed(args.backward_speed)
             motorB.set_speed(args.backward_speed)
             sleep(args.backward_duration)
 
-            print("Stopping motors.")
+            logger.info("Stopping motors.")
             motorA.stop()
             motorB.stop()
             sleep(args.pause)
 
     except KeyboardInterrupt:
-        print("Exiting and cleaning up GPIO...")
+        logger.info("Exiting and cleaning up GPIO...")
 
     finally:
         motorA.stop()
