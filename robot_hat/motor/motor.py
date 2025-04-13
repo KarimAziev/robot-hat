@@ -4,7 +4,7 @@ abstracted PWM driver (often over I²C).
 """
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 
 from robot_hat.drivers.pwm.sunfounder_pwm import PWMDriverABC
 from robot_hat.exceptions import InvalidChannelName
@@ -43,7 +43,7 @@ class HBridgeMotor(MotorCalibration, MotorABC):
         self,
         dir_pin: "Pin",
         driver: "PWMDriverABC",
-        channel: int,
+        channel: Union[int, str],
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
