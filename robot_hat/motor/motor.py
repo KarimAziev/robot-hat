@@ -7,10 +7,11 @@ import logging
 from typing import TYPE_CHECKING, Optional
 
 from robot_hat.drivers.pwm.sunfounder_pwm import PWMDriverABC
+from robot_hat.exceptions import InvalidChannelName
 from robot_hat.motor.config import MotorDirection
 from robot_hat.motor.motor_abc import MotorABC
 from robot_hat.motor.motor_calibration import MotorCalibration
-from robot_hat.utils import constrain
+from robot_hat.utils import constrain, validate_pwm_channel_name
 
 if TYPE_CHECKING:
     from robot_hat import Pin
@@ -41,8 +42,8 @@ class HBridgeMotor(MotorCalibration, MotorABC):
     def __init__(
         self,
         dir_pin: "Pin",
-        pwm_driver: "PWMDriverABC",
-        pwm_channel: int,
+        driver: "PWMDriverABC",
+        channel: int,
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
@@ -55,9 +56,9 @@ class HBridgeMotor(MotorCalibration, MotorABC):
         Args:
             dir_pin: A digital output pin used to control the motor's direction.
               You must supply an object that has high() and low() methods.
-            pwm_driver: A PWM driver instance (e.g. SunfounderPWM, PCA9685, etc.)
+            driver: A PWM driver instance (e.g. SunfounderPWM, PCA9685, etc.)
               that implements PWMDriverABC.
-            pwm_channel: The channel number (e.g. 0–19) on the PWM driver to use.
+            channel: The channel number (e.g. 0–19) on the PWM driver to use.
             calibration_direction: Calibration factor for the motor direction (+1 or -1).
             calibration_speed_offset: Speed offset for calibration purposes.
             max_speed: Maximum speed value (interpreted as 100% duty cycle).
@@ -68,14 +69,24 @@ class HBridgeMotor(MotorCalibration, MotorABC):
             calibration_direction=calibration_direction,
             calibration_speed_offset=calibration_speed_offset,
         )
+        if isinstance(channel, str):
+            if not validate_pwm_channel_name(channel):
+                raise InvalidChannelName(
+                    f"Invalid PWM channel's name {channel}. "
+                    "The channel name must start with 'P' followed by one or more digits."
+                )
+            self.channel = int(channel[1:])
+
+        else:
+            self.channel = channel
+
         self.direction_pin = dir_pin
-        self.pwm_driver = pwm_driver
-        self.pwm_channel = pwm_channel
+        self.driver = driver
         self.max_speed = max_speed
-        self.name = name or f"Motor_channel_{pwm_channel}"
+        self.name = name or f"Motor_channel_{channel}"
         self._speed: float = 0
 
-        self.pwm_driver.set_pwm_freq(frequency)
+        self.driver.set_pwm_freq(frequency)
         logger.debug(f"{self.name}: PWM frequency set to {frequency} Hz.")
 
     @property
@@ -116,7 +127,7 @@ class HBridgeMotor(MotorCalibration, MotorABC):
             self.direction_pin.high()
             logger.debug(f"{self.name}: set direction to reverse.")
 
-        self.pwm_driver.set_pwm_duty_cycle(self.pwm_channel, duty)
+        self.driver.set_pwm_duty_cycle(self.channel, duty)
         logger.debug(f"{self.name}: speed set to {speed}% (duty cycle {duty}%).")
         self._speed = speed
 
@@ -124,7 +135,7 @@ class HBridgeMotor(MotorCalibration, MotorABC):
         """
         Stop the motor by setting the PWM duty cycle to 0.
         """
-        self.pwm_driver.set_pwm_duty_cycle(self.pwm_channel, 0)
+        self.driver.set_pwm_duty_cycle(self.channel, 0)
         self._speed = 0
         logger.debug(f"{self.name}: motor stopped.")
 
@@ -132,7 +143,7 @@ class HBridgeMotor(MotorCalibration, MotorABC):
         """
         Clean up resources by closing both the PWM driver and the direction pin.
         """
-        self.pwm_driver.close()
+        self.driver.close()
         self.direction_pin.close()
         logger.debug(f"{self.name}: resources closed.")
 
