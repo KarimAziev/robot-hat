@@ -22,7 +22,7 @@ from .grayscale import Grayscale
 from .i2c import I2C
 from .mock.ultrasonic import Ultrasonic as UltrasonicMock
 from .motor.config import MotorConfig, MotorDirection
-from .motor.motor import Motor
+from .motor.motor import HBridgeMotor as Motor
 from .motor.motor_fabric import MotorFabric
 from .music import Music
 from .pin import Pin

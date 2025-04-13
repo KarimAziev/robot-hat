@@ -40,6 +40,17 @@ class PWMDriverABC(ABC):
         """
         pass
 
+    @abstractmethod
+    def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
+        """
+        Set the PWM duty cycle for a specific channel.
+
+        Args:
+            channel: The channel number.
+            duty: The duty cycle as a percentage.
+        """
+        pass
+
     def __enter__(self) -> "PWMDriverABC":
         """
         Optional: Provide support for context managers.

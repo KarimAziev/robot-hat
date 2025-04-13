@@ -1,3 +1,9 @@
+"""
+Sunfounder PWM Driver
+
+This driver controls all channels on a Sunfounder PWM device via I2C.
+"""
+
 import logging
 import math
 import os
@@ -56,6 +62,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
             frame_width: The total frame width (in µs) that is used by a servo (for pulse width conversion).
         """
         self._frame_width = frame_width
+        self._arr: int = 4096
 
         if isinstance(bus, int):
             self._bus_num = bus
@@ -74,7 +81,6 @@ class SunfounderPWM(I2C, PWMDriverABC):
 
         self._freq = 50
         self._prescaler = None
-        self._arr = None
 
         self.set_pwm_freq(50)
 
@@ -183,6 +189,32 @@ class SunfounderPWM(I2C, PWMDriverABC):
             reg,
         )
         self._i2c_write(reg, pulse)
+
+    def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
+        """
+        Set the PWM duty cycle for a specific channel.
+
+        Args:
+            channel: The PWM channel number (0–19).
+            duty: The duty cycle as a percentage (0 - 100).
+
+        The duty cycle is converted into a pulse value based on the period (ARR)
+        computed by set_pwm_freq(), then written to the channel register.
+        """
+        if not (0 <= duty <= 100):
+            raise ValueError(f"Duty cycle must be between 0 and 100, got {duty}.")
+
+        assert self._arr is not None, "set_pwm_freq() must be called first"
+
+        pulse_val = int((duty / 100.0) * self._arr)
+        logger.debug(
+            "Setting duty cycle %.1f%% on channel %d (pulse=%d out of %d)",
+            duty,
+            channel,
+            pulse_val,
+            self._arr,
+        )
+        self._i2c_write(self.REG_CHN + channel, pulse_val)
 
     def close(self) -> None:
         """

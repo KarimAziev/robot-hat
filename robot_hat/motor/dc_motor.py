@@ -1,3 +1,16 @@
+"""
+The DCMotor class is intended for cases where a motor is controlled directly via
+GPIO pins.
+
+It typically uses one or more GPIO pins to drive the motor in forward or
+reverse direction, and, if available, an RPi.GPIO.PWM instance for speed
+control.
+
+This class is suitable when the motor driver board (e.g., a
+Waveshare/MC33886-based module) does not require or use an external PWM driver
+and is controlled entirely through direct GPIO calls.
+"""
+
 import logging
 from typing import Optional, Union, cast
 
@@ -11,7 +24,20 @@ logger = logging.getLogger(__name__)
 
 class DCMotor(MotorCalibration, MotorABC):
     """
-    A concrete motor implementation for the RPi Motor Driver board.
+    This implementation controls a motor using direct GPIO control. It drives the motor by toggling
+    GPIO output pins for forward and reverse directions.
+
+    If speed control is desired and available, an RPi.GPIO.PWM object can be
+    used in conjunction with the direction pins.
+
+    Use Case:
+      - Ideal for hardware setups (like the Waveshare MC33886 module) that do not rely on a dedicated PWM
+        driver.
+      - The motor is controlled entirely via direct GPIO calls, and no I²C address or external PWM driver is needed.
+
+    Example wiring:
+      - Two GPIO pins are used for direction control (one for forward, one for reverse).
+      - Optionally, a third GPIO pin can be used to generate PWM (using RPi.GPIO.PWM) for variable speed.
     """
 
     def __init__(

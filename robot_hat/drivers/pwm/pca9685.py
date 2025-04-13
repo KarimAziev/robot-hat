@@ -182,6 +182,29 @@ class PCA9685(PWMDriverABC):
             logger.debug("Closing SMBus on bus %d", self._bus_num)
             self._bus.close()
 
+    def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
+        """
+        Set the PWM duty cycle for a specific channel.
+
+        Args:
+            channel: The channel number (0-15).
+            duty: The duty cycle as a percentage (0 - 100).
+
+        The duty is converted to a value in the range [0, _period] and then set
+        using the set_pwm() method.
+        """
+        if not (0 <= duty <= 100):
+            raise ValueError(f"Duty cycle must be between 0 and 100, got {duty}.")
+        pulse_val: int = int((duty / 100.0) * self._period)
+        logger.debug(
+            "Setting duty cycle %.1f%% on channel %d (pulse=%d out of %d)",
+            duty,
+            channel,
+            pulse_val,
+            self._period,
+        )
+        self.set_pwm(channel, 0, pulse_val)
+
     def __enter__(self) -> "PCA9685":
         """
         Enable use as a context manager.
