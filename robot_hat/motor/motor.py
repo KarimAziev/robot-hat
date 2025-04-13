@@ -37,8 +37,8 @@ class Motor(MotorCalibration, MotorABC):
         Initialize the motor instance.
 
         Args:
-            dir_pin: Pin used to control motor direction.
-            pwm_pin: Pin used to control motor speed via PWM.
+            dir_pin: Pin used to control motor direction. Also called phase pin.
+            pwm_pin: Pin used to control motor speed via PWM. Also called speed pin.
             calibration_direction: Initial calibration for the motor direction (+1 or -1).
             calibration_speed_offset: Adjustment for the motor speed calibration.
             max_speed: Maximum allowable speed percentage for the motor.

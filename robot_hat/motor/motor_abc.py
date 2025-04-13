@@ -13,6 +13,26 @@ class MotorABC(ABC):
 
     @property
     @abstractmethod
+    def direction(self) -> MotorDirection:
+        pass
+
+    @property
+    @abstractmethod
+    def calibration_direction(self) -> MotorDirection:
+        pass
+
+    @property
+    @abstractmethod
+    def calibration_speed_offset(self) -> float:
+        pass
+
+    @property
+    @abstractmethod
+    def speed_offset(self) -> float:
+        pass
+
+    @property
+    @abstractmethod
     def speed(self) -> float:
         pass
 

@@ -5,8 +5,6 @@ A wrapper for servos driven directly via Raspberry Pi GPIO (using gpiozero's Ang
 import logging
 from typing import Union, cast
 
-from gpiozero import AngularServo
-
 from robot_hat.servos.servo_abc import ServoABC
 
 logger = logging.getLogger(__name__)
@@ -52,6 +50,8 @@ class GPIOAngularServo(ServoABC):
             min_pulse: The pulse width (in microseconds) corresponding to min_angle.
             max_pulse: The pulse width (in microseconds) corresponding to max_angle.
         """
+        from gpiozero import AngularServo
+
         self.pin = pin
         self.min_angle = min_angle
         self.max_angle = max_angle

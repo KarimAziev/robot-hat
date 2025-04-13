@@ -7,13 +7,19 @@ logger = logging.getLogger(__name__)
 
 
 class MotorCalibration:
+    _direction: MotorDirection
+    _calibration_direction: MotorDirection
+    _calibration_speed_offset: float
+    _speed_offset: float
+
     def __init__(
         self,
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
     ):
-        self.direction: MotorDirection = calibration_direction
-        self.calibration_direction: MotorDirection = calibration_direction
+
+        self.direction = calibration_direction
+        self.calibration_direction = calibration_direction
         self.calibration_speed_offset = calibration_speed_offset
         self.speed_offset = calibration_speed_offset
 
@@ -32,6 +38,48 @@ class MotorCalibration:
         if persist:
             self.calibration_speed_offset = value
         return self.speed_offset
+
+    @property
+    def direction(self) -> MotorDirection:
+        """
+        Return current motor direction.
+        """
+        return self._direction
+
+    @direction.setter
+    def direction(self, value: MotorDirection) -> None:
+        if value not in (1, -1):
+            raise MotorValidationError("Calibration value must be 1 or -1.")
+        self._direction = value
+
+    @property
+    def calibration_direction(self) -> MotorDirection:
+        """
+        Return persisted motor direction.
+        """
+        return self._calibration_direction
+
+    @calibration_direction.setter
+    def calibration_direction(self, value: MotorDirection) -> None:
+        if value not in (1, -1):
+            raise MotorValidationError("Calibration value must be 1 or -1.")
+        self._calibration_direction = value
+
+    @property
+    def calibration_speed_offset(self) -> float:
+        return self._calibration_speed_offset
+
+    @calibration_speed_offset.setter
+    def calibration_speed_offset(self, value: float):
+        self._calibration_speed_offset = value
+
+    @property
+    def speed_offset(self) -> float:
+        return self._speed_offset
+
+    @speed_offset.setter
+    def speed_offset(self, value: float):
+        self._speed_offset = value
 
     def reset_calibration_speed(self) -> float:
         """
@@ -56,9 +104,6 @@ class MotorCalibration:
         Returns:
             The updated direction calibration.
         """
-        if value not in (1, -1):
-            raise MotorValidationError("Calibration value must be 1 or -1.")
-
         self.direction = value
 
         if persist:
