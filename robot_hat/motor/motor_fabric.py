@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Optional, Tuple
 from robot_hat.pin import Pin
 from robot_hat.pwm import PWM
 
-from .motor import Motor
+from .motor import HBridgeMotor
 
 if TYPE_CHECKING:
     from .config import MotorConfig
@@ -19,19 +19,19 @@ class MotorFabric:
         config: "MotorConfig",
         pwm_pin: Optional[PWM] = None,
         dir_pin: Optional[Pin] = None,
-    ) -> Motor:
+    ) -> HBridgeMotor:
         """
         Create a motor instance from a MotorConfig.
 
         This method takes a `MotorConfig` object defining the initialization parameters
         for a motor (e.g., pins, calibration settings, and speed constraints) and returns
-        a fully configured `Motor` instance.
+        a fully configured `HBridgeMotor` instance.
 
         Args:
             config (MotorConfig): The motor configuration object (e.g., pin mappings, calibration).
 
         Returns:
-            Motor: A new motor instance configured as per the MotorConfig.
+            HBridgeMotor: A new motor instance configured as per the MotorConfig.
 
         Example:
         --------------
@@ -43,7 +43,7 @@ class MotorFabric:
         motor = MotorFabric.create_motor(motor_config)
         ```
         """
-        return Motor(
+        return HBridgeMotor(
             dir_pin=dir_pin or Pin(config.dir_pin),
             pwm_pin=pwm_pin or PWM(config.pwm_pin),
             calibration_direction=config.calibration_direction,
@@ -57,7 +57,7 @@ class MotorFabric:
     @staticmethod
     def create_motor_pair(
         left_config: "MotorConfig", right_config: "MotorConfig"
-    ) -> Tuple[Motor, Motor]:
+    ) -> Tuple[HBridgeMotor, HBridgeMotor]:
         """
         Create a pair of motors (left and right) using their configurations.
 
@@ -69,7 +69,7 @@ class MotorFabric:
             right_config (MotorConfig): Configuration for the right motor.
 
         Returns:
-            Tuple[Motor, Motor]: A tuple containing the `left_motor` and `right_motor` instances.
+            Tuple[HBridgeMotor, HBridgeMotor]: A tuple containing the `left_motor` and `right_motor` instances.
 
         Example:
         --------------

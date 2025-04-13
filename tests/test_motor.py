@@ -2,14 +2,14 @@ import unittest
 from unittest.mock import MagicMock
 
 from robot_hat import PWM, Pin
-from robot_hat.motor.motor import Motor
+from robot_hat.motor.motor import HBridgeMotor
 
 
 class TestMotor(unittest.TestCase):
     def setUp(self):
         self.mock_dir_pin = MagicMock(spec=Pin)
         self.mock_pwm_pin = MagicMock(spec=PWM)
-        self.motor = Motor(
+        self.motor = HBridgeMotor(
             dir_pin=self.mock_dir_pin,
             pwm_pin=self.mock_pwm_pin,
             calibration_direction=1,
