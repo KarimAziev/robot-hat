@@ -112,20 +112,32 @@ class DCMotor(MotorCalibration, MotorABC):
             if self._pwm:
                 scale = speed / self.max_speed
                 logger.debug(f"Motor set forward: {speed} (scaled {scale:.2f}).")
-                self._motor.forward(cast(int, scale))
+                if self.direction == -1:
+                    self._motor.backward(cast(int, scale))
+                else:
+                    self._motor.forward(cast(int, scale))
             else:
                 logger.debug(f"Motor set full forward (digital).")
                 speed = self.max_speed
-                self._motor.forward(1)
+                if self.direction == -1:
+                    self._motor.backward(1)
+                else:
+                    self._motor.forward(1)
         elif speed < 0:
             if self._pwm:
                 scale = abs(speed) / self.max_speed
                 logger.debug(f"Motor set backward: {speed} (scaled {scale:.2f}).")
-                self._motor.backward(cast(int, scale))
+                if self.direction == -1:
+                    self._motor.forward(cast(int, scale))
+                else:
+                    self._motor.backward(cast(int, scale))
             else:
                 logger.debug(f"Motor set full backward (digital).")
                 speed = self.max_speed
-                self._motor.backward(1)
+                if self.direction == -1:
+                    self._motor.forward(1)
+                else:
+                    self._motor.backward(1)
         else:
             self.stop()
 
