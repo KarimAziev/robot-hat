@@ -81,6 +81,8 @@ class MotorService:
         - speed (int): The base speed (-100 to 100).
         - direction (int): 1 for forward, -1 for backward.
         """
+        assert self.left_motor
+        assert self.right_motor
         speed1 = speed * direction
         speed2 = -speed * direction
 
@@ -93,6 +95,8 @@ class MotorService:
         """
         Get the average speed of the motors.
         """
+        assert self.left_motor
+        assert self.right_motor
         return round((abs(self.left_motor.speed) + abs(self.right_motor.speed)) / 2)
 
     def update_left_motor_calibration_speed(self, value: float, persist=False) -> float:
@@ -109,6 +113,8 @@ class MotorService:
         Usage:
             >>> controller.update_left_motor_calibration_speed(5, persist=True)
         """
+        assert self.left_motor
+        assert self.right_motor
         return self.left_motor.update_calibration_speed(value, persist)
 
     def update_right_motor_calibration_speed(
@@ -127,6 +133,8 @@ class MotorService:
         Usage:
             >>> controller.update_right_motor_calibration_speed(-3, persist=False)
         """
+        assert self.left_motor
+        assert self.right_motor
         return self.right_motor.update_calibration_speed(value, persist)
 
     def update_right_motor_calibration_direction(
@@ -145,6 +153,7 @@ class MotorService:
         Usage:
             >>> controller.update_left_motor_calibration_direction(-1, persist=True)
         """
+        assert self.right_motor
         return self.right_motor.update_calibration_direction(value, persist)
 
     def update_left_motor_calibration_direction(
@@ -163,6 +172,7 @@ class MotorService:
         Usage:
             >>> controller.update_right_motor_calibration_direction(1, persist=False)
         """
+        assert self.left_motor
         return self.left_motor.update_calibration_direction(value, persist)
 
     def reset_calibration(self) -> None:
@@ -170,18 +180,40 @@ class MotorService:
         Resets the calibration for both the left and right motors, including speed and direction calibration.
         """
         for motor in [self.left_motor, self.right_motor]:
-            motor.reset_calibration_direction()
-            motor.reset_calibration_speed()
+            if motor:
+                motor.reset_calibration_direction()
+                motor.reset_calibration_speed()
 
-    def _stop_all(self):
+    def _stop_all(self) -> None:
         """
         Internal method to stop all motors.
 
         Stops both the left and right motors instantly without additional delays.
         """
-        self.left_motor.stop()
-        self.right_motor.stop()
+        if self.left_motor:
+            self.left_motor.stop()
+        if self.right_motor:
+            self.right_motor.stop()
         self.direction = 0
+
+    def __del__(self) -> None:
+        """
+        Destructor method.
+        """
+        self.close()
+
+    def close(self) -> None:
+        """
+        Clean up any resources.
+        """
+        for motor in [self.left_motor, self.right_motor]:
+            if motor:
+                try:
+                    motor.close()
+                except Exception:
+                    logger.error("Error closing motor")
+        self.right_motor = None
+        self.left_motor = None
 
     def move_with_steering(self, speed: int, direction: int, current_angle=0) -> None:
         """
@@ -216,6 +248,8 @@ class MotorService:
         - direction (int): 1 for forward, -1 for backward.
         - current_angle (int): Steering angle for turning (e.g., -100 to 100).
         """
+        assert self.left_motor
+        assert self.right_motor
 
         speed1 = speed * direction
         speed2 = -speed * direction

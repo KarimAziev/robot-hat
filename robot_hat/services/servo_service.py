@@ -208,6 +208,7 @@ class ServoService:
         >>> servo_service = ServoService("P1", min_angle=-45, max_angle=45, calibration_mode=ServoCalibrationMode.NEGATIVE)
         >>> servo_service.set_angle(30)
         """
+        assert self.servo
         constrained_value = constrain(angle, self.min_angle, self.max_angle)
         calibrated_value = (
             self.calibration_function(angle, self.calibration_offset)
@@ -235,6 +236,7 @@ class ServoService:
         Returns:
             The updated calibration offset.
         """
+        assert self.servo
         logger.debug(
             (
                 (self._log_prefix + " updating and persisting from %s to %s")
@@ -258,12 +260,14 @@ class ServoService:
         Returns:
             The reset direction calibration.
         """
+        assert self.servo
         logger.debug(
             "Resetting calibration offset from %s to %s",
             self.calibration_offset,
             self._persisted_calibration_offset,
         )
         self.calibration_offset = self._persisted_calibration_offset
+
         self.servo.angle(self.calibration_offset)
         return self.calibration_offset
 
@@ -272,6 +276,20 @@ class ServoService:
         Reset servo to its calibrated zero position.
         """
         self.set_angle(0)
+
+    def close(self) -> None:
+        """
+        Close servo.
+        """
+        if self.servo:
+            self.servo.close()
+        self.servo = None
+
+    def __del__(self) -> None:
+        """
+        Destructor method.
+        """
+        self.close()
 
     def __repr__(self):
         """

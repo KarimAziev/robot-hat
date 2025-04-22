@@ -157,6 +157,12 @@ class DCMotor(MotorCalibration, MotorABC):
         """
         self._motor.close()
 
+    def __del__(self) -> None:
+        """
+        Destructor method.
+        """
+        self.close()
+
 
 def main():
     import argparse
