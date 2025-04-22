@@ -60,7 +60,13 @@ class SMBus(metaclass=SingletonMeta):
 
     def close(self) -> None:
         logger.debug("Closing SMBus on bus %s", self._bus)
-        self._smbus.close()
+        try:
+            self._smbus.close()
+        except Exception as err:
+            logger.error("Error closing SMBus: %s", err)
+        cls = self.__class__
+        if cls in cls._instances:
+            del cls._instances[cls]
 
     @RETRY_DECORATOR
     def enable_pec(self, enable: bool = False) -> None:
