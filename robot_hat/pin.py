@@ -19,7 +19,6 @@ from robot_hat.exceptions import (
     InvalidPinInterruptTrigger,
     InvalidPinMode,
     InvalidPinName,
-    InvalidPinNumber,
     InvalidPinPull,
 )
 from robot_hat.pin_descriptions import pin_descriptions
@@ -176,7 +175,7 @@ class Pin(object):
         identifier (integer or string).
 
         Args:
-            pin (Union[int, str]): Pin identifier, either as a GPIO pin number (int) or a named string.
+            pin: Pin identifier, either as a GPIO pin number (int) or a named string.
 
         Raises:
         --------------
@@ -194,18 +193,7 @@ class Pin(object):
             self._board_name = pin
             self._pin_num = pin_num
         elif isinstance(pin, int):
-            names = [i for i in self.dict if self.dict[i] == pin]
-            length = len(names)
-            if length <= 0:
-                msg = f"Pin number is not found in {self.dict.values}"
-                raise InvalidPinNumber(pin)
-            name = names[0]
-            if length > 1:
-                msg = f"Pin number is not found in {self.dict.values}"
-                logger.warning(
-                    f"Multiple pins found for pin '{pin}': {', '.join(names)}  using the {name}"
-                )
-            self._board_name = name
+            self._board_name = f"{pin}"
             self._pin_num = pin
         else:
             msg = f'Invalid PIN: "{pin}"'
