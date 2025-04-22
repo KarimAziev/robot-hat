@@ -237,9 +237,9 @@ class ServoService:
         """
         logger.debug(
             (
-                self._log_prefix + "updating and persisting"
+                (self._log_prefix + " updating and persisting from %s to %s")
                 if persist
-                else "updating" + "calibration offset from %s to %s"
+                else (self._log_prefix + " updating calibration offset from %s to %s")
             ),
             self.calibration_offset,
             value,
