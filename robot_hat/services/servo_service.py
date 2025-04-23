@@ -211,7 +211,7 @@ class ServoService:
         assert self.servo
         constrained_value = constrain(angle, self.min_angle, self.max_angle)
         calibrated_value = (
-            self.calibration_function(angle, self.calibration_offset)
+            self.calibration_function(constrained_value, self.calibration_offset)
             if self.calibration_function is not None
             else constrained_value
         )
