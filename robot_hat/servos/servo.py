@@ -60,15 +60,13 @@ class Servo(ServoABC):
         The angle is mapped to a pulse width in microseconds based on
         the configured min and max values.
         """
-        clamped_angle = max(self.min_angle, min(angle, self.max_angle))
         pulse_width = self.min_pulse + (
-            (clamped_angle - self.min_angle) / (self.max_angle - self.min_angle)
+            (angle - self.min_angle) / (self.max_angle - self.min_angle)
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
         logger.debug(
-            "angle=%s, clamped_angle=%s, pulse_width=%s, pulse_width_int=%s",
+            "angle=%s, pulse_width=%s, pulse_width_int=%s",
             angle,
-            clamped_angle,
             pulse_width,
             pulse_width_int,
         )
