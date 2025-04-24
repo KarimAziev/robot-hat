@@ -65,10 +65,15 @@ class Servo(ServoABC):
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
         logger.debug(
-            "angle=%s, pulse_width=%s, pulse_width_int=%s",
+            "[%s]: Angle=%s, pulse_width=%s, pulse_width_int=%s, min_pulse=%s, max_pulse=%s, min_angle=%s, max_angle=%s",
+            self.name,
             angle,
             pulse_width,
             pulse_width_int,
+            self.min_pulse,
+            self.max_pulse,
+            self.min_angle,
+            self.max_angle,
         )
         self.driver.set_servo_pulse(self.channel, pulse_width_int)
 
