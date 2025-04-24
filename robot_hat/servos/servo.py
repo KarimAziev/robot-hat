@@ -29,6 +29,8 @@ class Servo(ServoABC):
         channel: Union[int, str],
         min_angle: float = -90.0,
         max_angle: float = 90.0,
+        min_real_angle: float = -90.0,
+        max_real_angle: float = 90.0,
         min_pulse: int = 500,
         max_pulse: int = 2500,
     ) -> None:
@@ -52,6 +54,8 @@ class Servo(ServoABC):
         self.max_angle = max_angle
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
+        self.max_real_angle = max_real_angle
+        self.min_real_angle = min_real_angle
 
     def angle(self, angle: float) -> None:
         """
@@ -61,7 +65,7 @@ class Servo(ServoABC):
         the configured min and max values.
         """
         pulse_width = self.min_pulse + (
-            (angle - self.min_angle) / (self.max_angle - self.min_angle)
+            (angle - self.min_real_angle) / (self.max_real_angle - self.min_real_angle)
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
         logger.debug(
