@@ -31,6 +31,8 @@ class Servo(ServoABC):
         max_angle: float = 90.0,
         min_pulse: int = 500,
         max_pulse: int = 2500,
+        real_min_angle: float = -90.0,
+        real_max_angle: float = 90.0,
     ) -> None:
 
         if isinstance(channel, str):
@@ -52,6 +54,8 @@ class Servo(ServoABC):
         self.max_angle = max_angle
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
+        self.real_min_angle = real_min_angle
+        self.real_max_angle = real_max_angle
 
     def angle(self, angle: float) -> None:
         """
@@ -60,20 +64,28 @@ class Servo(ServoABC):
         The angle is mapped to a pulse width in microseconds based on
         the configured min and max values.
         """
+        logical_angle = max(self.min_angle, min(angle, self.max_angle))
+        ratio = (logical_angle - self.min_angle) / (self.max_angle - self.min_angle)
+        physical_angle = self.real_min_angle + ratio * (
+            self.real_max_angle - self.real_min_angle
+        )
         pulse_width = self.min_pulse + (
-            (angle - self.min_angle) / (self.max_angle - self.min_angle)
+            (physical_angle - self.real_min_angle)
+            / (self.real_max_angle - self.real_min_angle)
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
         logger.debug(
-            "[%s]: Angle=%s, pulse_width=%s, pulse_width_int=%s, min_pulse=%s, max_pulse=%s, min_angle=%s, max_angle=%s",
+            "[%s]: Logical Angle=%s, mapped Physical Angle=%s, pulse_width=%s, pulse_width_int=%s, "
+            "logical_range=(%s, %s), physical_range=(%s, %s)",
             self.name,
-            angle,
+            logical_angle,
+            physical_angle,
             pulse_width,
             pulse_width_int,
-            self.min_pulse,
-            self.max_pulse,
             self.min_angle,
             self.max_angle,
+            self.real_min_angle,
+            self.real_max_angle,
         )
         self.driver.set_servo_pulse(self.channel, pulse_width_int)
 
