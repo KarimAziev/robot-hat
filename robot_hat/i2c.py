@@ -58,7 +58,7 @@ logger = logging.getLogger(__name__)
 USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
 
 if USE_MOCK == "1":
-    from .mock.smbus2 import MockSMBus as SMBus
+    from robot_hat.mock.smbus2 import MockSMBus as SMBus
 else:
     from smbus2 import SMBus
 

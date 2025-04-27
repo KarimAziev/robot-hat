@@ -126,3 +126,9 @@ class InvalidCalibrationModeError(Exception):
     def __init__(self, mode, message="Invalid calibration mode provided."):
         super().__init__(f"{message} Received: {mode}")
         self.mode = mode
+
+
+class IMUInitializationError(Exception):
+    """Raised when the IMU sensor fails to initialize properly."""
+
+    pass
