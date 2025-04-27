@@ -1,10 +1,15 @@
 import logging
 import time
+from typing import Literal, Union
 
 from robot_hat.motor.config import MotorDirection
 from robot_hat.motor.motor_abc import MotorABC
 
 logger = logging.getLogger(__name__)
+
+MotorZeroDirection = Literal[0]
+
+MotorServiceDirection = Union[MotorDirection, MotorZeroDirection]
 
 
 class MotorService:
@@ -54,7 +59,7 @@ class MotorService:
         """
         self.left_motor = left_motor
         self.right_motor = right_motor
-        self.direction = 0
+        self.direction: MotorServiceDirection = 0
 
     def stop_all(self) -> None:
         """
@@ -73,7 +78,7 @@ class MotorService:
         time.sleep(0.002)
         logger.debug("Motors Stopped")
 
-    def move(self, speed: int, direction: int) -> None:
+    def move(self, speed: int, direction: MotorServiceDirection) -> None:
         """
         Move the robot forward or backward.
 
@@ -215,7 +220,9 @@ class MotorService:
         self.right_motor = None
         self.left_motor = None
 
-    def move_with_steering(self, speed: int, direction: int, current_angle=0) -> None:
+    def move_with_steering(
+        self, speed: int, direction: MotorServiceDirection, current_angle=0
+    ) -> None:
         """
         Move the robot with speed and direction, applying steering based on the current angle.
 
