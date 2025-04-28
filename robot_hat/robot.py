@@ -1,5 +1,5 @@
 import time
-from typing import List, Optional, TypeVar
+from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from robot_hat.filedb import FileDB
 from robot_hat.servos.sunfounder_servo import Servo
@@ -11,15 +11,14 @@ class Robot:
     """
     Represents a programmable robot with multiple servos.
 
-    Manages servo control, movements, calibration, and configuration. The class
-    is initialized with a list of servo pins and utilizes a configuration file
-    to save settings like servo offsets.
+    Manages servo control, movements, calibration, and configuration.
+    The class is initialized with a list of servo pins and utilizes a
+    configuration file to save settings like servo offsets.
     """
 
-    move_list = {}
-    """A dictionary of preset actions."""
+    move_list: Dict[str, List[List[float]]] = {}
 
-    max_dps = 428
+    max_dps: int = 428
     """Maximum Degrees Per Second (DPS) a servo is allowed to move."""
 
     def __init__(
@@ -27,47 +26,48 @@ class Robot:
         pin_list: List[int],
         db: str,
         name: str = "other",
-        init_angles: Optional[List[int]] = None,
-        init_order=None,
-        **kwargs,
-    ):
+        init_angles: Optional[List[float]] = None,
+        init_order: Optional[Iterable[int]] = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Initializes the robot.
 
         Args:
-        - `pin_list`: List of integers representing servo pins.
-        - `db`: Path to the configuration file for saving settings.
-        - `name`: Robot name (used for offsets in the config file).
-        - `init_angles`: Initial angles for each servo. Defaults to [0] for all servos.
-        - `init_order`: Order in which servos are initialized to avoid power surges.
+            pin_list: List of integers representing servo pins.
+            db: Path to the configuration file for saving settings.
+            name: Robot name (used for offsets in the config file).
+            init_angles: Initial angles for each servo. Defaults to [0] for all servos.
+            init_order: Order in which servos are initialized to avoid power surges.
+            **kwargs: Additional keyword arguments to pass to the superclass.
         """
-        super().__init__(**kwargs)
-        self.servo_list = []
-        self.pin_num = len(pin_list)
+        super().__init__(**kwargs)  # if there is a parent with an __init__
+        self.servo_list: List[Servo] = []
+        self.pin_num: int = len(pin_list)
 
-        self.name = name
+        self.name: str = name
 
-        self.offset_value_name = f"{self.name}_servo_offset_list"
+        self.offset_value_name: str = f"{self.name}_servo_offset_list"
 
-        self.db = FileDB(db=db)
-        temp = self.db.get(self.offset_value_name, default_value=str(self.new_list(0)))
-        temp = [float(i.strip()) for i in temp.strip("[]").split(",")]
+        self.db: FileDB = FileDB(db=db)
+        temp_str: str = self.db.get(
+            self.offset_value_name, default_value=str(self.new_list(0))
+        )
+        temp: List[float] = [float(i.strip()) for i in temp_str.strip("[]").split(",")]
+        self.offset: List[float] = temp
 
-        self.offset = temp
-
-        self.servo_positions = self.new_list(0)
-
-        self.origin_positions = self.new_list(0)
-        self.calibrate_position = self.new_list(0)
-        self.direction = self.new_list(1)
+        self.servo_positions: List[float] = self.new_list(0.0)
+        self.origin_positions: List[float] = self.new_list(0.0)
+        self.calibrate_position: List[float] = self.new_list(0.0)
+        self.direction: List[int] = self.new_list(1)
 
         if init_angles is None:
-            init_angles = [0] * self.pin_num
+            init_angles = [0.0] * self.pin_num
         elif len(init_angles) != self.pin_num:
             raise ValueError("init angels numbers do not match pin numbers ")
-
-        if init_order == None:
+        if init_order is None:
             init_order = range(self.pin_num)
+
         for i, pin in enumerate(pin_list):
             self.servo_list.append(Servo(pin))
             self.servo_positions[i] = init_angles[i]
@@ -75,7 +75,7 @@ class Robot:
             self.servo_list[i].angle(self.offset[i] + self.servo_positions[i])
             time.sleep(0.15)
 
-        self.last_move_time = time.time()
+        self.last_move_time: float = time.time()
 
     def new_list(self, default_value: T) -> List[T]:
         """
@@ -89,7 +89,7 @@ class Robot:
         """
         return [default_value] * self.pin_num
 
-    def servo_write_raw(self, angle_list) -> None:
+    def servo_write_raw(self, angle_list: List[float]) -> None:
         """
         Sets servos to the specified raw angles (ignoring offsets).
 
@@ -99,7 +99,7 @@ class Robot:
         for i in range(self.pin_num):
             self.servo_list[i].angle(angle_list[i])
 
-    def servo_write_all(self, angles) -> None:
+    def servo_write_all(self, angles: List[float]) -> None:
         """
         Set servo positions relative to their origin and offsets.
 
@@ -109,7 +109,7 @@ class Robot:
         Args:
             angles: A list of servo angles to set.
         """
-        relative_angles = []
+        relative_angles: List[float] = []
         for i in range(self.pin_num):
             relative_angles.append(
                 self.direction[i]
@@ -117,7 +117,9 @@ class Robot:
             )
         self.servo_write_raw(relative_angles)
 
-    def servo_move(self, targets, speed=50, bpm=None) -> None:
+    def servo_move(
+        self, targets: List[float], speed: int = 50, bpm: Optional[float] = None
+    ) -> None:
         """
         Move servos to target angles at a given speed or beats per minute (BPM).
 
@@ -131,53 +133,54 @@ class Robot:
         """
         speed = max(0, speed)
         speed = min(100, speed)
-        step_time = 10  # ms
-        delta = []
-        absdelta = []
-        max_step = 0
-        steps = []
+        step_time: float = 10  # ms
+        delta: List[float] = []
+        absdelta: List[float] = []
+        steps: List[float] = []
 
         for i in range(self.pin_num):
-            value = targets[i] - self.servo_positions[i]
+            value: float = targets[i] - self.servo_positions[i]
             delta.append(value)
             absdelta.append(abs(value))
 
-        max_delta = int(max(absdelta))
+        max_delta: int = int(max(absdelta))
         if max_delta == 0:
             time.sleep(step_time / 1000)
             return
 
         if bpm:
-            total_time = 60 / bpm * 1000  # time taken per beat, unit: ms
+            total_time: float = 60 / bpm * 1000  # time taken per beat, unit: ms
         else:
             total_time = -9.9 * speed + 1000  # time spent in one step, unit: ms
 
-        current_max_dps = max_delta / total_time * 1000  # dps, degrees per second
+        current_max_dps: float = (
+            max_delta / total_time * 1000
+        )  # dps, degrees per second
 
         # If current max dps is larger than max dps, then calculate a new total servo move time
         if current_max_dps > self.max_dps:
             total_time = max_delta / self.max_dps * 1000
 
-        max_step = int(total_time / step_time)
+        max_step: int = int(total_time / step_time)
 
         for i in range(self.pin_num):
-            step = float(delta[i]) / max_step
+            step: float = float(delta[i]) / max_step
             steps.append(step)
 
         for _ in range(max_step):
-            start_timer = time.time()
-            delay = step_time / 1000
+            start_timer: float = time.time()
+            delay: float = step_time / 1000
 
             for j in range(self.pin_num):
                 self.servo_positions[j] += steps[j]
             self.servo_write_all(self.servo_positions)
 
-            servo_move_time = time.time() - start_timer
+            servo_move_time: float = time.time() - start_timer
             delay = delay - servo_move_time
             delay = max(0, delay)
             time.sleep(delay)
 
-    def do_action(self, motion_name, step=1, speed=50) -> None:
+    def do_action(self, motion_name: str, step: int = 1, speed: int = 50) -> None:
         """
         Perform a predefined action multiple times.
 
@@ -192,7 +195,7 @@ class Robot:
             for motion in self.move_list[motion_name]:
                 self.servo_move(motion, speed)
 
-    def set_offset(self, offset_list) -> None:
+    def set_offset(self, offset_list: List[float]) -> None:
         """
         Set servo offset values in the database.
 
@@ -202,16 +205,18 @@ class Robot:
             offset_list: A list of offset values for each servo.
         """
         offset_list = [min(max(offset, -20), 20) for offset in offset_list]
-        temp = str(offset_list)
+        temp: str = str(offset_list)
         self.db.set(self.offset_value_name, temp)
         self.offset = offset_list
 
     def calibration(self) -> None:
-        """Move all servos to their home (calibration) position."""
-        self.servo_positions = self.calibrate_position
+        """
+        Move all servos to their home (calibration) position.
+        """
+        self.servo_positions = self.calibrate_position.copy()
         self.servo_write_all(self.servo_positions)
 
-    def reset(self, list=None) -> None:
+    def reset(self, position_list: Optional[List[float]] = None) -> None:
         """
         Reset servo positions to their original or specified state.
 
@@ -219,16 +224,16 @@ class Robot:
             position_list: If provided, sets servos to these positions instead
                 of their default position.
         """
-        if list is None:
+        if position_list is None:
             self.servo_positions = self.new_list(0)
             self.servo_write_all(self.servo_positions)
         else:
-            self.servo_positions = list
+            self.servo_positions = position_list
             self.servo_write_all(self.servo_positions)
 
     def soft_reset(self) -> None:
         """
         Gently reset servos to their neutral position.
         """
-        temp_list = self.new_list(0)
+        temp_list: List[float] = self.new_list(0)
         self.servo_write_all(temp_list)
