@@ -21,7 +21,6 @@ from robot_hat.exceptions import (
     InvalidPinName,
     InvalidPinPull,
 )
-from robot_hat.pin_descriptions import pin_descriptions
 
 logger = logging.getLogger(__name__)
 
@@ -148,21 +147,9 @@ class Pin(object):
         )
         pull_hex = "None" if pull is None else f"0x{pull:02X}"
 
-        self.descr = " ".join(
-            [
-                self.name(),
-                (
-                    pin_descriptions.get(self._board_name, "")
-                    if pin_dict is self.DEFAULT_PIN_MAPPING
-                    else ""
-                ),
-                self._board_name,
-            ]
-        )
-
         logger.debug(
             "Initted [%s], mode: %s (0x%s:02X) %s (%s)",
-            self.descr,
+            self._board_name,
             mode_str,
             self._pin_num,
             pull_str,
@@ -215,7 +202,7 @@ class Pin(object):
         """
         logger.debug(
             "[%s]: Closing %s",
-            self.descr,
+            self._board_name,
             self.gpio,
         )
         if self.gpio:

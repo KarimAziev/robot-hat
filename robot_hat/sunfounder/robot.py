@@ -2,7 +2,7 @@ import time
 from typing import Any, Dict, Iterable, List, Optional, TypeVar
 
 from robot_hat.filedb import FileDB
-from robot_hat.servos.sunfounder_servo import Servo
+from robot_hat.sunfounder.sunfounder_servo import Servo
 
 T = TypeVar("T", int, float, str)
 

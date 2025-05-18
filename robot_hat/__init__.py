@@ -1,7 +1,6 @@
-from .accelerometer import ADXL345
-from .address_descriptions import get_address_description, get_value_description
-from .drivers.adc.sunfounder_adc import ADC
-from .exceptions import (
+from robot_hat.data_types.config.motor import MotorConfig, MotorDirection
+from robot_hat.drivers.adc.sunfounder_adc import ADC
+from robot_hat.exceptions import (
     ADCAddressNotFound,
     FileDBValidationError,
     InvalidCalibrationModeError,
@@ -17,30 +16,20 @@ from .exceptions import (
     InvalidServoAngle,
     UltrasonicEchoPinError,
 )
-from .filedb import FileDB
-from .grayscale import Grayscale
-from .i2c import I2C
-from .mock.ultrasonic import Ultrasonic as UltrasonicMock
-from .motor.config import MotorConfig, MotorDirection
-from .motor.motor import HBridgeMotor as Motor
-from .motor.motor_fabric import MotorFabric
-from .music import Music
-from .pin import Pin
-from .pin_descriptions import pin_descriptions
-from .pwm import PWM
-from .robot import Robot
-from .services.battery.sunfounder_battery import Battery
-from .services.motor_service import MotorService
-from .services.servo_service import ServoCalibrationMode, ServoService
-from .servos.servo import Servo
-from .servos.sunfounder_servo import Servo as SunfounderServo
-from .smbus_singleton import SMBus
-from .ultrasonic import Ultrasonic
-from .utils import compose, constrain, get_firmware_version, is_raspberry_pi, mapping
-from .utils import reset_mcu_sync
-from .utils import reset_mcu_sync as reset_mcu
-from .utils import run_command
-from .version import version
+from robot_hat.factories.motor_factory import MotorFactory
+from robot_hat.filedb import FileDB
+from robot_hat.i2c.i2c_manager import I2C
+from robot_hat.mock.ultrasonic import Ultrasonic as UltrasonicMock
+from robot_hat.motor.i2c_dc_motor import I2CDCMotor as I2CDCMotor
+from robot_hat.music import Music
+from robot_hat.pin import Pin
+from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
+from robot_hat.services.battery.sunfounder_battery import Battery
+from robot_hat.services.motor_service import MotorService
+from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
+from robot_hat.servos.servo import Servo
+from robot_hat.utils import compose, constrain, is_raspberry_pi, mapping
+from robot_hat.version import version
 
 __all__ = [
     "ADC",
@@ -48,21 +37,14 @@ __all__ = [
     "Battery",
     "I2C",
     "Ultrasonic",
-    "Grayscale",
-    "Robot",
-    "ADXL345",
     "Music",
     "Pin",
-    "PWM",
-    "Motor",
-    "MotorConfig",
-    "MotorFabric",
+    "I2CDCMotor",
+    "MotorFactory",
     "MotorService",
     "Servo",
-    "SunfounderServo",
     "ServoCalibrationMode",
     "ServoService",
-    "SMBus",
     "UltrasonicMock",
     "FileDBValidationError",
     "InvalidPin",
@@ -76,20 +58,14 @@ __all__ = [
     "InvalidChannelName",
     "InvalidChannelNumber",
     "InvalidCalibrationModeError",
+    "MotorConfig",
     "MotorDirection",
     "UltrasonicEchoPinError",
     "compose",
     "constrain",
     "mapping",
-    "reset_mcu",
-    "reset_mcu_sync",
-    "run_command",
     "is_raspberry_pi",
     "ADCAddressNotFound",
-    "get_address_description",
     "ADCAddressNotFound",
-    "get_firmware_version",
-    "get_value_description",
-    "pin_descriptions",
     "version",
 ]

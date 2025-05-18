@@ -1,7 +1,9 @@
 import errno
 import logging
 import os
-from typing import TYPE_CHECKING, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Union
+
+from robot_hat.interfaces import SMBusABC
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg
@@ -12,23 +14,31 @@ I2C_ALLOWED_ADDRESES = [20, 54]
 
 
 def generate_discharge_sequence(
-    start_voltage=2.6, end_voltage=2.0, amount: Optional[int] = None, rate=20
-):
+    start_voltage: float,
+    end_voltage: float,
+    *,
+    amount: Optional[int] = None,
+    rate: Optional[int] = None,
+    conversion_fn: Optional[Callable[[float], int]] = None,
+) -> List[int]:
     """
-    Generate a flattened list of MSB and LSB values simulating a discharge
-    over a specified range of voltages, with control over the number of points or step size.
+    Generate a flattened list of raw values (split into MSB and LSB)
+    simulating a discharge over a specified voltage range.
 
     Args:
-        start_voltage (float): The starting voltage (e.g., 2.6 for ~2.6 V).
-        end_voltage (float): The ending voltage (e.g., 2.0 for ~2.0 V).
-        amount (int, optional): The number of discharge points (equally spaced).
-        rate (int, optional): Step size for raw value decrement (e.g., 20 for faster discharge).
+      start_voltage (float): The starting voltage (e.g. full voltage).
+      end_voltage (float): The ending voltage (e.g. empty voltage).
+      amount (int, optional): Number of discharge points (evenly spaced).
+      rate (int, optional): The decrement for raw value if amount not provided.
+      conversion_fn (Callable[[float], int], optional):
+          A function that converts a voltage (in Volts) to a raw integer value.
+          If not provided, a default ADC conversion is used:
+            raw = int((voltage * 4095) / 3.3)
 
     Returns:
-        List[int]: A flattened list containing MSB and LSB values in decreasing order.
-                   For example, [12, 159, 12, 158, ..., 9, 178].
+      List[int]: A flat list of bytes [MSB, LSB, MSB, LSB, …] representing
+                 successive raw readings.
     """
-
     if start_voltage < end_voltage:
         raise ValueError(
             "Start voltage must be greater than or equal to the end voltage."
@@ -36,11 +46,15 @@ def generate_discharge_sequence(
     if amount is not None and rate is not None:
         raise ValueError("Specify either 'amount' or 'rate', but not both.")
 
-    def voltage_to_raw(voltage):
-        return int((voltage * 4095) / 3.3)
+    if conversion_fn is None:
 
-    start_raw_value = voltage_to_raw(start_voltage)
-    end_raw_value = voltage_to_raw(end_voltage)
+        def conversion_fn_default(voltage: float) -> int:
+            return int((voltage * 4095) / 3.3)
+
+        conversion_fn = conversion_fn_default
+
+    start_raw_value = conversion_fn(start_voltage)
+    end_raw_value = conversion_fn(end_voltage)
 
     if amount is not None:
         discharge_values = [
@@ -50,20 +64,33 @@ def generate_discharge_sequence(
             for i in range(amount)
         ]
     elif rate is not None:
-        discharge_values = range(start_raw_value, end_raw_value - 1, -rate)
+        discharge_values = list(range(start_raw_value, end_raw_value - 1, -rate))
     else:
-        discharge_values = range(start_raw_value, end_raw_value - 1, -1)
+        discharge_values = list(range(start_raw_value, end_raw_value - 1, -1))
 
     discharge_sequence = []
     for raw_value in discharge_values:
-        msb = raw_value >> 8  # Extract MSB
-        lsb = raw_value & 0xFF  # Extract LSB
+        msb = raw_value >> 8
+        lsb = raw_value & 0xFF
         discharge_sequence.extend([msb, lsb])
-
     return discharge_sequence
 
 
-class MockSMBus(object):
+def ina219_bus_voltage_conversion(bus_voltage: float) -> int:
+    """
+    Convert a desired bus voltage into the raw value expected by the INA219.
+
+    The INA219 returns a 16-bit value. When reading, the driver shifts it right by 3
+    and multiplies by 0.004 to recover the voltage:
+      bus_voltage = (raw >> 3) * 0.004
+    Therefore, to simulate a given bus voltage you must generate a raw value as:
+      raw_after_shift = bus_voltage / 0.004
+      raw_value = raw_after_shift << 3
+    """
+    return int(bus_voltage / 0.004) << 3
+
+
+class MockSMBus(SMBusABC):
     def __init__(self, bus: Union[None, int, str], force: bool = False):
         self.bus = bus
         self.force = force
@@ -72,11 +99,15 @@ class MockSMBus(object):
         self.address = None
         self._force_last = None
 
+        self._discharge_sequences = {}
+
         self._command_responses = {
             "byte": 0x10,
             "word": 0x1234,
-            "block": [1, 2, 3, 4, 5],
+            "block": [12, 154, 3, 4, 5],
         }
+
+        self._command_responses_by_addr = {"3": []}
 
         self._byte_responses_by_addrs = {
             "20": [],
@@ -104,7 +135,7 @@ class MockSMBus(object):
             rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 20
 
             self._byte_responses_by_addrs[f"{i2c_addr}"] = generate_discharge_sequence(
-                rate=rate
+                start_voltage=6.4, end_voltage=8.4, rate=rate
             )
             byte_responses = self._byte_responses_by_addrs[f"{i2c_addr}"]
         return byte_responses.pop(0)
@@ -189,7 +220,7 @@ class MockSMBus(object):
         data: Sequence[int],
         force: Optional[bool] = None,
     ):
-        logger.debug("write_i2c_block_data %s to register '%s'", data, register)
+        logger.debug("write_i2c_block_data %s to register %s", data, register)
         self._set_address(i2c_addr, force)
         return
 
@@ -198,14 +229,34 @@ class MockSMBus(object):
     ) -> List[int]:
         logger.debug("read_i2c_block_data register: %s", register)
         self._set_address(i2c_addr, force)
-        return self._command_responses["block"][:length]
+
+        if register in (1, 2, 3, 4):
+            if register not in self._discharge_sequences:
+                self._discharge_sequences[register] = generate_discharge_sequence(
+                    start_voltage=12.6,
+                    end_voltage=8.0,
+                    rate=10,
+                    conversion_fn=ina219_bus_voltage_conversion,
+                )
+            sequence = self._discharge_sequences[register]
+            if len(sequence) < length:
+                data = sequence if sequence else [0] * length
+            else:
+                data = sequence[:length]
+                self._discharge_sequences[register] = sequence[length:]
+            logger.debug(
+                "Simulated discharge response for register %s: %s", register, data
+            )
+            return data
+        else:
+            return self._command_responses["block"][:length]
 
     def i2c_rdwr(self, *i2c_msgs: "i2c_msg") -> None:
         logger.debug("%s", i2c_msgs)
         return
 
     def enable_pec(self, enable=True) -> None:
-        self.pec = int(enable)  # Simulate enabling PEC
+        self.pec = int(enable)
 
     def __enter__(self):
         """Enter handler."""

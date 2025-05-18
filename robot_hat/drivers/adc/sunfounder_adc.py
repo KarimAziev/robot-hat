@@ -6,7 +6,7 @@ import logging
 from typing import List, Union
 
 from robot_hat.exceptions import InvalidChannel
-from robot_hat.i2c import I2C
+from robot_hat.i2c.i2c_manager import I2C
 
 logger = logging.getLogger(__name__)
 
@@ -98,9 +98,10 @@ class ADC(I2C):
         Returns:
             int: ADC value (0-4095).
         """
-        # Write register address
         self.write([self.channel, 0, 0])
+
         msb, lsb = self.read(2)  # read two bytes
+
         logger.debug(
             "ADC Most Significant Byte: '%s', Least Significant Byte: '%s'", msb, lsb
         )
@@ -120,7 +121,6 @@ class ADC(I2C):
         # Read ADC value
         value = self.read_raw_value()
 
-        # Convert to voltage
         voltage = value * 3.3 / 4095
         logger.debug(f"ADC raw voltage: {voltage}")
         return voltage

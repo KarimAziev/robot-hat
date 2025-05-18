@@ -5,9 +5,9 @@ A wrapper for servos driven directly via Raspberry Pi GPIO (using gpiozero's Ang
 import logging
 from typing import Union, cast
 
-from robot_hat.servos.servo_abc import ServoABC
+from robot_hat.interfaces import ServoABC
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class GPIOAngularServo(ServoABC):
@@ -65,7 +65,7 @@ class GPIOAngularServo(ServoABC):
             min_pulse_width=min_pulse / 1e6,
             max_pulse_width=max_pulse / 1e6,
         )
-        logger.debug(
+        _log.debug(
             "Initialized GPIOAngularServo on pin %s with angle range (%.2f, %.2f)",
             pin,
             min_angle,
@@ -81,7 +81,7 @@ class GPIOAngularServo(ServoABC):
         """
         clamped = max(self.min_angle, min(angle, self.max_angle))
         self._servo.angle = clamped
-        logger.debug("Set servo on pin %s to angle %.2f°", self.pin, clamped)
+        _log.debug("Set servo on pin %s to angle %.2f°", self.pin, clamped)
 
     def pulse_width_time(self, pulse_width_time: float) -> None:
         """
@@ -97,7 +97,7 @@ class GPIOAngularServo(ServoABC):
             self.max_angle - self.min_angle
         ) + self.min_angle
         self._servo.angle = angle
-        logger.debug(
+        _log.debug(
             "Translated pulse width %d µs on pin %s to angle %.2f°",
             pulse,
             self.pin,
@@ -110,17 +110,26 @@ class GPIOAngularServo(ServoABC):
         """
         mid_angle = (self.min_angle + self.max_angle) / 2
         self._servo.angle = mid_angle
-        logger.debug("Reset servo on pin %s to mid position %.2f°", self.pin, mid_angle)
+        _log.debug("Reset servo on pin %s to mid position %.2f°", self.pin, mid_angle)
 
     def close(self) -> None:
         """
         Release any resources used by the servo (i.e. free the GPIO pin).
         """
         self._servo.close()
-        logger.debug("Closed GPIOAngularServo on pin %s", self.pin)
+        _log.debug("Closed GPIOAngularServo on pin %s", self.pin)
 
     def __enter__(self) -> "GPIOAngularServo":
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
+
+
+if __name__ == "__main__":
+    from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
+
+    servo = GPIOAngularServo(
+        pin=17, min_angle=-42, max_angle=44, min_pulse=1000, max_pulse=2000
+    )
+    servo.angle(15)

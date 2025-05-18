@@ -1,6 +1,6 @@
 """
-The DCMotor class is intended for cases where a motor is controlled directly via
-GPIO pins.
+This module is intended for cases where a motor is controlled directly via
+GPIO pins without I²C.
 
 It typically uses one or more GPIO pins to drive the motor in forward or
 reverse direction, and, if available, an RPi.GPIO.PWM instance for speed
@@ -14,15 +14,15 @@ and is controlled entirely through direct GPIO calls.
 import logging
 from typing import Optional, Union, cast
 
-from robot_hat.motor.config import MotorDirection
-from robot_hat.motor.motor_abc import MotorABC
-from robot_hat.motor.motor_calibration import MotorCalibration
+from robot_hat.data_types.config.motor import MotorDirection
+from robot_hat.interfaces import MotorABC
+from robot_hat.motor.mixins.motor_calibration import MotorCalibration
 from robot_hat.utils import constrain
 
 logger = logging.getLogger(__name__)
 
 
-class DCMotor(MotorCalibration, MotorABC):
+class GPIODCMotor(MotorCalibration, MotorABC):
     """
     This implementation controls a motor using direct GPIO control. It drives the motor by toggling
     GPIO output pins for forward and reverse directions.
@@ -99,8 +99,11 @@ class DCMotor(MotorCalibration, MotorABC):
 
     def set_speed(self, speed: float):
         """
-        Set the motor's speed and direction. Accepts any speed in the interval
-        [-max_speed, max_speed] and converts the value to a 0.0 to 1.0 range for gpiozero.
+        Set the motor's speed and direction.
+
+        Accepts any speed in the interval [-max_speed, max_speed] and converts
+        the value to a 0.0 to 1.0 range for gpiozero.
+
         If PWM is disabled, the motor is simply set to full forward (1), full backward (-1)
         or stopped (0).
 
@@ -108,38 +111,31 @@ class DCMotor(MotorCalibration, MotorABC):
             speed: Target speed percentage within [-max_speed, max_speed].
         """
         speed = self._apply_speed_correction(speed)
-        if speed > 0:
-            if self._pwm:
-                scale = speed / self.max_speed
-                logger.debug(f"Motor set forward: {speed} (scaled {scale:.2f}).")
-                if self.direction == -1:
-                    self._motor.backward(cast(int, scale))
-                else:
-                    self._motor.forward(cast(int, scale))
-            else:
-                logger.debug(f"Motor set full forward (digital).")
-                speed = self.max_speed
-                if self.direction == -1:
-                    self._motor.backward(1)
-                else:
-                    self._motor.forward(1)
-        elif speed < 0:
-            if self._pwm:
-                scale = abs(speed) / self.max_speed
-                logger.debug(f"Motor set backward: {speed} (scaled {scale:.2f}).")
-                if self.direction == -1:
-                    self._motor.forward(cast(int, scale))
-                else:
-                    self._motor.backward(cast(int, scale))
-            else:
-                logger.debug(f"Motor set full backward (digital).")
-                speed = self.max_speed
-                if self.direction == -1:
-                    self._motor.forward(1)
-                else:
-                    self._motor.backward(1)
-        else:
+        if speed == 0:
             self.stop()
+            return
+
+        sign = 1 if speed > 0 else -1
+
+        if sign > 0:
+            command = (
+                self._motor.forward if self.direction == 1 else self._motor.backward
+            )
+            log_direction = "forward"
+        else:
+            command = (
+                self._motor.backward if self.direction == 1 else self._motor.forward
+            )
+            log_direction = "backward"
+
+        if self._pwm:
+            scale = abs(speed) / self.max_speed
+            logger.debug(f"Motor set {log_direction}: {speed} (scaled {scale:.2f}).")
+            command(cast(int, scale))
+        else:
+            logger.debug(f"Motor set full {log_direction} (digital).")
+            command(1)
+            speed = self.max_speed
 
         self._speed = speed
 
@@ -155,7 +151,9 @@ class DCMotor(MotorCalibration, MotorABC):
         """
         Close the underlying resources.
         """
-        self._motor.close()
+        logger.debug("Closing motor.")
+        if self._motor and hasattr(self._motor, "close"):
+            self._motor.close()
 
     def __del__(self) -> None:
         """
@@ -271,14 +269,14 @@ def main():
 
     args = parser.parse_args()
 
-    motorA = DCMotor(
+    motorA = GPIODCMotor(
         forward_pin=args.left_forward,
         backward_pin=args.left_backward,
         pwm_pin=args.left_pwm_pin,
         pwm=args.left_pwm,
         name="left",
     )
-    motorB = DCMotor(
+    motorB = GPIODCMotor(
         forward_pin=args.right_forward,
         backward_pin=args.right_backward,
         pwm_pin=args.right_pwm_pin,

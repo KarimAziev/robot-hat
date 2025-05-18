@@ -2,8 +2,8 @@ import logging
 import time
 from typing import Literal, Union
 
-from robot_hat.motor.config import MotorDirection
-from robot_hat.motor.motor_abc import MotorABC
+from robot_hat.data_types.config.motor import MotorDirection
+from robot_hat.interfaces import MotorABC
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +25,9 @@ class MotorService:
     Simple exampe:
     --------------
     ```python
-    from robot_hat import MotorConfig, MotorService, MotorFabric
+    from robot_hat import MotorConfig, MotorService, MotorFactory
 
-    left_motor, right_motor = MotorFabric.create_motor_pair(
+    left_motor, right_motor = MotorFactory.create_motor_pair(
         MotorConfig(
             dir_pin="D4",
             pwm_pin="P12",

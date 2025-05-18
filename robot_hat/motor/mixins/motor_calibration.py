@@ -1,9 +1,5 @@
-import logging
-
+from robot_hat.data_types.config.motor import MotorDirection
 from robot_hat.exceptions import MotorValidationError
-from robot_hat.motor.config import MotorDirection
-
-logger = logging.getLogger(__name__)
 
 
 class MotorCalibration:

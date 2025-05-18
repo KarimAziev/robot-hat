@@ -1,14 +1,18 @@
 import logging
 import time
-from dataclasses import dataclass
-from enum import IntEnum
-from typing import List, Optional, Union
+from typing import List, Optional
 
-from smbus2 import SMBus
+from robot_hat.data_types.bus import BusType
+from robot_hat.data_types.config.ina219 import (
+    ADCResolution,
+    BusVoltageRange,
+    Gain,
+    INA219Config,
+    Mode,
+)
+from robot_hat.interfaces import SMBusABC
 
-from robot_hat.smbus_singleton import SMBus as SMBusSingleton
-
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 # Register addresses
 REG_CONFIG = 0x00
@@ -17,82 +21,6 @@ REG_BUSVOLTAGE = 0x02
 REG_POWER = 0x03
 REG_CURRENT = 0x04
 REG_CALIBRATION = 0x05
-
-
-class BusVoltageRange(IntEnum):
-    """
-    Voltage range settings.
-    """
-
-    RANGE_16V = 0x00  # 16V
-    RANGE_32V = 0x01  # 32V (default)
-
-
-class Gain(IntEnum):
-    """
-    Gain settings for the shunt voltage measurement.
-    """
-
-    DIV_1_40MV = 0x00  # 1x gain, 40mV range
-    DIV_2_80MV = 0x01  # 2x gain, 80mV range
-    DIV_4_160MV = 0x02  # 4x gain, 160mV range
-    DIV_8_320MV = 0x03  # 8x gain, 320mV range
-
-
-class ADCResolution(IntEnum):
-    """
-    ADC resolution or averaging settings.
-    """
-
-    ADCRES_9BIT_1S = 0x00  # 9-bit, 1 sample, 84µs
-    ADCRES_10BIT_1S = 0x01  # 10-bit, 1 sample, 148µs
-    ADCRES_11BIT_1S = 0x02  # 11-bit, 1 sample, 276µs
-    ADCRES_12BIT_1S = 0x03  # 12-bit, 1 sample, 532µs
-    ADCRES_12BIT_2S = 0x09  # 12-bit, 2 samples, 1.06ms
-    ADCRES_12BIT_4S = 0x0A  # 12-bit, 4 samples, 2.13ms
-    ADCRES_12BIT_8S = 0x0B  # 12-bit, 8 samples, 4.26ms
-    ADCRES_12BIT_16S = 0x0C  # 12-bit, 16 samples, 8.51ms
-    ADCRES_12BIT_32S = 0x0D  # 12-bit, 32 samples, 17.02ms
-    ADCRES_12BIT_64S = 0x0E  # 12-bit, 64 samples, 34.05ms
-    ADCRES_12BIT_128S = 0x0F  # 12-bit, 128 samples, 68.10ms
-
-
-class Mode(IntEnum):
-    """
-    Operating mode settings.
-    """
-
-    POWERDOWN = 0x00
-    SHUNT_VOLT_TRIGGERED = 0x01
-    BUS_VOLT_TRIGGERED = 0x02
-    SHUNT_AND_BUS_TRIGGERED = 0x03
-    ADC_OFF = 0x04
-    SHUNT_VOLT_CONTINUOUS = 0x05
-    BUS_VOLT_CONTINUOUS = 0x06
-    SHUNT_AND_BUS_CONTINUOUS = 0x07
-
-
-@dataclass
-class INA219Config:
-    """
-    Sensor configuration settings.
-
-    The calibration-related values (current_lsb, calibration_value, power_lsb)
-    are tied to the shunt resistor and maximum current measurement range.
-    """
-
-    bus_voltage_range: BusVoltageRange = BusVoltageRange.RANGE_32V
-    gain: Gain = Gain.DIV_8_320MV
-    bus_adc_resolution: ADCResolution = ADCResolution.ADCRES_12BIT_32S
-    shunt_adc_resolution: ADCResolution = ADCResolution.ADCRES_12BIT_32S
-    mode: Mode = Mode.SHUNT_AND_BUS_CONTINUOUS
-
-    # Calibration parameters:
-    current_lsb: float = 0.1  # in mA/bit (e.g., for 0.1 mA per bit)
-    calibration_value: int = (
-        4096  # Calibration register value (magic number based on shunt resistor)
-    )
-    power_lsb: float = 0.002  # in W/bit (e.g., 20 * current_lsb)
 
 
 class INA219:
@@ -105,32 +33,33 @@ class INA219:
 
     def __init__(
         self,
-        bus_num: int = 1,
+        bus: BusType = 1,
         address: int = 0x41,
         config: Optional[INA219Config] = None,
-        bus: Union[SMBusSingleton, SMBus, None] = None,
     ) -> None:
         """
         Initialize the INA219 sensor.
 
         Parameters:
             i2c_bus: The I2C bus number. Ignored if bus_instance is provided.
-            addr: The I2C address of the sensor.
+            address: The I2C address of the sensor.
             config: An INA219Config instance with configuration settings.
             bus_instance: An optional pre-configured smbus2.SMBus instance for dependency injection.
         """
-        self.addr = address
-        self.config = config if config is not None else INA219Config()
+        self._address = address
 
-        self._bus_num: int = bus_num
-        if bus is None:
-            self.bus = SMBus(bus_num)
-            self._own_bus: bool = True
-            logger.debug("Created own SMBus on bus %d", bus_num)
+        if isinstance(bus, int):
+            from robot_hat.i2c.i2c_bus import I2CBus
+
+            self._bus = I2CBus(bus)
+            self._own_bus = True
+            _log.debug("Created own SMBus on bus %d", bus)
         else:
-            self.bus = bus
+            self._bus = bus
             self._own_bus = False
-            logger.debug("Using injected SMBus instance")
+            _log.debug("Using injected SMBus instance")
+
+        self.config = config if config is not None else INA219Config()
 
         # Calibration parameters:
         self._current_lsb: float = self.config.current_lsb  # in mA per bit.
@@ -139,6 +68,18 @@ class INA219:
 
         # Write calibration and configuration registers.
         self._apply_configuration()
+
+    @property
+    def address(self) -> int:
+        return self._address
+
+    @property
+    def bus(self) -> SMBusABC:
+        return self._bus
+
+    @property
+    def own_bus(self) -> bool:
+        return self._own_bus
 
     def _apply_configuration(self) -> None:
         """
@@ -170,9 +111,9 @@ class INA219:
         """
         data = [(value >> 8) & 0xFF, value & 0xFF]
         try:
-            self.bus.write_i2c_block_data(self.addr, reg, data)
+            self.bus.write_i2c_block_data(self.address, reg, data)
         except Exception as e:
-            logger.error(f"Failed to write register 0x{reg:02X}: {e}")
+            _log.error(f"Failed to write register 0x{reg:02X}: {e}")
             raise
 
     def _read_register(self, reg: int) -> int:
@@ -186,10 +127,18 @@ class INA219:
             Combined 16-bit value.
         """
         try:
-            data: List[int] = self.bus.read_i2c_block_data(self.addr, reg, 2)
+            data: List[int] = self.bus.read_i2c_block_data(self.address, reg, 2)
+            _log.debug(
+                "Read from register %s (%s): at address %s (%s): data=%s",
+                hex(reg),
+                reg,
+                hex(self.address),
+                self.address,
+                data,
+            )
             return (data[0] << 8) | data[1]
         except Exception as e:
-            logger.error(f"Failed to read register 0x{reg:02X}: {e}")
+            _log.error(f"Failed to read register 0x{reg:02X}: {e}")
             raise
 
     def _refresh_calibration(self) -> None:
@@ -265,16 +214,16 @@ class INA219:
 
     def close(self) -> None:
         """
-        Close the underlying resources.
+        Clean up or close any resources (like closing the I2C connection).
         """
-        if self._own_bus:
-            logger.debug("Closing SMBus on bus %d", self._bus_num)
+        if self.own_bus:
+            _log.debug("Closing SMBus")
             self.bus.close()
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s - %(message)s",
     )
     default_config = INA219Config(
@@ -308,15 +257,15 @@ if __name__ == "__main__":
             # 2025-04-06 13:44:53,605 - Current:       -0.022300 A
             # 2025-04-06 13:44:53,605 - Power:          0.262 W
             # 2025-04-06 13:44:53,605 - Percent:       75.2%
-            logger.info(f"PSU Voltage:   {(bus_voltage + shunt_voltage):6.3f} V")
-            logger.info(f"Shunt Voltage: {shunt_voltage:9.6f} V")
-            logger.info(f"Load Voltage:  {bus_voltage:6.3f} V")
-            logger.info(f"Current:       {current/1000.0:9.6f} A")  # convert mA to A
-            logger.info(f"Power:         {power:6.3f} W")
+            _log.info(f"PSU Voltage:   {(bus_voltage + shunt_voltage):6.3f} V")
+            _log.info(f"Shunt Voltage: {shunt_voltage:9.6f} V")
+            _log.info(f"Load Voltage:  {bus_voltage:6.3f} V")
+            _log.info(f"Current:       {current/1000.0:9.6f} A")  # convert mA to A
+            _log.info(f"Power:         {power:6.3f} W")
 
-            logger.info(f"Percent:       {percent:3.1f}%")
+            _log.info(f"Percent:       {percent:3.1f}%")
 
             time.sleep(2)
 
     except KeyboardInterrupt:
-        logger.info("Exiting on keyboard interrupt")
+        _log.info("Exiting on keyboard interrupt")

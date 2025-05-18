@@ -35,7 +35,3 @@ VALUE_DESCRIPTIONS = {
 
 def get_address_description(address):
     return ADDRESS_DESCRIPTIONS.get(address, "")
-
-
-def get_value_description(value):
-    return VALUE_DESCRIPTIONS.get(value, "")

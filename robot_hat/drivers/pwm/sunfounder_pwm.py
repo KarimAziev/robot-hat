@@ -6,26 +6,22 @@ This driver controls all channels on a Sunfounder PWM device via I2C.
 
 import logging
 import math
-import os
-from typing import List, Optional, Union
+from typing import Optional, Union
 
-from robot_hat.drivers.pwm.pwm_driver_abc import PWMDriverABC
+from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import InvalidChannelNumber
-from robot_hat.i2c import I2C
-from robot_hat.smbus_singleton import SMBus as SMBusSingleton
+from robot_hat.factories import register_pwm_driver
+from robot_hat.interfaces import PWMDriverABC
 
-USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
-if USE_MOCK == "1":
-    from robot_hat.mock.smbus2 import MockSMBus as SMBus  # type: ignore
-else:
-    from smbus2 import SMBus
-
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 NUM_TIMERS = 7
 
 
-class SunfounderPWM(I2C, PWMDriverABC):
+@register_pwm_driver
+class SunfounderPWM(PWMDriverABC):
+    DRIVER_TYPE = "Sunfounder"
+
     REG_CHN = 0x20
 
     REG_PSC = 0x40
@@ -43,41 +39,28 @@ class SunfounderPWM(I2C, PWMDriverABC):
 
     def __init__(
         self,
-        bus: Union[int, SMBus, SMBusSingleton] = 1,
-        address: Optional[Union[int, List[int]]] = None,
+        address: int,
+        bus: BusType = 1,
+        period: int = 4096,
         frame_width: int = 20000,
-        *args,
-        **kwargs,
     ):
         """
         Initialize the SunfounderPWM device.
 
-        Note: Unlike the previous version that was bound to one channel (and its timer),
-        this implementation controls ALL channels so that you can use arbitrary channels
-        when calling set_servo_pulse(channel, pulse).
 
         Args:
             bus: I2C bus number or an SMBus instance.
             address: I2C address or list of addresses.
+            period: The period (auto-reload register value) that determines the PWM resolution
             frame_width: The total frame width (in µs) that is used by a servo (for pulse width conversion).
         """
         self._frame_width = frame_width
-        self._arr: int = 4096
-
-        if isinstance(bus, int):
-            self._bus_num = bus
-            self._bus = SMBus(bus)
-            self._own_bus = True
-            logger.debug("Created own SMBus on bus %d", bus)
-        else:
-            self._bus = bus
-            self._own_bus = False
-            logger.debug("Using injected SMBus instance")
+        self._arr: int = period
 
         if address is None:
-            super().__init__(self.ADDR, *args, **kwargs)
+            super().__init__(address=self.ADDR, bus=bus)
         else:
-            super().__init__(address, *args, **kwargs)
+            super().__init__(address=address, bus=bus)
 
         self._freq = 50
         self._prescaler = None
@@ -91,7 +74,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
         """
         value_h = value >> 8
         value_l = value & 0xFF
-        logger.debug(
+        _log.debug(
             "Writing value %d (0x%02X): high=0x%02X, low=0x%02X to register 0x%02X",
             value,
             value,
@@ -99,7 +82,8 @@ class SunfounderPWM(I2C, PWMDriverABC):
             value_l,
             reg,
         )
-        self.write([reg, value_h, value_l])
+        data = (value_l << 8) + value_h
+        return self.bus.write_word_data(self.address, reg, data)
 
     def set_pwm_freq(self, freq: Union[int, float]) -> None:
         """
@@ -131,7 +115,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
         self._prescaler = round(best_psc)
         self._arr = round(best_arr)
 
-        logger.debug(
+        _log.debug(
             "Setting PWM frequency to %d Hz: chosen prescaler=%d, period (ARR)=%d",
             self._freq,
             self._prescaler,
@@ -167,7 +151,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
         """
         if not (0 <= channel <= 19):
             msg = f"Channel must be in range 0–19, got {channel}"
-            logger.error(msg)
+            _log.error(msg)
             raise InvalidChannelNumber(msg)
 
         timer_index: Optional[int] = None
@@ -181,7 +165,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
             timer_index = 6
 
         reg = self.REG_CHN + channel
-        logger.debug(
+        _log.debug(
             "Setting pulse width %d µs on channel %d (using timer %d) to register 0x%02X",
             pulse,
             channel,
@@ -207,7 +191,7 @@ class SunfounderPWM(I2C, PWMDriverABC):
         assert self._arr is not None, "set_pwm_freq() must be called first"
 
         pulse_val = int((duty / 100.0) * self._arr)
-        logger.debug(
+        _log.debug(
             "Setting duty cycle %.1f%% on channel %d (pulse=%d out of %d)",
             duty,
             channel,
@@ -216,16 +200,27 @@ class SunfounderPWM(I2C, PWMDriverABC):
         )
         self._i2c_write(self.REG_CHN + channel, pulse_val)
 
-    def close(self) -> None:
-        """
-        Close the I2C bus if it was opened by this instance.
-        """
-        if self._own_bus:
-            logger.debug("Closing SMBus on bus %d", self._bus_num)
-            self._bus.close()
 
-    def __enter__(self) -> "SunfounderPWM":
-        return self
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(message)s",
+    )
+    # Example usage: sweep servo on channel 0
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        self.close()
+    try:
+        import time
+
+        with SunfounderPWM(address=0x40, bus=1) as pwm:
+            pwm.set_pwm_freq(50)
+            while True:
+                # Increase pulse width from 500µs to 2500µs.
+                for pulse in range(500, 2500, 10):
+                    pwm.set_servo_pulse(0, pulse)
+                    time.sleep(0.02)
+                # Decrease pulse width from 2500µs to 500µs.
+                for pulse in range(2500, 500, -10):
+                    pwm.set_servo_pulse(0, pulse)
+                    time.sleep(0.02)
+    except KeyboardInterrupt:
+        _log.info("Exiting on keyboard interrupt")

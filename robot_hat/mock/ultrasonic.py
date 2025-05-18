@@ -3,7 +3,7 @@ import random
 import time
 from typing import List
 
-from robot_hat.ultrasonic import Ultrasonic as UltrasonicOrig
+from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic as UltrasonicOrig
 
 logger = logging.getLogger(__name__)
 

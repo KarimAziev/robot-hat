@@ -8,9 +8,8 @@ import logging
 from typing import List, Optional, Union
 
 from robot_hat.exceptions import InvalidServoAngle
-from robot_hat.pin_descriptions import pin_descriptions
-from robot_hat.pwm import PWM
-from robot_hat.servos.servo_abc import ServoABC
+from robot_hat.interfaces import ServoABC
+from robot_hat.sunfounder.pwm import PWM
 from robot_hat.utils import mapping
 
 logger = logging.getLogger(__name__)
@@ -91,13 +90,10 @@ class Servo(PWM, ServoABC):
             address: I2C device address or list of addresses.
         """
         super().__init__(channel, address, *args, **kwargs)
-        self.channel_description = pin_descriptions.get(
-            (
-                channel
-                if isinstance(channel, str)
-                else f"P{channel}" if isinstance(channel, int) else "unknown"
-            ),
-            "unknown",
+        self.channel_description = (
+            channel
+            if isinstance(channel, str)
+            else f"P{channel}" if isinstance(channel, int) else "unknown"
         )
 
         logger.debug(f"Initted {self.channel_description} at address {address}")

@@ -1,16 +1,17 @@
 """
 Provides a Servo abstraction using an arbitrary PWM driver.
 
-The driver must adhere to the PWMDriverABC interface (such as the PCA9685).
+The driver must adhere to the PWMDriverABC interface.
 """
 
 import logging
 from typing import Union
 
-from robot_hat.drivers.pwm.pwm_driver_abc import PWMDriverABC
+from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.exceptions import InvalidChannelName
-from robot_hat.servos.servo_abc import ServoABC
-from robot_hat.utils import validate_pwm_channel_name
+from robot_hat.factories import PWMFactory
+from robot_hat.interfaces import PWMDriverABC, ServoABC
+from robot_hat.utils import parse_int_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +35,42 @@ class Servo(ServoABC):
         real_min_angle: float = -90.0,
         real_max_angle: float = 90.0,
     ) -> None:
+        """
+        Initialize a Servo instance with the given PWM driver and configuration parameters.
+
+        Parameters:
+            `driver`:
+                A PWM driver instance implementing the required interface to control pulse widths.
+            `channel`:
+                The identifier of the PWM channel to which the servo is
+                connected. This can be an integer or a string ending with
+                digits; if a string is provided, the trailing numeric part is
+                used as the channel number, for example, P2 means channel 2.
+            `min_angle`:
+                The minimum logical angle (in degrees) that can be commanded to the servo.
+            `max_angle`:
+                The maximum logical angle (in degrees) that can be commanded to the servo.
+            `min_pulse`:
+                The minimum pulse width (in microseconds) corresponding to the servo's physical movement.
+            `max_pulse`:
+                The maximum pulse width (in microseconds) corresponding to the servo's physical movement.
+            `real_min_angle`:
+                The minimum physical angle (in degrees) that the servo can achieve. This value is used in
+                the mapping from the logical angle to the physical angle.
+            `real_max_angle`:
+                The maximum physical angle (in degrees) that the servo can achieve. This value is used in
+                the mapping from the logical angle to the physical angle.
+        """
 
         if isinstance(channel, str):
-            if not validate_pwm_channel_name(channel):
+            channel_int = parse_int_suffix(channel)
+            if channel_int is None:
                 raise InvalidChannelName(
                     f"Invalid PWM channel's name {channel}. "
-                    "The channel name must start with 'P' followed by one or more digits."
+                    "The channel name must end with one or more digits."
                 )
             self.name = channel
-            self.channel = int(channel[1:])
+            self.channel = channel_int
 
         else:
             self.name = f"P{channel}"
@@ -74,6 +102,7 @@ class Servo(ServoABC):
             / (self.real_max_angle - self.real_min_angle)
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
+
         logger.debug(
             "[%s]: Logical Angle=%s, mapped Physical Angle=%s, pulse_width=%s, pulse_width_int=%s, "
             "logical_range=(%s, %s), physical_range=(%s, %s)",
@@ -128,96 +157,127 @@ class Servo(ServoABC):
         )
 
 
-if __name__ == "__main__":
+def parse_args():
     import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Demo: Sweep a servo using a PCA9685 driver."
+    )
+    pwm_config_group = parser.add_argument_group(title="PWM config")
+    servo_group = parser.add_argument_group(title="Servo")
+
+    servo_group.add_argument(
+        "--channel",
+        type=int,
+        default=0,
+        help="PWM channel to which the servo is connected (default: 0).",
+    )
+    servo_group.add_argument(
+        "--min_angle",
+        type=int,
+        default=-90,
+        help="The minimum logical angle (in degrees) that can be commanded to the servo. (default -90)",
+    )
+    servo_group.add_argument(
+        "--max_angle",
+        type=int,
+        default=90,
+        help="The maximum logical angle (in degrees) that can be commanded to the servo.",
+    )
+    servo_group.add_argument(
+        "--real-min-angle",
+        type=int,
+        default=-90,
+        help="The minimum physical angle (in degrees) that the servo can achieve.",
+    )
+    servo_group.add_argument(
+        "--real-max-angle",
+        type=int,
+        default=90,
+        help="The maximum physical angle (in degrees) that the servo can achieve.",
+    )
+    servo_group.add_argument(
+        "--min-pulse",
+        type=int,
+        default=-90,
+        help="The minimum pulse width (in microseconds) corresponding to the servo's physical movement.",
+    )
+    servo_group.add_argument(
+        "--max-pulse",
+        type=int,
+        default=90,
+        help="The maximum logical angle (in degrees) that can be commanded to the servo.",
+    )
+    servo_group.add_argument(
+        "--step",
+        type=int,
+        default=10,
+        help="Angle step in degrees for each move (default: 10).",
+    )
+    servo_group.add_argument(
+        "--delay",
+        type=float,
+        default=0.1,
+        help="Delay in seconds between each movement (default: 0.1).",
+    )
+
+    pwm_config_group.add_argument(
+        "--driver",
+        default="PCA9685",
+        choices=["PCA9685", "Sunfounder"],
+        help="PWM driver to use.",
+    )
+    pwm_config_group.add_argument(
+        "--address",
+        type=lambda x: int(x, 0),
+        default="0x40",
+        help="I2C address of the PWM driver (default: 0x40). Prefix with '0x' for hex values.",
+    )
+    pwm_config_group.add_argument(
+        "--bus", type=int, default=1, help="I2C bus number (default: 1)."
+    )
+    pwm_config_group.add_argument(
+        "--freq",
+        type=float,
+        default=50,
+        help="PWM frequency in Hz (default: 50). Typical for servos.",
+    )
+    pwm_config_group.add_argument(
+        "--frame_width",
+        type=int,
+        default=20000,
+        help="Frame Width in µs.",
+    )
+
+    return parser.parse_args()
+
+
+def main():
     import time
-
-    def parse_args():
-        parser = argparse.ArgumentParser(
-            description="Demo: Sweep a servo using a PCA9685 driver."
-        )
-
-        parser.add_argument(
-            "--driver",
-            default="PCA9685",
-            choices=["PCA9685", "Sunfounder"],
-            help="PWM driver to use.",
-        )
-        parser.add_argument(
-            "--address",
-            type=lambda x: int(x, 0),
-            default="0x40",
-            help="I2C address of the PWM driver (default: 0x40). Prefix with '0x' for hex values.",
-        )
-        parser.add_argument(
-            "--bus", type=int, default=1, help="I2C bus number (default: 1)."
-        )
-        parser.add_argument(
-            "--frequency",
-            type=float,
-            default=50,
-            help="PWM frequency in Hz (default: 50). Typical for servos.",
-        )
-        parser.add_argument(
-            "--channel",
-            type=int,
-            default=0,
-            help="PWM channel to which the servo is connected (default: 0).",
-        )
-        parser.add_argument(
-            "--min_angle",
-            type=int,
-            default=-90,
-            help="Minimum servo angle in degrees (default: -90).",
-        )
-        parser.add_argument(
-            "--max_angle",
-            type=int,
-            default=90,
-            help="Maximum servo angle in degrees (default: 90).",
-        )
-        parser.add_argument(
-            "--step",
-            type=int,
-            default=10,
-            help="Angle step in degrees for each move (default: 10).",
-        )
-        parser.add_argument(
-            "--delay",
-            type=float,
-            default=0.1,
-            help="Delay in seconds between each movement (default: 0.1).",
-        )
-
-        return parser.parse_args()
 
     args = parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
-    from typing import Dict, Type
-
-    from robot_hat.drivers.pwm.pca9685 import PCA9685
-    from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
-
-    drivers: Dict[str, Union[Type[PCA9685], Type[SunfounderPWM]]] = {
-        "PCA9685": PCA9685,
-        "Sunfounder": SunfounderPWM,
-    }
-
-    driver_name: str = args.driver
-
-    driver = drivers[driver_name]
-
-    logging.info("Starting servo sweep demo with the following parameters:")
     logging.info(
         "Driver: %s, I2C address: 0x%x, Bus: %d, Frequency: %0.1f Hz, Channel: %d",
-        driver_name,
+        args.driver,
         args.address,
         args.bus,
-        args.frequency,
+        args.freq,
         args.channel,
     )
+
+    pwm_config = PWMDriverConfig(
+        address=args.address,
+        name=args.driver,
+        bus=args.bus,
+        frame_width=args.frame_width,
+        freq=args.freq,
+    )
+
+    logging.info("Starting servo sweep demo with the following parameters:")
+
     logging.info(
         "Angles: from %d° to %d° with a step of %d° and delay: %.2f s",
         args.min_angle,
@@ -228,8 +288,8 @@ if __name__ == "__main__":
 
     try:
 
-        with driver(address=args.address, bus=args.bus) as pwm_driver:
-            pwm_driver.set_pwm_freq(args.frequency)
+        with PWMFactory.create_pwm_driver(pwm_config) as pwm_driver:
+            pwm_driver.set_pwm_freq(args.freq)
 
             servo = Servo(driver=pwm_driver, channel=args.channel)
             while True:
@@ -246,4 +306,8 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logging.info("Exiting servo sweep demo.")
     except Exception as e:
-        logging.error("An error occurred: %s", e)
+        logging.error("An error occurred: %s", e, exc_info=True)
+
+
+if __name__ == "__main__":
+    main()

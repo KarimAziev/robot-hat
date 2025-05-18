@@ -7,9 +7,8 @@ import math
 from typing import Dict, List, Optional, Union
 
 from robot_hat.exceptions import InvalidChannelName, InvalidChannelNumber
-from robot_hat.i2c import I2C
-from robot_hat.pin_descriptions import pin_descriptions
-from robot_hat.utils import validate_pwm_channel_name
+from robot_hat.i2c.i2c_manager import I2C
+from robot_hat.utils import parse_int_suffix
 
 logger = logging.getLogger(__name__)
 
@@ -104,30 +103,23 @@ class PWM(I2C):
         Initialize the PWM module.
 
         Args:
-            channel (int or str): PWM channel number (0-19/P0-P19).
-            address (Optional[List[int]]): I2C device address or list of addresses.
+            channel: PWM channel number (0-19/P0-P19).
+            address: I2C device address or list of addresses.
         """
         if address is None:
             super().__init__(self.ADDR, *args, **kwargs)
         else:
             super().__init__(address, *args, **kwargs)
 
-        self._chan_desc = pin_descriptions.get(
-            (
-                channel
-                if isinstance(channel, str)
-                else f"P{channel}" if isinstance(channel, int) else "unknown"
-            ),
-            "unknown",
-        )
-
         if isinstance(channel, str):
-            if not validate_pwm_channel_name(channel):
+            chan_int = parse_int_suffix(channel)
+            if chan_int is None:
                 raise InvalidChannelName(
                     f"Invalid PWM channel's name {channel}. "
-                    "The channel name must start with 'P' followed by one or more digits."
+                    "The channel name must end with one or more digits."
                 )
-            channel = int(channel[1:])
+            channel = chan_int
+
         if isinstance(channel, int):
             if channel > 19 or channel < 0:
                 msg = f'channel must be in range of 0-19, not "{channel}"'
@@ -140,10 +132,9 @@ class PWM(I2C):
             )
         else:
             logger.warning(
-                "PWM address %s is not found for channel %s (%s)",
+                "PWM address %s is not found for channel %s",
                 address,
                 channel,
-                self._chan_desc,
             )
 
         self.channel = channel
@@ -202,7 +193,7 @@ class PWM(I2C):
 
         logger.debug(
             "[%s]: writing 16 bit %s (%s) high byte: %s (%s) low byte: %s, (%s)",
-            self._chan_desc,
+            self.channel,
             value,
             hex(value),
             value_h,
@@ -255,7 +246,7 @@ class PWM(I2C):
 
         logger.debug(
             "[{%s}]: frequency {%s} -> prescaler {%s}, period: {%s}",
-            self._chan_desc,
+            self.channel,
             self._freq,
             psc,
             arr,
@@ -292,7 +283,7 @@ class PWM(I2C):
             reg = self.REG_PSC2 + self.timer - 4
         logger.debug(
             "[%s]: Set prescaler to PWM %s at timer %s to register: %s, global timer: %s",
-            self._chan_desc,
+            self.channel,
             self._prescaler - 1,
             self.timer,
             hex(reg),
@@ -351,7 +342,7 @@ class PWM(I2C):
 
         logger.debug(
             "[%s]: Set period to PWM %s at timer %s to register: %s, global timer: %s",
-            self._chan_desc,
+            self.channel,
             arr,
             self.timer,
             hex(reg),
@@ -378,7 +369,7 @@ class PWM(I2C):
         reg = self.REG_CHN + self.channel
         logger.debug(
             "[%s]: writing pulse width %s  to register: %s global timer: %s",
-            self._chan_desc,
+            self.channel,
             self._pulse_width,
             hex(reg),
             timer,

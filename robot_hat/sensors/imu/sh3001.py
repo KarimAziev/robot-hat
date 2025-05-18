@@ -1,20 +1,12 @@
 import logging
-import os
 import time
 from dataclasses import dataclass
-from typing import ClassVar, List, Optional, Tuple, Union
+from typing import ClassVar, List, Optional, Tuple
 
+from robot_hat.data_types import BusType
 from robot_hat.exceptions import IMUInitializationError
-from robot_hat.i2c import I2C
-from robot_hat.imu.imu_abc import AbstractIMU
-from robot_hat.smbus_singleton import SMBus as SMBusSingleton
-
-USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
-
-if USE_MOCK == "1":
-    from robot_hat.mock.smbus2 import MockSMBus as SMBus
-else:
-    from smbus2 import SMBus
+from robot_hat.i2c.i2c_manager import I2C
+from robot_hat.interfaces import AbstractIMU
 
 
 @dataclass(frozen=True)
@@ -403,7 +395,7 @@ class Sh3001(I2C, AbstractIMU):
     def __init__(
         self,
         address=SH3001_ADDRESS,
-        bus: Union[int, SMBus, SMBusSingleton] = 1,
+        bus: BusType = 1,
         config: Optional[SH3001Config] = None,
     ) -> None:
         """

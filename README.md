@@ -206,7 +206,7 @@ Measure distance using the `HC-SR04` ultrasonic sensor module.
 
 ```python
 from robot_hat.pin import Pin
-from robot_hat.ultrasonic import Ultrasonic
+from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 
 # Initialize Ultrasonic Sensor
 trig_pin = Pin("P9")

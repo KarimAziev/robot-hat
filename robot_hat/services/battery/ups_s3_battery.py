@@ -1,10 +1,8 @@
-from typing import Optional, Union
+from typing import Optional
 
-from smbus2 import SMBus
-
+from robot_hat.data_types import BusType
 from robot_hat.drivers.adc.INA219 import INA219, INA219Config
-from robot_hat.services.battery.battery_abc import BatteryABC
-from robot_hat.smbus_singleton import SMBus as SMBusSingleton
+from robot_hat.interfaces import BatteryABC
 
 
 class Battery(INA219, BatteryABC):
@@ -16,10 +14,9 @@ class Battery(INA219, BatteryABC):
 
     def __init__(
         self,
-        bus_num: int = 1,
+        bus: BusType = 1,
         address: int = 0x41,
         config: Optional[INA219Config] = None,
-        bus: Union[SMBusSingleton, SMBus, None] = None,
         *args,
         **kwargs,
     ):
@@ -27,7 +24,6 @@ class Battery(INA219, BatteryABC):
         Initialize the Battery object.
         """
         super().__init__(
-            bus_num=bus_num,
             address=address,
             config=config,
             bus=bus,
