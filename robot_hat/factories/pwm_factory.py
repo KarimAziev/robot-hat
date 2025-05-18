@@ -31,6 +31,7 @@ class PWMFactory:
         config: PWMDriverConfig,
         bus: Optional[BusType] = None,
     ) -> PWMDriverABC:
+        import robot_hat.drivers.pwm  # type: ignore
 
         driver_cls = PWM_DRIVER_REGISTRY[config.name]
 
