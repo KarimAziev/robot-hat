@@ -12,7 +12,7 @@ from typing import Optional
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.factories import register_pwm_driver
-from robot_hat.interfaces import PWMDriverABC
+from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 
 _log = logging.getLogger(__name__)
 

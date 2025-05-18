@@ -3,7 +3,7 @@ import time
 from typing import Literal, Union
 
 from robot_hat.data_types.config.motor import MotorDirection
-from robot_hat.interfaces import MotorABC
+from robot_hat.interfaces.motor_abc import MotorABC
 
 logger = logging.getLogger(__name__)
 

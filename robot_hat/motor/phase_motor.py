@@ -2,7 +2,7 @@ import logging
 from typing import Optional, Union, cast
 
 from robot_hat.data_types.config.motor import MotorDirection
-from robot_hat.interfaces import MotorABC
+from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.motor.mixins.motor_calibration import MotorCalibration
 from robot_hat.utils import constrain
 

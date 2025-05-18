@@ -3,7 +3,7 @@ import logging
 import os
 from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Union
 
-from robot_hat.interfaces import SMBusABC
+from robot_hat.interfaces.smbus_abc import SMBusABC
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg

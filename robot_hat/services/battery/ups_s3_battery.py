@@ -1,8 +1,8 @@
 from typing import Optional
 
-from robot_hat.data_types import BusType
+from robot_hat.data_types.bus import BusType
 from robot_hat.drivers.adc.INA219 import INA219, INA219Config
-from robot_hat.interfaces import BatteryABC
+from robot_hat.interfaces.battery_abc import BatteryABC
 
 
 class Battery(INA219, BatteryABC):

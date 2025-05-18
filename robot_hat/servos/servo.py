@@ -10,7 +10,8 @@ from typing import Union
 from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.exceptions import InvalidChannelName
 from robot_hat.factories import PWMFactory
-from robot_hat.interfaces import PWMDriverABC, ServoABC
+from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
+from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.utils import parse_int_suffix
 
 logger = logging.getLogger(__name__)

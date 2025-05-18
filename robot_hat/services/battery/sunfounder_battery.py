@@ -2,7 +2,7 @@ import logging
 from typing import List, Union
 
 from robot_hat.drivers.adc.sunfounder_adc import ADC, ADC_DEFAULT_ADDRESSES
-from robot_hat.interfaces import BatteryABC
+from robot_hat.interfaces.battery_abc import BatteryABC
 
 logger = logging.getLogger(__name__)
 

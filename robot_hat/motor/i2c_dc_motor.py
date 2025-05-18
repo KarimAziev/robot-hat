@@ -8,7 +8,8 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from robot_hat.data_types.config.motor import MotorDirection
 from robot_hat.exceptions import InvalidChannelName
-from robot_hat.interfaces import MotorABC, PWMDriverABC
+from robot_hat.interfaces.motor_abc import MotorABC
+from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 from robot_hat.motor.mixins.motor_calibration import MotorCalibration
 from robot_hat.utils import constrain, parse_int_suffix
 

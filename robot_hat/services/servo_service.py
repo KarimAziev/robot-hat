@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Callable, Optional, Union
 
 from robot_hat.exceptions import InvalidCalibrationModeError
-from robot_hat.interfaces import ServoABC
+from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.utils import constrain
 
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Optional, Sequence, Type, Union
 
 from robot_hat.common.event_emitter import EventEmitter
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
-from robot_hat.interfaces import SMBusABC
+from robot_hat.interfaces.smbus_abc import SMBusABC
 
 USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
 

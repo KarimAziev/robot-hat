@@ -5,7 +5,7 @@ A wrapper for servos driven directly via Raspberry Pi GPIO (using gpiozero's Ang
 import logging
 from typing import Union, cast
 
-from robot_hat.interfaces import ServoABC
+from robot_hat.interfaces.servo_abc import ServoABC
 
 _log = logging.getLogger(__name__)
 

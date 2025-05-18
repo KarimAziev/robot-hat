@@ -10,7 +10,7 @@ from robot_hat.data_types.config.ina219 import (
     INA219Config,
     Mode,
 )
-from robot_hat.interfaces import SMBusABC
+from robot_hat.interfaces.smbus_abc import SMBusABC
 
 _log = logging.getLogger(__name__)
 

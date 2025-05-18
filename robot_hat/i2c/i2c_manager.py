@@ -19,7 +19,7 @@ import logging
 import os
 from typing import Any, List, Optional, Union
 
-from robot_hat.data_types import BusType
+from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import ADCAddressNotFound
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
 

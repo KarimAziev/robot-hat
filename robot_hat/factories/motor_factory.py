@@ -10,7 +10,8 @@ from robot_hat.data_types.config.motor import (
     PhaseMotorConfig,
 )
 from robot_hat.factories.pwm_factory import PWMFactory
-from robot_hat.interfaces import MotorABC, PWMDriverABC
+from robot_hat.interfaces.motor_abc import MotorABC
+from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 from robot_hat.motor.gpio_dc_motor import GPIODCMotor
 from robot_hat.motor.i2c_dc_motor import I2CDCMotor
 from robot_hat.motor.phase_motor import PhaseMotor

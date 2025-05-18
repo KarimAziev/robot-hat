@@ -3,10 +3,10 @@ import time
 from dataclasses import dataclass
 from typing import ClassVar, List, Optional, Tuple
 
-from robot_hat.data_types import BusType
+from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import IMUInitializationError
 from robot_hat.i2c.i2c_manager import I2C
-from robot_hat.interfaces import AbstractIMU
+from robot_hat.interfaces.imu_abc import AbstractIMU
 
 
 @dataclass(frozen=True)

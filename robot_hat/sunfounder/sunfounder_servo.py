@@ -8,7 +8,7 @@ import logging
 from typing import List, Optional, Union
 
 from robot_hat.exceptions import InvalidServoAngle
-from robot_hat.interfaces import ServoABC
+from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.sunfounder.pwm import PWM
 from robot_hat.utils import mapping
 
