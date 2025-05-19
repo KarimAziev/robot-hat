@@ -135,7 +135,7 @@ class MockSMBus(SMBusABC):
             rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 20
 
             self._byte_responses_by_addrs[f"{i2c_addr}"] = generate_discharge_sequence(
-                start_voltage=6.4, end_voltage=8.4, rate=rate
+                start_voltage=8.4, end_voltage=8.4, rate=rate
             )
             byte_responses = self._byte_responses_by_addrs[f"{i2c_addr}"]
         return byte_responses.pop(0)
