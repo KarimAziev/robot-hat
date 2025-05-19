@@ -132,10 +132,18 @@ class MockSMBus(SMBusABC):
             return self._command_responses["byte"]
         if len(byte_responses) == 0:
             DISCHARGE_RATE = os.getenv("ROBOT_HAT_DISCHARGE_RATE")
+            START_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_START_VOLTAGE_MOCK")
+            END_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_END_VOLTAGE_MOCK")
             rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 20
+            start_voltage = (
+                float(START_VOLTAGE_MOCK) if START_VOLTAGE_MOCK is not None else 2.6
+            )
+            end_voltage = (
+                float(END_VOLTAGE_MOCK) if END_VOLTAGE_MOCK is not None else 2.0
+            )
 
             self._byte_responses_by_addrs[f"{i2c_addr}"] = generate_discharge_sequence(
-                start_voltage=8.4, end_voltage=8.4, rate=rate
+                start_voltage=start_voltage, end_voltage=end_voltage, rate=rate
             )
             byte_responses = self._byte_responses_by_addrs[f"{i2c_addr}"]
         return byte_responses.pop(0)
@@ -232,10 +240,22 @@ class MockSMBus(SMBusABC):
 
         if register in (1, 2, 3, 4):
             if register not in self._discharge_sequences:
+                DISCHARGE_RATE = os.getenv("ROBOT_HAT_DISCHARGE_RATE")
+                START_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_START_VOLTAGE_MOCK")
+                END_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_END_VOLTAGE_MOCK")
+                rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 10
+                start_voltage = (
+                    float(START_VOLTAGE_MOCK)
+                    if START_VOLTAGE_MOCK is not None
+                    else 12.6
+                )
+                end_voltage = (
+                    float(END_VOLTAGE_MOCK) if END_VOLTAGE_MOCK is not None else 8.0
+                )
                 self._discharge_sequences[register] = generate_discharge_sequence(
-                    start_voltage=12.6,
-                    end_voltage=8.0,
-                    rate=10,
+                    start_voltage=start_voltage,
+                    end_voltage=end_voltage,
+                    rate=rate,
                     conversion_fn=ina219_bus_voltage_conversion,
                 )
             sequence = self._discharge_sequences[register]
