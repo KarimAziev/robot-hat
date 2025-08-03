@@ -31,6 +31,7 @@ class ServoService:
         min_angle=-90,
         max_angle=90,
         calibration_offset=0.0,
+        reverse: bool = False,
         calibration_mode: Optional[
             Union[ServoCalibrationMode, Callable[[float, float], float]]
         ] = ServoCalibrationMode.SUM,
@@ -51,6 +52,16 @@ class ServoService:
               and returns a calibrated angle for more advanced customization.
             - `None`: Disables calibration entirely. Only the constrained angle value
               (within `min_angle` and `max_angle`) is passed directly to the hardware
+
+        - reverse: Indicates whether the input angle should be logically
+                   reversed before being sent to the servo. When set to True, all input
+                   angles passed to the set_angle method will be mirrored about the origin
+                   (i.e., multiplied by -1) before applying constraints and calibration.
+                   This is useful when the physical orientation of the servo requires
+                   inversion of its direction to behave correctly (e.g., mirrored servo
+                   mounting in a differential steering setup or mechanical linkage that
+                   reverses motion).
+
 
         Raises:
         --------------
@@ -115,6 +126,7 @@ class ServoService:
         self._persisted_calibration_offset = calibration_offset or 0.0
         self.calibration_offset = calibration_offset or 0.0
         self._current_angle = 0.0
+        self._reverse = reverse
         self._log_prefix = f"Servo {self.name or ''}".strip() + ": "
 
         self.calibration_function = (
@@ -209,7 +221,10 @@ class ServoService:
         >>> servo_service.set_angle(30)
         """
         assert self.servo
-        constrained_value = constrain(angle, self.min_angle, self.max_angle)
+
+        constrained_value = constrain(
+            angle if not self._reverse else -angle, self.min_angle, self.max_angle
+        )
         calibrated_value = (
             self.calibration_function(constrained_value, self.calibration_offset)
             if self.calibration_function is not None
