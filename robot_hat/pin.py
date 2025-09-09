@@ -12,17 +12,34 @@ Types of Pins
 """
 
 import logging
-from typing import Callable, ClassVar, Dict, Literal, Optional, Union, overload
+import re
+from typing import (
+    TYPE_CHECKING,
+    Callable,
+    ClassVar,
+    Dict,
+    List,
+    Literal,
+    Optional,
+    Tuple,
+    Union,
+    overload,
+)
 
 from robot_hat.exceptions import (
+    DevicePinFactoryError,
     InvalidPin,
     InvalidPinInterruptTrigger,
     InvalidPinMode,
     InvalidPinName,
+    InvalidPinNumber,
     InvalidPinPull,
 )
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from gpiozero import HeaderInfo, PinInfo
 
 
 class Pin(object):
@@ -124,12 +141,13 @@ class Pin(object):
         - `InvalidPin`: If the input pin type is neither an integer nor a string.
         - `InvalidPinMode`: If the mode is not valid.
         - `InvalidPinPull`: If pull is not valid.
+        - `BoardInfoMissingError`: If Device.pin_factory is None.
         """
         super().__init__(*args, **kwargs)
 
         # Parse pin
         self.dict = pin_dict
-        self._setup_pin_number(pin)
+        self._setup_pin(pin)
 
         self._value = 0
         self.gpio = None
@@ -156,7 +174,68 @@ class Pin(object):
             pull_hex,
         )
 
-    def _setup_pin_number(self, pin: Union[int, str]) -> None:
+    @staticmethod
+    def gpio_pin_info(name: Union[str, int]) -> Tuple[int, str]:
+        from gpiozero import Device
+
+        Device.ensure_pin_factory()
+
+        if Device.pin_factory is None:
+            raise DevicePinFactoryError("Device Pin Factory is None ")
+
+        def has_letter(s: str):
+            return bool(re.search("[A-Za-z]", s))
+
+        def sort_key(s: str):
+            s = str(s)
+            if s.upper().startswith("GPIO"):
+                group = 0
+            elif not has_letter(s):
+                group = 2
+            else:
+                group = 1
+            return (group, s.lower())
+
+        header_values: List[HeaderInfo] = Device.pin_factory.board_info.headers.values()
+        for header in header_values:
+            vals = header.pins.values()
+            for pin in vals:
+                pin_info: PinInfo = pin
+                if name in pin.names:
+                    pin_num: Optional[int] = (
+                        name
+                        if isinstance(name, int)
+                        else next(
+                            (x for x in pin_info.names if isinstance(x, int)), None
+                        )
+                    )
+                    pin_str: Optional[str] = (
+                        name
+                        if isinstance(name, str)
+                        else next(
+                            (
+                                x
+                                for x in sorted(pin_info.names, key=sort_key)
+                                if isinstance(x, str)
+                            ),
+                            None,
+                        )
+                    )
+
+                    if pin_num is None:
+                        raise InvalidPinName(
+                            f"The pin {name} is found but cannot be used!"
+                        )
+                    return pin_num, pin_str or f"{pin_str}"
+        else:
+            if isinstance(name, str):
+                raise InvalidPinName(f"Invalid pin name {name}")
+            elif isinstance(name, int):
+                raise InvalidPinNumber(f"Invalid pin number {name}")
+            else:
+                raise InvalidPin("Received invalid pin value %s", name)
+
+    def _setup_pin(self, pin: Union[int, str]) -> None:
         """
         Determines and sets up the GPIO pin number based on the input pin
         identifier (integer or string).
@@ -173,15 +252,13 @@ class Pin(object):
         """
         if isinstance(pin, str):
             pin_num = self.dict.get(pin)
-            if pin_num is None:
-                msg = f"Pin '{pin}' is not found in {self.dict.keys()}"
-                logger.error(msg)
-                raise InvalidPinName(msg)
-            self._board_name = pin
-            self._pin_num = pin_num
+            if pin_num is not None:
+                self._pin_num = pin_num
+                self._board_name = pin
+            else:
+                self._pin_num, self._board_name = self.gpio_pin_info(pin)
         elif isinstance(pin, int):
-            self._board_name = f"{pin}"
-            self._pin_num = pin
+            self._pin_num, self._board_name = self.gpio_pin_info(pin)
         else:
             msg = f'Invalid PIN: "{pin}"'
             logger.error(msg)

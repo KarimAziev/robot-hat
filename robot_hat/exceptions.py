@@ -132,3 +132,11 @@ class IMUInitializationError(Exception):
     """Raised when the IMU sensor fails to initialize properly."""
 
     pass
+
+
+class DevicePinFactoryError(ValueError):
+    """
+    Exception raised when the Device.pin_factory is None.
+    """
+
+    pass
