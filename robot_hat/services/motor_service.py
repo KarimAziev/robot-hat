@@ -19,8 +19,8 @@ class MotorService:
     The MotorService provides methods for controlling both motors together, handling speed, direction, calibration, and steering.
 
     Attributes:
-    - left_motor (Motor): Instance of the motor controlling the left side.
-    - right_motor (Motor): Instance of the motor controlling the right side.
+    - left_motor: Instance of the motor controlling the left side.
+    - right_motor: Instance of the motor controlling the right side.
 
     Simple exampe:
     --------------
@@ -78,42 +78,55 @@ class MotorService:
         time.sleep(0.002)
         logger.debug("Motors Stopped")
 
-    def move(self, speed: int, direction: MotorServiceDirection) -> None:
+    def move(self, speed: float, direction: MotorServiceDirection) -> None:
         """
         Move the robot forward or backward.
 
         Args:
-        - speed (int): The base speed (-100 to 100).
-        - direction (int): 1 for forward, -1 for backward.
+        - speed: The base speed (-100 to 100).
+        - direction: 1 for forward, -1 for backward, 0 for stopping.
         """
+        if direction == 0 and abs(speed) > 0:
+            logger.warning(
+                "Non-zero speed provided with direction 0; motors will be stopped."
+            )
         assert self.left_motor
         assert self.right_motor
-        speed1 = speed * direction
-        speed2 = -speed * direction
 
-        self.left_motor.set_speed(speed1)
-        self.right_motor.set_speed(speed2)
-        self.direction = direction
+        if direction == 0:
+            self.stop_all()
+        else:
+            speed1 = speed * direction
+            speed2 = -speed * direction
+
+            self.left_motor.set_speed(speed1)
+            self.right_motor.set_speed(speed2)
+            self.direction = direction
 
     @property
-    def speed(self):
+    def speed(self) -> float:
         """
         Get the average speed of the motors.
         """
-        assert self.left_motor
-        assert self.right_motor
-        return round((abs(self.left_motor.speed) + abs(self.right_motor.speed)) / 2)
+
+        return round(
+            (
+                abs(self.left_motor.speed if self.left_motor else 0)
+                + abs(self.right_motor.speed if self.right_motor else 0)
+            )
+            / 2
+        )
 
     def update_left_motor_calibration_speed(self, value: float, persist=False) -> float:
         """
         Update the speed calibration offset for the left motor.
 
         Args:
-            value (float): New speed offset for calibration.
-            persist (bool): Whether to make the calibration persistent across resets (default: False).
+            value: New speed offset for calibration.
+            persist: Whether to make the calibration persistent across resets.
 
         Returns:
-            float: Updated speed calibration offset.
+            Updated speed calibration offset.
 
         Usage:
             >>> controller.update_left_motor_calibration_speed(5, persist=True)
@@ -129,8 +142,8 @@ class MotorService:
         Update the speed calibration offset for the right motor.
 
         Args:
-            value (float): New speed offset for calibration.
-            persist (bool): Whether to make the calibration persistent across resets (default: False).
+            value: New speed offset for calibration.
+            persist: Whether to make the calibration persistent across resets (default: False).
 
         Returns:
             float: Updated speed calibration offset.
@@ -149,8 +162,8 @@ class MotorService:
         Update the direction calibration for the left motor.
 
         Args:
-            value (int): New calibration direction (+1 or -1).
-            persist (bool): Whether to make the calibration persistent across resets (default: False).
+            value: New calibration direction (+1 or -1).
+            persist: Whether to make the calibration persistent across resets (default: False).
 
         Returns:
             int: Updated direction calibration.
@@ -168,8 +181,8 @@ class MotorService:
         Update the direction calibration for the right motor.
 
         Args:
-            value (int): New calibration direction (+1 or -1).
-            persist (bool): Whether to make the calibration persistent across resets (default: False).
+            value: New calibration direction (+1 or -1).
+            persist: Whether to make the calibration persistent across resets (default: False).
 
         Returns:
             int: Updated direction calibration.
@@ -215,8 +228,8 @@ class MotorService:
             if motor:
                 try:
                     motor.close()
-                except Exception:
-                    logger.error("Error closing motor")
+                except Exception as e:
+                    logger.error("Error closing motor: %s", e)
         self.right_motor = None
         self.left_motor = None
 
@@ -227,9 +240,9 @@ class MotorService:
         Move the robot with speed and direction, applying steering based on the current angle.
 
         Args:
-            speed (int): Base speed for the robot (range: -100 to 100).
-            direction (int): 1 for forward, -1 for backward.
-            current_angle (int, optional): Steering angle for turning (range: -100 to 100, default: 0).
+            speed: Base speed for the robot (range: -100 to 100).
+            direction: 1 for forward, -1 for backward.
+            current_angle: Steering angle for turning (range: -100 to 100, default: 0).
 
             - A positive angle steers toward the right.
             - A negative angle steers toward the left.
@@ -251,9 +264,9 @@ class MotorService:
         Move the robot forward or backward, optionally steering it based on the current angle.
 
         Args:
-        - speed (int): The base speed at which to move.
-        - direction (int): 1 for forward, -1 for backward.
-        - current_angle (int): Steering angle for turning (e.g., -100 to 100).
+        - speed: The base speed at which to move.
+        - direction: 1 for forward, -1 for backward.
+        - current_angle: Steering angle for turning (e.g., -100 to 100).
         """
         assert self.left_motor
         assert self.right_motor

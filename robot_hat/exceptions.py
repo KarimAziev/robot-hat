@@ -140,3 +140,11 @@ class DevicePinFactoryError(ValueError):
     """
 
     pass
+
+
+class MotorFactoryError(Exception):
+    """Base class for MotorFactory-related errors."""
+
+
+class UnsupportedMotorConfigError(MotorFactoryError, TypeError):
+    """Raised when an unsupported motor config type is passed to MotorFactory.create_motor."""

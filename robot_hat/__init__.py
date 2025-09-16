@@ -1,4 +1,4 @@
-from robot_hat.data_types.config.motor import MotorConfig, MotorDirection
+from robot_hat.data_types.config.motor import MotorConfigType, MotorDirection
 from robot_hat.drivers.adc.sunfounder_adc import ADC
 from robot_hat.exceptions import (
     ADCAddressNotFound,
@@ -58,7 +58,7 @@ __all__ = [
     "InvalidChannelName",
     "InvalidChannelNumber",
     "InvalidCalibrationModeError",
-    "MotorConfig",
+    "MotorConfigType",
     "MotorDirection",
     "UltrasonicEchoPinError",
     "compose",

@@ -149,33 +149,142 @@ class PhaseMotorConfig(MotorBaseConfig):
     )
 
 
-MotorConfig = Union[I2CDCMotorConfig, GPIODCMotorConfig, PhaseMotorConfig]
+MotorConfigType = Union[I2CDCMotorConfig, GPIODCMotorConfig, PhaseMotorConfig]
 
 
 if __name__ == "__main__":
+    import argparse
+    import dataclasses
+    import json
+    from typing import Any
 
-    pwm_config = PWMDriverConfig(
-        name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x40
-    )
-    print("PWMDriverConfig address:", pwm_config.addr_str)
+    def parse_int_or_str(value: str) -> Any:
+        """
+        Try to parse a string as int (base 0 to allow hex like 0x40).
+        If that fails, return the original string.
+        """
+        try:
+            return int(value, 0)
+        except Exception:
+            return value
 
-    i2c_dc_motor_config = I2CDCMotorConfig(
-        calibration_direction=1,
-        name="left_motor",
-        max_speed=100,
-        driver=pwm_config,
-        channel="P0",
-        dir_pin="D5",
+    parser = argparse.ArgumentParser(
+        prog="motor_config_demo",
+        description="Create and print a motor config (I2C/GPIO/Phase) for testing/demo.",
     )
-    print("I2CDCMotorConfig:", i2c_dc_motor_config)
+    subparsers = parser.add_subparsers(dest="motor_type", required=True)
 
-    gpio_dc_motor_config = GPIODCMotorConfig(
-        calibration_direction=-1,
-        name="right_motor",
-        max_speed=90,
-        forward_pin=17,
-        backward_pin=18,
-        enable_pin=27,
-        pwm=False,
+    # I2C DC Motor parser
+    p_i2c = subparsers.add_parser(
+        "i2c", help="I2C-driven DC motor (PWM driver + dir pin)"
     )
-    print("GPIODCMotorConfig:", gpio_dc_motor_config)
+    p_i2c.add_argument("--name", default="left_motor", help="Human-readable motor name")
+    p_i2c.add_argument("--calibration-direction", type=int, choices=[1, -1], default=1)
+    p_i2c.add_argument("--max-speed", type=int, default=100)
+    p_i2c.add_argument("--channel", default="P0", help="PWM channel (e.g. P0, 0)")
+    p_i2c.add_argument("--dir-pin", default="D5", help="Direction pin (string or int)")
+
+    # PWM driver options (I2C)
+    p_i2c.add_argument("--driver-name", default="Sunfounder")
+    p_i2c.add_argument("--driver-bus", type=int, default=1)
+    p_i2c.add_argument("--driver-frame-width", type=int, default=20000)
+    p_i2c.add_argument("--driver-freq", type=int, default=50)
+    # allow hex address like 0x40
+    p_i2c.add_argument("--driver-address", type=lambda s: int(s, 0), default=0x40)
+
+    # GPIO DC Motor parser
+    p_gpio = subparsers.add_parser("gpio", help="GPIO-driven DC motor (direct pins)")
+    p_gpio.add_argument(
+        "--name", default="right_motor", help="Human-readable motor name"
+    )
+    p_gpio.add_argument("--calibration-direction", type=int, choices=[1, -1], default=1)
+    p_gpio.add_argument("--max-speed", type=int, default=90)
+    p_gpio.add_argument(
+        "--forward-pin",
+        help="Forward GPIO pin (string or int)",
+        default=25,
+    )
+    p_gpio.add_argument(
+        "--backward-pin",
+        help="Backward GPIO pin (string or int)",
+        default=6,
+    )
+    p_gpio.add_argument(
+        "--pwm", action="store_true", help="Use PWM output devices on the pins"
+    )
+    p_gpio.add_argument("--enable-pin", help="Optional enable pin (string or int)")
+
+    # Phase motor parser
+    p_phase = subparsers.add_parser(
+        "phase", help="Phase/enable motor driver configuration"
+    )
+    p_phase.add_argument("--name", required=True, help="Human-readable motor name")
+    p_phase.add_argument(
+        "--calibration-direction", type=int, choices=[1, -1], default=1
+    )
+    p_phase.add_argument("--max-speed", type=int, default=100)
+    p_phase.add_argument("--phase-pin", required=True, help="Phase/direction GPIO pin")
+    p_phase.add_argument("--pwm", action="store_true", help="Use PWM on enable pin")
+    p_phase.add_argument("--enable-pin", required=True, help="Enable GPIO pin")
+
+    args = parser.parse_args()
+
+    # Construct the selected config
+    if args.motor_type == "i2c":
+        driver = PWMDriverConfig(
+            name=args.driver_name,
+            bus=args.driver_bus,
+            frame_width=args.driver_frame_width,
+            freq=args.driver_freq,
+            address=args.driver_address,
+        )
+
+        channel = parse_int_or_str(args.channel)
+        dir_pin = parse_int_or_str(args.dir_pin)
+
+        cfg = I2CDCMotorConfig(
+            calibration_direction=args.calibration_direction,
+            name=args.name,
+            max_speed=args.max_speed,
+            driver=driver,
+            channel=channel,
+            dir_pin=dir_pin,
+        )
+
+    elif args.motor_type == "gpio":
+        forward_pin = parse_int_or_str(args.forward_pin)
+        backward_pin = parse_int_or_str(args.backward_pin)
+        enable_pin = (
+            parse_int_or_str(args.enable_pin) if args.enable_pin is not None else None
+        )
+
+        cfg = GPIODCMotorConfig(
+            calibration_direction=args.calibration_direction,
+            name=args.name,
+            max_speed=args.max_speed,
+            forward_pin=forward_pin,
+            backward_pin=backward_pin,
+            pwm=args.pwm,
+            enable_pin=enable_pin,
+        )
+
+    elif args.motor_type == "phase":
+        phase_pin = parse_int_or_str(args.phase_pin)
+        enable_pin = parse_int_or_str(args.enable_pin)
+
+        cfg = PhaseMotorConfig(
+            calibration_direction=args.calibration_direction,
+            name=args.name,
+            max_speed=args.max_speed,
+            phase_pin=phase_pin,
+            pwm=args.pwm,
+            enable_pin=enable_pin,
+        )
+    else:
+        parser.error("Unknown motor type")
+
+    # Print the dataclass and JSON representation for inspection
+    print("Dataclass repr:")
+    print(cfg)
+    print("\nAs JSON:")
+    print(json.dumps(dataclasses.asdict(cfg), indent=2))
