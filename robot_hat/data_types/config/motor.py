@@ -202,17 +202,22 @@ if __name__ == "__main__":
     p_gpio.add_argument(
         "--forward-pin",
         help="Forward GPIO pin (string or int)",
-        default=25,
+        default=20,
     )
     p_gpio.add_argument(
         "--backward-pin",
         help="Backward GPIO pin (string or int)",
-        default=6,
+        default=21,
     )
     p_gpio.add_argument(
-        "--pwm", action="store_true", help="Use PWM output devices on the pins"
+        "--pwm",
+        action="store_true",
+        help="Use PWM output devices on the pins",
+        default=True,
     )
-    p_gpio.add_argument("--enable-pin", help="Optional enable pin (string or int)")
+    p_gpio.add_argument(
+        "--enable-pin", help="Optional enable pin (string or int)", default=26
+    )
 
     # Phase motor parser
     p_phase = subparsers.add_parser(

@@ -88,10 +88,10 @@ class MotorFactory:
 
         i2c_cfg = I2CDCMotorConfig(
             calibration_direction=1,
-            name="left_motor",
+            name="right_motor",
             max_speed=100,
             driver=driver_cfg,
-            channel="P0",
+            channel="P13",
             dir_pin="D5",
         )
 
@@ -107,13 +107,14 @@ class MotorFactory:
 
         cfg_gpio = GPIODCMotorConfig(
             calibration_direction=1,
-            name="right_motor",
-            max_speed=90,
-            forward_pin=25,
-            backward_pin=6,
-            pwm=True,  # enable PWM output on the motor pins if supported
-            enable_pin=26,  # optional enable PWM pin on some motor boards
+            name="left_motor",
+            max_speed=100,
+            forward_pin=6,
+            backward_pin=13,
+            enable_pin=12,
+            pwm=True,
         )
+
         motor_gpio = MotorFactory.create_motor(cfg_gpio)
         ```
 
@@ -243,17 +244,19 @@ class MotorFactory:
 
         Example
         -------
+        ```python
         from robot_hat.data_types.config.motor import GPIODCMotorConfig
         cfg = GPIODCMotorConfig(
             calibration_direction=1,
             name="drive_right",
             max_speed=90,
-            forward_pin=25,
-            backward_pin=6,
+            forward_pin=6,
+            backward_pin=13,
             pwm=True,
-            enable_pin=26,
+            enable_pin=12,
         )
         motor = MotorFactory.create_gpio_motor(cfg)
+        ```
         """
         is_mock = os.getenv("GPIOZERO_PIN_FACTORY") == "mock"
         _log.debug("Initializing GPIO DC motor %s", config)
@@ -309,6 +312,7 @@ class MotorFactory:
 
         Example
         -------
+        ```python
         from robot_hat.data_types.config.pwm import PWMDriverConfig
         from robot_hat.data_types.config.motor import I2CDCMotorConfig
         from robot_hat.factories.pwm_factory import PWMFactory
@@ -316,18 +320,19 @@ class MotorFactory:
         pwm_cfg = PWMDriverConfig(name="PCA9685", bus=1, frame_width=20000, freq=50, address=0x40)
         driver = PWMFactory.create_pwm_driver(pwm_cfg, bus=1)
 
-        cfg = I2CDCMotorConfig(
+        i2c_cfg = I2CDCMotorConfig(
             calibration_direction=1,
-            name="left_wheel",
+            name="right_motor",
             max_speed=100,
-            driver=pwm_cfg,
-            channel="P0",
+            driver=driver_cfg,
+            channel="P13",
             dir_pin="D5",
         )
 
-        motor = MotorFactory.create_i2c_motor(cfg, driver=driver)
+        motor = MotorFactory.create_i2c_motor(i2c_cfg, driver=driver)
+        ```
         """
-        _log.debug("Initializng I2C motor %s", config)
+        _log.debug("Initializing I2C motor %s", config)
 
         driver = driver or PWMFactory.create_pwm_driver(
             config.driver,

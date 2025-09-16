@@ -14,6 +14,25 @@ def register_pwm_driver(cls: Type[PWMDriverABC]) -> Type[PWMDriverABC]:
     """
     Decorator to register a PWM driver in the global registry.
     The class must have a DRIVER_TYPE attribute.
+
+    The decorator stores the class in PWM_DRIVER_REGISTRY
+    so the PWMFactory can later construct instances by name.
+
+    Usage example:
+    ```python
+    @register_pwm_driver
+    class PCA9685(PWMDriverABC):
+        DRIVER_TYPE = "PCA9685"
+        def __init__(
+            self,
+            address: int,
+            bus: BusType = 1,
+            period: int = 4096,
+            frame_width: Optional[int] = 20000,
+        ) -> None:
+            super().__init__(bus=bus, address=address)
+            # driver-specific init...
+    ```
     """
     driver_type = getattr(cls, "DRIVER_TYPE", None)
     if driver_type is None:
@@ -31,6 +50,20 @@ class PWMFactory:
         config: PWMDriverConfig,
         bus: Optional[BusType] = None,
     ) -> PWMDriverABC:
+        """
+        Create and return a PWM driver instance from a given config.
+
+        This will dynamically import available PWM drivers and look up the driver
+        class registered under config.name.
+
+        Args:
+            config: PWMDriverConfig containing name, address, bus, frame_width, etc.
+            bus: The I2C bus number or an already created instance of SMBus or
+                 None. If none, the bus from config.bus is used.
+
+        Returns:
+            An instance of a class implementing PWM driver.
+        """
         import robot_hat.drivers.pwm  # type: ignore
 
         driver_cls = PWM_DRIVER_REGISTRY[config.name]

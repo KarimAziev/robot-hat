@@ -16,34 +16,53 @@ class MotorService:
     """
     The service for managing a pair of motors (left and right).
 
-    The MotorService provides methods for controlling both motors together, handling speed, direction, calibration, and steering.
+    The MotorService provides methods for controlling both motors together,
+    handling speed, direction, calibration, and steering.
 
     Attributes:
     - left_motor: Instance of the motor controlling the left side.
     - right_motor: Instance of the motor controlling the right side.
 
-    Simple exampe:
+
+    Example using GPIO-driven DC motors:
     --------------
     ```python
-    from robot_hat import MotorConfig, MotorService, MotorFactory
+    from robot_hat.data_types.config.motor import GPIODCMotorConfig
+    from robot_hat.factories.motor_factory import MotorFactory
+    from robot_hat.services.motor_service import MotorService
 
-    left_motor, right_motor = MotorFactory.create_motor_pair(
-        MotorConfig(
-            dir_pin="D4",
-            pwm_pin="P12",
-            name="LeftMotor",
-        ),
-        MotorConfig(
-            dir_pin="D5",
-            pwm_pin="P13",
-            name="RightMotor",
-        ),
+    left_motor = MotorFactory.create_motor(
+        config=GPIODCMotorConfig(
+            calibration_direction=1,
+            name="left_motor",
+            max_speed=100,
+            forward_pin=6,
+            backward_pin=13,
+            enable_pin=12,
+            pwm=True,
+        )
     )
-    motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
+    right_motor = MotorFactory.create_motor(
+        config=GPIODCMotorConfig(
+            calibration_direction=1,
+            name="right_motor",
+            max_speed=100,
+            forward_pin=20,
+            backward_pin=21,
+            pwm=True,
+            enable_pin=26,
+        )
+    )
+
 
     # move forward
     speed = 40
+    motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
+
     motor_service.move(speed, 1)
+
+    # increase speed
+    motor_service.move(motor_service.speed + 10, 1)
 
     # move backward
     motor_service.move(speed, -1)
@@ -51,6 +70,63 @@ class MotorService:
     # stop
     motor_service.stop_all()
     ```
+
+    Example using I2C-driven DC motors:
+    --------------
+    ```python
+    from robot_hat.data_types.config.motor import I2CDCMotorConfig
+    from robot_hat.data_types.config.pwm import PWMDriverConfig
+    from robot_hat.factories.motor_factory import MotorFactory
+    from robot_hat.factories.pwm_factory import PWMFactory
+    from robot_hat.services.motor_service import MotorService
+
+    driver_cfg = PWMDriverConfig(
+        name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x40
+    )
+    driver = PWMFactory.create_pwm_driver(driver_cfg, bus=1)
+
+    motor_service = MotorService(
+        left_motor=MotorFactory.create_motor(
+            config=I2CDCMotorConfig(
+                calibration_direction=1,
+                name="left_motor",
+                max_speed=100,
+                driver=driver_cfg,
+                channel="P12",
+                dir_pin="D4",
+            ),
+            driver=driver,
+        ),
+        right_motor=MotorFactory.create_motor(
+            config=I2CDCMotorConfig(
+                calibration_direction=1,
+                name="right_motor",
+                max_speed=100,
+                driver=driver_cfg,
+                channel="P13",
+                dir_pin="D5",
+            ),
+            driver=driver,
+        ),
+    )
+
+    # Usage
+
+    speed = 40
+    motor_service.move(speed, 1)
+
+    # increase speed
+    motor_service.move(motor_service.speed + 10, 1)
+
+    # move backward
+    motor_service.move(speed, -1)
+
+    # stop
+    motor_service.stop_all()
+
+
+    ```
+
     """
 
     def __init__(self, left_motor: "MotorABC", right_motor: "MotorABC"):
