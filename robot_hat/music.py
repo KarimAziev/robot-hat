@@ -15,14 +15,6 @@ import threading
 import time
 from typing import Optional
 
-original_stdout = sys.stdout
-try:
-    sys.stdout = open(os.devnull, "w")
-    import pygame
-finally:
-    sys.stdout.close()
-    sys.stdout = original_stdout
-
 
 class Music:
     """
@@ -233,6 +225,13 @@ class Music:
 
     def __init__(self):
         """Initialize music"""
+        original_stdout = sys.stdout
+        try:
+            sys.stdout = open(os.devnull, "w")
+            import pygame
+        finally:
+            sys.stdout.close()
+            sys.stdout = original_stdout
         self.pygame = pygame
         self.pygame.mixer.init()
         self.time_signature(4, 4)
