@@ -5,7 +5,11 @@
 
 This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling **motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
 
-The motivation comes from dissatisfaction with the code quality, safety, and unnecessary `sudo` requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi). That being said, this library was originally written as a replacement for Sunfounder's Robot-HAT.
+The motivation comes from dissatisfaction with the code quality, safety, and unnecessary `sudo` requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi).
+
+Another reason is to provide a unified way to use different servo and motor controllers without writing custom code (or copying untyped, poorly written examples) for every hardware vendor.
+
+Originally written as a replacement for Sunfounder's Robot-HAT, this library now also supports other peripherals and allows users to register custom drivers.
 
 Unlike the aforementioned libraries:
 
@@ -19,17 +23,17 @@ Unlike the aforementioned libraries:
 
 > - [Robot Hat](#robot-hat)
 >   - [Installation](#installation)
->   - [Usage Examples](#usage-examples)
->     - [Motor Control](#motor-control)
->     - [Controlling a Servo Motor with ServoCalibrationMode](#controlling-a-servo-motor-with-servocalibrationmode)
->       - [Available Modes](#available-modes)
->       - [Configuring the `ServoService`](#configuring-the-servoservice)
->         - [Example 1: Steering Servo Using `ServoCalibrationMode.SUM`](#example-1-steering-servo-using-servocalibrationmodesum)
->         - [Example 2: Head Servos Using `ServoCalibrationMode.NEGATIVE`](#example-2-head-servos-using-servocalibrationmodenegative)
->       - [Custom Calibration Mode](#custom-calibration-mode)
->     - [I2C Example](#i2c-example)
->     - [Ultrasonic Sensor for Distance Measurement](#ultrasonic-sensor-for-distance-measurement)
->     - [Reading Battery Voltage](#reading-battery-voltage)
+>   - [Usage examples](#usage-examples)
+>     - [Motor control](#motor-control)
+>     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
+>     - [I2C-driven DC motors](#i2c-driven-dc-motors)
+>     - [Controlling a servo motor with ServoCalibrationMode](#controlling-a-servo-motor-with-servocalibrationmode)
+>     - [Combined example with shared bus instance](#combined-example-with-shared-bus-instance)
+>     - [I2C example](#i2c-example)
+>     - [Ultrasonic sensor for distance measurement](#ultrasonic-sensor-for-distance-measurement)
+>     - [Reading battery voltage](#reading-battery-voltage)
+>   - [Adding custom drivers](#adding-custom-drivers)
+>     - [How to make your driver discoverable](#how-to-make-your-driver-discoverable)
 >   - [Comparison with Other Libraries](#comparison-with-other-libraries)
 >     - [No sudo](#no-sudo)
 >     - [Type Hints](#type-hints)
@@ -45,145 +49,494 @@ Unlike the aforementioned libraries:
 
 ## Installation
 
-Install this via `pip` or your favorite package manager:
+Install this package via `pip` or your preferred package manager:
 
 ```bash
 pip install robot-hat
 ```
 
-## Usage Examples
+## Usage examples
 
-### Motor Control
+### Motor control
 
-Control dual motors using the `MotorService` modules.
+Three types of motors are currently supported: GPIO-driven motors, phase motors, and I2C DC motors. All are controlled the same way using `MotorService` modules.
+
+### GPIO-driven DC motors
+
+GPIO motors are motors that are controlled entirely via direct GPIO calls; no I²C address or external PWM driver is needed. Examples include the Waveshare RPi Motor Driver Board with the MC33886 module.
 
 ```python
-from robot_hat import MotorConfig, MotorService, MotorFabric
+from robot_hat.data_types.config.motor import GPIODCMotorConfig
+from robot_hat.factories.motor_factory import MotorFactory
+from robot_hat.services.motor_service import MotorService
 
-left_motor, right_motor = MotorFabric.create_motor_pair(
-    MotorConfig(
-        dir_pin="D4",
-        pwm_pin="P12",
-        name="LeftMotor",
-    ),
-    MotorConfig(
-        dir_pin="D5",
-        pwm_pin="P13",
-        name="RightMotor",
-    ),
+left_motor = MotorFactory.create_motor(
+    config=GPIODCMotorConfig(
+        calibration_direction=1,
+        name="left_motor",
+        max_speed=100,
+        forward_pin=6,
+        backward_pin=13,
+        enable_pin=12,
+        pwm=True,
+    )
 )
-motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
+right_motor = MotorFactory.create_motor(
+    config=GPIODCMotorConfig(
+        calibration_direction=1,
+        name="right_motor",
+        max_speed=100,
+        forward_pin=20,
+        backward_pin=21,
+        pwm=True,
+        enable_pin=26,
+    )
+)
+
 
 # move forward
 speed = 40
+motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
+speed = 40
 motor_service.move(speed, 1)
+
+# increase speed
+motor_service.move(motor_service.speed + 10, 1)
 
 # move backward
 motor_service.move(speed, -1)
 
 # stop
 motor_service.stop_all()
-
 ```
 
-### Controlling a Servo Motor with ServoCalibrationMode
+### I2C-driven DC motors
 
-The `ServoCalibrationMode` is an enum used to define how the calibration offsets are applied to the servo's angle. It supports two predefined modes and also allows for custom calibration functions for advanced use cases.
+I2C-driven motors rely on an external PWM driver (e.g., PCA9685, Sunfounder) to control motor speed via I²C.
 
-#### Available Modes
+```python
+from robot_hat.data_types.config.motor import I2CDCMotorConfig
+from robot_hat.data_types.config.pwm import PWMDriverConfig
+from robot_hat.factories.motor_factory import MotorFactory
+from robot_hat.factories.pwm_factory import PWMFactory
+from robot_hat.services.motor_service import MotorService
 
-1. **SUM**: Adds a constant offset (`calibration_offset`) to the input angle. This is generally used for steering operations, like managing front wheels in a robotics car.
-   - Formula:
-     \( \text{calibrated_angle} = \text{input_angle} + \text{calibration_offset} \)
-2. **NEGATIVE**: Subtracts the constant offset after inverting the input angle. This mode may be helpful for servos that require an inverted adjustment, like a camera tilt mechanism.
-   - Formula:
-     \( \text{calibrated_angle} = -1 \times (\text{input_angle} + (-1 \times \text{calibration_offset})) \)
+driver_cfg = PWMDriverConfig(
+    name="Sunfounder",  # 'PCA9685', 'Sunfounder', or a custom driver.
+    bus=1,
+    frame_width=20000,
+    freq=50,
+    address=0x14
+)
+driver = PWMFactory.create_pwm_driver(driver_cfg, bus=1)
 
-#### Configuring the `ServoService`
+motor_service = MotorService(
+    left_motor=MotorFactory.create_motor(
+        config=I2CDCMotorConfig(
+            calibration_direction=1,
+            name="left_motor",
+            max_speed=100,
+            driver=driver_cfg,
+            channel="P12",  # Either an integer or a string with a numeric suffix.
+            dir_pin="D4",  # Digital output pin used to control the motor's direction.
+        ),
+        driver=driver,
+    ),
+    right_motor=MotorFactory.create_motor(
+        config=I2CDCMotorConfig(
+            calibration_direction=1,
+            name="right_motor",
+            max_speed=100,
+            driver=driver_cfg,
+            channel="P13",  # Either an integer or a string with a numeric suffix.
+            dir_pin="D5",  # Digital output pin used to control the motor's direction.
+        ),
+        driver=driver,
+    ),
+)
 
-The `ServoService` provides a high-level abstraction for managing servo operations. It allows for easy configuration of the calibration mode, constraints for the servo's movement bounds, and custom calibration logic if needed.
+speed = 40
+motor_service.move(speed, 1)
+
+# increase speed
+motor_service.move(motor_service.speed + 10, 1)
+
+# move backward
+motor_service.move(speed, -1)
+
+# stop
+motor_service.stop_all()
+```
+
+### Controlling a servo motor with ServoCalibrationMode
+
+The `ServoCalibrationMode` enum defines how calibration offsets are applied to a servo's angle. It supports two predefined modes and also allows custom calibration functions for advanced use cases.
+
+Available modes
+
+- **SUM**: Adds a constant offset (`calibration_offset`) to the input angle. This is generally used for steering operations, such as controlling the front wheels of a robotic car.
+
+Formula:
+
+```
+calibrated_angle = input_angle + calibration_offset
+```
+
+- **NEGATIVE**: Applies an inverted adjustment combined with an offset. This mode may be helpful for servos that require an inverted calibration, such as a camera tilt mechanism.
+  Formula:
+
+```python-console
+calibrated_angle = -1 × (input_angle + (-1 × calibration_offset))
+```
+
+**Configuring the `ServoService`**
+
+The `ServoService` provides a high-level abstraction for managing servo operations. It allows easy configuration of the calibration mode, movement bounds, and custom calibration logic if needed.
 
 Here's how to use `ServoCalibrationMode` in your servo configuration:
 
-##### Example 1: Steering Servo Using `ServoCalibrationMode.SUM`
+**Example 1**: Steering servo using **ServoCalibrationMode.SUM**
 
-For steering purposes (e.g., controlling front wheels of a robotics car):
+For steering purposes (e.g., controlling the front wheels of a robotic car):
 
 ```python
-from robot_hat import ServoCalibrationMode, ServoService
+from robot_hat.utils import setup_env_vars
 
-steering_servo = ServoService(
-    servo_pin="P2",
-    min_angle=-30,  # Maximum left turn
-    max_angle=30,   # Maximum right turn
-    calibration_mode=ServoCalibrationMode.SUM,  # Adds offset directly
-    calibration_offset=-14.4,  # Adjust servo position for centered alignment
+setup_env_vars()  # automatically set up GPIOZERO_PIN_FACTORY and other environment variables
+from robot_hat.data_types.config.pwm import PWMDriverConfig
+from robot_hat.factories import PWMFactory
+from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
+from robot_hat.servos.servo import Servo
+
+pwm_config = PWMDriverConfig(
+    name="PCA9685",  # 'PCA9685', 'Sunfounder', or a custom driver.
+    address=0x40,  # I2C address of the device
+    bus=1,  # The I2C bus number used to communicate with the PWM driver chip
+    # The parameters below are optional and have default values:
+    frame_width=20000,
+    freq=50,
+)
+driver = PWMFactory.create_pwm_driver(
+    bus=pwm_config.bus,  # either a bus number or an smbus instance
+    config=pwm_config,
 )
 
-# Turn left
-steering_servo.set_angle(-30)
+steering_servo = ServoService(
+    servo=Servo(
+        driver=driver,
+        channel="P1",  # Either an integer or a string with a numeric suffix.
+        # Optional parameters with default values:
+        min_angle=-90.0,
+        max_angle=90.0,
+        min_pulse=500,
+        max_pulse=2500,
+        real_min_angle=-90.0,
+        real_max_angle=90.0,
+    ),
+    name="steering",  # A human-readable name for the servo (useful for debugging/logging).
+    min_angle=-90,
+    max_angle=90,
+    calibration_mode=ServoCalibrationMode.SUM,
+    calibration_offset=-14.4,
+)
+driver.set_pwm_freq(pwm_config.freq)
 
-# Turn slightly right
-steering_servo.set_angle(15)
+steering_servo.set_angle(-30)  # Turn left.
+steering_servo.set_angle(15)  # Turn slightly to the right.
+steering_servo.reset()  # Reset to the center position.
 
-# Center position
-steering_servo.reset()
+# Calibration
+print(steering_servo.calibration_offset)  # -14.4
+steering_servo.update_calibration(-10.2)  # temporarily update calibration until reset_calibration is called
+print(steering_servo.calibration_offset)  # -10.2
+steering_servo.reset_calibration()
+print(steering_servo.calibration_offset)  # -14.4
+steering_servo.update_calibration(-1.5, persist=True)
+print(steering_servo.calibration_offset)  # -1.5
+steering_servo.reset_calibration()  # resets to persisted value
+print(steering_servo.calibration_offset)  # -1.5
+
+steering_servo.close()  # Close and clean up the servo.
 ```
 
-##### Example 2: Head Servos Using `ServoCalibrationMode.NEGATIVE`
+Example 2: Head servos using ServoCalibrationMode.NEGATIVE
 
 For tilting a camera head (e.g., up-and-down movement):
 
 ```python
-from robot_hat import ServoCalibrationMode, ServoService
-
 cam_tilt_servo = ServoService(
-    servo_pin="P1",
+    name="tilt",
+    servo=Servo(
+        driver=driver,
+        channel="P1",  # Either an integer or a string with a numeric suffix.
+    ),
     min_angle=-35,  # Maximum downward tilt
-    max_angle=65,   # Maximum upward tilt
+    max_angle=65,  # Maximum upward tilt
     calibration_mode=ServoCalibrationMode.NEGATIVE,  # Inverted adjustment
     calibration_offset=1.4,  # Adjust alignment for neutral center
 )
 
-# Tilt down
-cam_tilt_servo.set_angle(-20)
+driver.set_pwm_freq(pwm_config.freq)
 
-# Tilt up
-cam_tilt_servo.set_angle(25)
-
-# Center position
-cam_tilt_servo.reset()
+cam_tilt_servo.set_angle(-20)  # Tilt down
+cam_tilt_servo.set_angle(25)  # Tilt up
+cam_tilt_servo.reset()  # Center position
 ```
 
----
+Custom calibration mode
 
-#### Custom Calibration Mode
-
-If the predefined modes (`SUM` or `NEGATIVE`) don’t meet your requirements, you can provide a custom calibration function. The function should accept the `angle` and `calibration_offset` as inputs and return the calibrated angle.
+If the predefined modes (`SUM` or `NEGATIVE`) don’t meet your requirements, you can provide a custom calibration function. The function should accept `angle` and `calibration_offset` as inputs and return the calibrated angle.
 
 Example:
 
 ```python
 def custom_calibration_function(angle: float, offset: float) -> float:
-    # Example: Scale angle by 2 and add offset to fine-tune servo position
+    """Scale angle by 2 and add offset to fine-tune servo position."""
     return (angle * 2) + offset
 
-servo = ServoService(
-    servo_pin="P3",
+
+cam_tilt_servo = ServoService(
+    name="tilt",
+    servo=Servo(
+        driver=driver,
+        channel="P1",  # Either an integer or a string with a numeric suffix.
+    ),
+    min_angle=-35,  # Maximum downward tilt
+    max_angle=65,  # Maximum upward tilt
     calibration_mode=custom_calibration_function,
-    calibration_offset=5.0,
-    min_angle=-35,
-    max_angle=65,
+    calibration_offset=1.4,  # Adjust alignment for neutral center
 )
-servo.set_angle(10)  # Custom logic will process the input angle
+
+cam_tilt_servo.set_angle(10)  # Custom logic will process the input angle
 ```
 
-### I2C Example
+### Combined example with shared bus instance
+
+This example shows how to share a single I²C/SMBus instance across multiple drivers and devices (servos, PWM controllers, sensors, etc.) in a robot application.
+
+Instead of letting each driver open its own `SMBus`, the example uses `SMBusManager` to create or reuse a single I2CBus object and pass it into PWM/motor/ADC drivers. Sharing the bus avoids duplicate opens, file-descriptor leaks, and inconsistent behavior when multiple parts of your program talk to devices on the same physical I²C bus.
+
+> [!NOTE]
+> Do not call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Closing emits a "close" event and removes the instance; further accesses must obtain a new bus instance.
+
+<details><summary>Show example</summary>
+<p>
+
+```python
+import logging
+from typing import Callable, Dict, Optional, Union
+
+from app.exceptions.robot import MotorNotFoundError, RobotI2CBusError, RobotI2CTimeout
+from robot_hat import MotorService, ServoService
+from robot_hat.data_types.config.motor import GPIODCMotorConfig
+from robot_hat.data_types.config.pwm import PWMDriverConfig
+from robot_hat.factories import PWMFactory
+from robot_hat.factories.motor_factory import MotorFactory
+from robot_hat.factories.pwm_factory import PWMFactory
+from robot_hat.i2c.smbus_manager import SMBusManager
+from robot_hat.services.motor_service import MotorService, MotorServiceDirection
+from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
+from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
+from robot_hat.servos.servo import Servo
+
+logger = logging.getLogger(__name__)
+
+
+class MyRobotCar:
+    def __init__(
+        self,
+    ) -> None:
+        self.smbus_manager = SMBusManager()
+        self.setup(
+            pwm_config=PWMDriverConfig(
+                name="PCA9685",  # 'PCA9685', 'Sunfounder', or a custom driver.
+                address=0x40,  # I2C address of the device
+                bus=1,
+                # The parameters below are optional and have default values:
+                frame_width=20000,
+                freq=50,
+            )
+        )
+
+    def setup(self, pwm_config: PWMDriverConfig):
+        self.cam_pan_servo = self._make_servo(
+            name="cam_pan", pwm_config=pwm_config, channel="P0"
+        )
+        self.cam_tilt_servo = self._make_servo(
+            name="cam_pan", pwm_config=pwm_config, channel="P1"
+        )
+        self.steering_servo = self._make_servo(
+            name="cam_pan", pwm_config=pwm_config, channel="P2"
+        )
+        self.left_motor = MotorFactory.create_motor(
+            config=GPIODCMotorConfig(
+                calibration_direction=1,
+                name="left_motor",
+                max_speed=100,
+                forward_pin=6,
+                backward_pin=13,
+                enable_pin=12,
+                pwm=True,
+            )
+        )
+        self.right_motor = MotorFactory.create_motor(
+            config=GPIODCMotorConfig(
+                calibration_direction=1,
+                name="left_motor",
+                max_speed=100,
+                forward_pin=6,
+                backward_pin=13,
+                enable_pin=12,
+                pwm=True,
+            )
+        )
+        self.motor_controller = MotorService(
+            left_motor=self.left_motor, right_motor=self.right_motor
+        )
+
+    def _make_servo(
+        self,
+        channel: Union[int, str],
+        name: str,
+        min_angle=-90,
+        max_angle=90,
+        calibration_offset=0.0,
+        reverse: bool = False,
+        pwm_config: Optional[PWMDriverConfig] = None,
+        calibration_mode: Optional[
+            Union[ServoCalibrationMode, Callable[[float, float], float]]
+        ] = ServoCalibrationMode.SUM,
+    ) -> ServoService:
+        if pwm_config is not None:
+            driver = PWMFactory.create_pwm_driver(
+                bus=self.smbus_manager.get_bus(pwm_config.bus),
+                config=pwm_config,
+            )
+
+            servo = Servo(
+                channel=channel,
+                driver=driver,
+            )
+            driver.set_pwm_freq(pwm_config.freq)
+
+        else:
+            servo = GPIOAngularServo(
+                pin=channel,
+                min_angle=min_angle,
+                max_angle=max_angle,
+            )
+        return ServoService(
+            servo=servo,
+            calibration_offset=calibration_offset,
+            min_angle=min_angle,
+            max_angle=max_angle,
+            calibration_mode=calibration_mode,
+            name=name,
+            reverse=reverse,
+        )
+
+    def move(self, speed: int, direction: MotorServiceDirection) -> None:
+        """
+        Move the robot forward or backward.
+
+        Args:
+        - speed: The base speed at which to move.
+        - direction: 1 for forward, -1 for backward, 0 for stop.
+        """
+        if not self.motor_controller:
+            raise MotorNotFoundError("Motors not found or not configured")
+        self.motor_controller.move(speed, direction)
+
+    @property
+    def state(self) -> Dict[str, float]:
+        """
+        Returns key metrics of the current state as a dictionary.
+        """
+        return {
+            "speed": self.motor_controller.speed if self.motor_controller else 0,
+            "direction": (
+                self.motor_controller.direction if self.motor_controller else 0
+            ),
+            "steering_servo_angle": (
+                self.steering_servo.current_angle if self.steering_servo else 0
+            ),
+            "cam_pan_angle": (
+                self.cam_pan_servo.current_angle if self.cam_pan_servo else 0
+            ),
+            "cam_tilt_angle": (
+                self.cam_tilt_servo.current_angle if self.cam_tilt_servo else 0
+            ),
+        }
+
+    def stop(self) -> None:
+        """
+        Stop the motors.
+        """
+        return self.motor_controller.stop_all()
+
+    def cleanup(self):
+        """
+        Clean up hardware resources by stopping all motors and gracefully closing all
+        associated I2C connections for both motors and servos.
+        """
+
+        if self.motor_controller:
+            try:
+                self.stop()
+                self.motor_controller.close()
+            except RobotI2CTimeout as e:
+                logger.error("I2C timeout error closing motors %s", e)
+            except RobotI2CBusError as e:
+                logger.error("I2C bus error closing motors %s", e)
+            except Exception as e:
+                logger.error(
+                    "Unexpected error while closing motor controller %s",
+                    e,
+                    exc_info=True,
+                )
+        else:
+            for motor in [self.left_motor, self.right_motor]:
+                if motor:
+                    try:
+                        motor.close()
+                    except Exception as e:
+                        logger.error("Error closing motor %s", e)
+
+        self._motor_addresses = []
+
+        self.right_motor = None
+        self.left_motor = None
+
+        for servo_service in [
+            self.steering_servo,
+            self.cam_tilt_servo,
+            self.cam_pan_servo,
+        ]:
+            if servo_service:
+                try:
+                    servo_service.close()
+                except (TimeoutError, OSError) as e:
+                    err_msg = str(e)
+                    logger.error(err_msg)
+                except Exception as e:
+                    logger.error("Error closing servo %s", e)
+
+```
+
+</p>
+</details>
+
+### I2C example
 
 Scan and communicate with connected I2C devices.
 
 ```python
-from robot_hat.i2c import I2C
+import os
+
+from robot_hat.utils import setup_env_vars
+
+# from robot_hat import I2C
+from robot_hat import I2C
 
 # Initialize I2C connection
 i2c_device = I2C(address=[0x15, 0x17], bus=1)
@@ -200,7 +553,7 @@ devices = i2c_device.scan()
 print("I2C Devices Detected:", devices)
 ```
 
-### Ultrasonic Sensor for Distance Measurement
+### Ultrasonic sensor for distance measurement
 
 Measure distance using the `HC-SR04` ultrasonic sensor module.
 
@@ -209,8 +562,8 @@ from robot_hat.pin import Pin
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 
 # Initialize Ultrasonic Sensor
-trig_pin = Pin("P9")
-echo_pin = Pin("P10")
+trig_pin = Pin("GPIO27")  # or an integer or other pin mapping
+echo_pin = Pin(17)        # or a string or other pin mapping
 ultrasonic = Ultrasonic(trig_pin, echo_pin)
 
 # Measure distance
@@ -218,20 +571,98 @@ distance_cm = ultrasonic.read(times=5)
 print(f"Distance: {distance_cm} cm")
 ```
 
-### Reading Battery Voltage
+### Reading battery voltage
 
-Use the ADC module to measure and scale the battery voltage.
+Currently, two battery drivers are supported: **INA219** and the built-in driver in Sunfounder's Robot Hat.
+
+Example with **INA219** (tested on Waveshare UPS Module 3S)
 
 ```python
-from robot_hat.battery import Battery
+from robot_hat.services.battery.ups_s3_battery import Battery
 
-# Initialize Battery module
-battery = Battery(channel="A4")
+battery = Battery(channel="A4", address=0x41, bus=1)
+voltage = battery.get_battery_voltage()  # Read battery voltage
+```
 
-# Get battery voltage
-voltage = battery.get_battery_voltage()
+Example with **Sunfounder module**
+
+```python
+from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
+
+battery = SunfounderBattery(channel="A4", address=[0x14, 0x15], bus=1)
+
+voltage = battery.get_battery_voltage()  # Read battery voltage
 print(f"Battery Voltage: {voltage} V")
 ```
+
+## Adding custom drivers
+
+This library uses a plugin-style registry for PWM drivers so you can add support for new hardware without changing core code.
+
+The base class manages the I2C/SMBus instance when the constructor receives either an int (bus number) or a bus object. Implement the `PWMDriverABC` interface, give your driver a meaningful name that matches the config, and register it with `@register_pwm_driver`.
+
+**Minimal example**
+
+```python
+import logging
+from typing import Optional
+
+from robot_hat.factories import register_pwm_driver
+from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
+from robot_hat.data_types.bus import BusType
+
+_log = logging.getLogger(__name__)
+
+
+@register_pwm_driver
+class MyDriver(PWMDriverABC):
+    DRIVER_TYPE = "MyDriver"  # Must match PWMDriverConfig.name
+
+    def __init__(
+        self,
+        address: int,
+        bus: BusType = 1,
+        frame_width: Optional[int] = 20000,
+        **kwargs
+    ) -> None:
+        super().__init__(bus=bus, address=address)
+        self._frame_width = frame_width if frame_width is not None else 20000
+        _log.debug("Initialized MyDriver at 0x%02X on bus %s", address, bus)
+
+    def set_pwm_freq(self, freq: int) -> None:
+        _log.debug("MyDriver.set_pwm_freq(%d)", freq)
+
+    def set_servo_pulse(self, channel: int, pulse: int) -> None:
+        _log.debug("MyDriver.set_servo_pulse(channel=%d, pulse=%d)", channel, pulse)
+
+    def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
+        if not (0 <= duty <= 100):
+            raise ValueError("Duty must be between 0 and 100")
+        _log.debug("MyDriver.set_pwm_duty_cycle(channel=%d, duty=%d)", channel, duty)
+```
+
+Use it from config
+
+```python
+from robot_hat.data_types.config.pwm import PWMDriverConfig
+from robot_hat.factories import PWMFactory
+from .my_driver import MyDriver  # ensure your module is imported
+
+pwm_config = PWMDriverConfig(
+    name=MyDriver.DRIVER_TYPE,
+    address=0x40,
+    bus=1,
+)
+
+driver = PWMFactory.create_pwm_driver(config=pwm_config)
+driver.set_pwm_freq(50)
+```
+
+### How to make your driver discoverable
+
+Put the driver in your project and import it before calling `PWMFactory.create_pwm_driver`. The decorator registers it in the global registry.
+
+Also, contributions are welcome but you don't have to upstream your driver - you can register and use custom drivers anywhere in your own code.
 
 ## Comparison with Other Libraries
 
@@ -266,9 +697,18 @@ This version prioritizes:
 
 `Sunfounder` (and similar libraries) offer no direct way to mock their hardware APIs, making it nearly impossible to write meaningful unit tests on non-Raspberry Pi platforms.
 
+This library can be configured either by environment values, either by function `setup_env_vars`, which will setup them automatically:
+
+```python
+from robot_hat.utils import setup_env_vars
+setup_env_vars()
+```
+
+Or:
+
 ```python
 import os
-os.environ["GPIOZERO_PIN_FACTORY"] = "mock"
+os.environ["GPIOZERO_PIN_FACTORY"] = "mock" # mock for non-raspberry pi, lgpio for Raspberry Pi 5 and rpigpio for other Raspberry versions
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 ```
 

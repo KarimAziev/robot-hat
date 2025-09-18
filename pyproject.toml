@@ -9,9 +9,10 @@ write_to = "robot_hat/version.py"
 
 [project]
 name = "robot_hat"
-description = "Custom version of Robot Hat Python library for Sunfounder's Raspberry Pi robots."
+description = "Extensible and type-hinted library for controlling robot hardware (motors, servos, ultrasonic, ADC, I2C)."
 readme = { file = "README.md", content-type = "text/markdown" }
-license = { text = "GNU" }
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [
     { name = "Karim Aziiev", email = "karim.aziiev@gmail.com" }
 ]
