@@ -180,8 +180,8 @@ class ServoService:
             calibrated_value = -1 * (value + -1 * calibration_value)
 
         Args:
-        - value (float): The input value to adjust.
-        - calibration_value (float): The calibration offset to use.
+        - value: The input value to adjust.
+        - calibration_value: The calibration offset to use.
 
         Returns:
         - The adjusted value.
@@ -214,11 +214,7 @@ class ServoService:
         3. Update and store the calibrated angle.
 
         Args:
-        - The desired input angle to set.
-
-        Example Usage:
-        >>> servo_service = ServoService("P1", min_angle=-45, max_angle=45, calibration_mode=ServoCalibrationMode.NEGATIVE)
-        >>> servo_service.set_angle(30)
+        The desired input angle to set.
         """
         assert self.servo
 
