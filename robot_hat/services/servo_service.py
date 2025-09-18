@@ -75,6 +75,7 @@ class ServoService:
         from robot_hat import ServoCalibrationMode, ServoService
 
         steering_servo = ServoService(
+            name="steering",
             servo=my_servo_instance,
             min_angle=-30,  # Maximum left turn
             max_angle=30,   # Maximum right turn
