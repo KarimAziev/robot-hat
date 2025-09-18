@@ -43,7 +43,7 @@ jobs:
         run: npm install -g pyright
 
       - name: Run Pyright static type checker
-        run: pyright
+        run: pyright ./robot_hat ./tests/ setup.py
 
       - name: Lint code
         run: |
