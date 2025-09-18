@@ -25,11 +25,6 @@ from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
 
 _log = logging.getLogger(__name__)
 
-if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
-    from robot_hat.mock.smbus2 import MockSMBus as SMBus
-else:
-    from smbus2 import SMBus
-
 
 class I2C(object):
     """
@@ -84,10 +79,14 @@ class I2C(object):
 
         Args:
             address: The address or list of addresses of I2C devices.
-            bus (int): I2C bus number. Default is 1.
+            bus: I2C bus number. Default is 1.
         """
 
         super().__init__(*args, **kwargs)
+        if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
+            from robot_hat.mock.smbus2 import MockSMBus as SMBus
+        else:
+            from smbus2 import SMBus
 
         if isinstance(bus, int):
             self._smbus = SMBus(bus)
