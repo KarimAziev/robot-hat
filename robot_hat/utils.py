@@ -141,7 +141,6 @@ def setup_env_vars() -> bool:
     """
     if os.getenv("GPIOZERO_PIN_FACTORY") is None:
         gpio_factory_name = get_gpio_factory_name()
-        print(gpio_factory_name)
         os.environ["GPIOZERO_PIN_FACTORY"] = gpio_factory_name
         is_real_raspberry = gpio_factory_name != "mock"
     else:
