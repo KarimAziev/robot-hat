@@ -4,15 +4,18 @@ import logging
 import threading
 import weakref
 from functools import partial
+from inspect import iscoroutinefunction
 from typing import (
     Any,
     Awaitable,
     Callable,
+    Coroutine,
     Dict,
     List,
     Optional,
     TypeVar,
     Union,
+    cast,
     overload,
 )
 
@@ -208,16 +211,20 @@ class EventEmitter:
                     event_name,
                     listener_name,
                 )
-                if asyncio.iscoroutinefunction(resolved_listener):
+                fn = getattr(resolved_listener, "__func__", resolved_listener)
+                if iscoroutinefunction(fn):
+                    coro = cast(
+                        Coroutine[Any, Any, Any], resolved_listener(*args, **kwargs)
+                    )
                     try:
                         loop = asyncio.get_running_loop()
                     except RuntimeError:
                         loop = None
 
                     if loop:
-                        asyncio.create_task(resolved_listener(*args, **kwargs))
+                        asyncio.create_task(coro)
                     else:
-                        asyncio.run(resolved_listener(*args, **kwargs))
+                        asyncio.run(coro)
                 else:
                     resolved_listener(*args, **kwargs)
             except Exception:
