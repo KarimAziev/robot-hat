@@ -36,10 +36,14 @@ from robot_hat.exceptions import (
     InvalidPinPull,
 )
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from gpiozero import HeaderInfo, PinInfo
+    from gpiozero import Button, HeaderInfo, InputDevice, OutputDevice, PinInfo
+
+
+PinMode = Literal[0x01, 0x02]
+PinPull = Literal[0x11, 0x12]
 
 
 class Pin(object):
@@ -116,8 +120,8 @@ class Pin(object):
     def __init__(
         self,
         pin: Union[int, str],
-        mode: Optional[int] = None,
-        pull: Optional[int] = None,
+        mode: Optional[PinMode] = None,
+        pull: Optional[PinPull] = None,
         pin_dict: Dict[str, int] = DEFAULT_PIN_MAPPING,
         *args,
         **kwargs,
@@ -141,16 +145,26 @@ class Pin(object):
         - `InvalidPin`: If the input pin type is neither an integer nor a string.
         - `InvalidPinMode`: If the mode is not valid.
         - `InvalidPinPull`: If pull is not valid.
-        - `BoardInfoMissingError`: If Device.pin_factory is None.
+        - `DevicePinFactoryError`: If Device.pin_factory is None.
         """
         super().__init__(*args, **kwargs)
 
         # Parse pin
         self.dict = pin_dict
-        self._setup_pin(pin)
+
+        try:
+            self._setup_pin(pin)
+        except (
+            DevicePinFactoryError,
+            InvalidPin,
+            InvalidPinName,
+            InvalidPinNumber,
+        ) as e:
+            _log.error("Failed to setup Pin %s: %s", pin, e)
+            raise
 
         self._value = 0
-        self.gpio = None
+        self.gpio: Optional[Union["OutputDevice", "Button", "InputDevice"]] = None
         self.setup(mode, pull)
 
         mode_str = "None" if mode is None else "OUT" if mode == self.OUT else "INPUT"
@@ -165,7 +179,7 @@ class Pin(object):
         )
         pull_hex = "None" if pull is None else f"0x{pull:02X}"
 
-        logger.debug(
+        _log.debug(
             "Initted [%s], mode: %s (0x%s:02X) %s (%s)",
             self._board_name,
             mode_str,
@@ -233,7 +247,7 @@ class Pin(object):
             elif isinstance(name, int):
                 raise InvalidPinNumber(f"Invalid pin number {name}")
             else:
-                raise InvalidPin("Received invalid pin value %s", name)
+                raise InvalidPin(f"Invalid Pin type '{name}'")
 
     def _setup_pin(self, pin: Union[int, str]) -> None:
         """
@@ -260,9 +274,7 @@ class Pin(object):
         elif isinstance(pin, int):
             self._pin_num, self._board_name = self.gpio_pin_info(pin)
         else:
-            msg = f'Invalid PIN: "{pin}"'
-            logger.error(msg)
-            raise InvalidPin(msg)
+            raise InvalidPin(f"Invalid Pin type: '{pin}'")
 
     @property
     def dict(self) -> Dict[str, int]:
@@ -277,14 +289,17 @@ class Pin(object):
         """
         Close the GPIO pin.
         """
-        logger.debug(
+        _log.debug(
             "[%s]: Closing %s",
             self._board_name,
             self.gpio,
         )
         if self.gpio:
-            self.gpio.close()
-            self.gpio = None
+            try:
+                self.gpio.close()
+            except Exception as err:
+                _log.error("Error closing Pin '%s': %s", self._board_name, err)
+                pass
 
     def deinit(self) -> None:
         """
@@ -296,14 +311,14 @@ class Pin(object):
             if pin_factory is not None:
                 pin_factory.close()
 
-    def setup(self, mode, pull: Optional[int] = None) -> None:
+    def setup(self, mode: Optional[PinMode], pull: Optional[PinPull] = None) -> None:
         """
         Setup the GPIO pin with a specific mode and optional pull-up/down resistor configuration.
 
         Args:
         --------------
-        - mode (int): Mode of the pin (`Pin.OUT` for output, `Pin.IN` for input). Default is None.
-        - pull (Optional[int]): Configure pull-up/down resistors (`Pin.PULL_UP`, `Pin.PULL_DOWN`, `Pin.PULL_NONE`). Default is None.
+        - mode: Mode of the pin (`Pin.OUT` for output, `Pin.IN` for input). Default is None.
+        - pull: Configure pull-up/down resistors (`Pin.PULL_UP`, `Pin.PULL_DOWN`, `Pin.PULL_NONE`). Default is None.
 
         Raises:
         --------------
@@ -313,20 +328,19 @@ class Pin(object):
         if mode in [None, self.OUT, self.IN]:
             self._mode = mode
         else:
-            msg = f"mode param error, should be None, Pin.OUT, Pin.IN"
-            logger.error(msg)
+            msg = f"Mode param error, should be None, Pin.OUT, Pin.IN"
+            _log.error(msg)
             raise InvalidPinMode(msg)
 
         if pull in [self.PULL_NONE, self.PULL_DOWN, self.PULL_UP]:
             self._pull = pull
         else:
-            msg = f"pull param error, should be None, Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
-            logger.error(msg)
+            msg = f"Pull param error, should be None, Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
+            _log.error(msg)
             raise InvalidPinPull(msg)
 
-        if self.gpio != None:
-            if self.gpio.pin != None:
-                self.gpio.close()
+        if self.gpio is not None:
+            self.close()
 
         if mode in [None, self.OUT]:
             from gpiozero import OutputDevice
@@ -345,7 +359,7 @@ class Pin(object):
         Set or get the value of the GPIO pin.
 
         Args:
-            value (int): Value to set the pin (high=1, low=0).
+            value: Value to set the pin (high=1, low=0).
 
         Returns:
             int: Value of the pin (0 or 1).
@@ -391,8 +405,8 @@ class Pin(object):
             if self._mode in [None, self.OUT]:
                 self.setup(self.IN)
             result: Optional[int] = self.gpio.value if self.gpio else None
-            logger.debug(
-                "read pin %s: %s",
+            _log.debug(
+                "Reading pin %s: %s",
                 self.gpio.pin if self.gpio else None,
                 result,
             )

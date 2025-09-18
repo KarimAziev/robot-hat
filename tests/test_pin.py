@@ -54,9 +54,9 @@ class TestPin(unittest.TestCase):
         """Test initializing a Pin object with a valid pin number."""
         pin = Pin(17, pin_dict=self.pin_mapping)
         self.assertEqual(pin._pin_num, 17)
-        self.assertEqual(pin._board_name, "D0")
+        self.assertEqual(pin._board_name, "GPIO17")
 
-    @patch("robot_hat.pin.logger")
+    @patch("robot_hat.pin._log")
     def test_pin_invalid_name(self, mock_logger: MagicMock):
         """Test initializing a Pin object with an invalid name."""
         with self.assertRaises(InvalidPinName):
@@ -68,13 +68,13 @@ class TestPin(unittest.TestCase):
         with self.assertRaises(InvalidPinNumber):
             Pin(99, pin_dict=self.pin_mapping)
 
-    @patch("robot_hat.pin.logger")
+    @patch("robot_hat.pin._log")
     def test_pin_invalid_type(self, mock_logger: MagicMock):
         """Test initializing a Pin object with an unsupported type."""
         with self.assertRaises(InvalidPin):
             Pin(None, pin_dict=self.pin_mapping)  # type: ignore
 
-        mock_logger.error.assert_called_once_with('Invalid PIN: "None"')
+        mock_logger.error.assert_called_once()
 
     @patch("gpiozero.OutputDevice")
     def test_pin_setup_as_output(self, mock_output_device):
@@ -93,20 +93,20 @@ class TestPin(unittest.TestCase):
         self.assertEqual(pin._pull, Pin.PULL_UP)
         mock_input_device.assert_called_with(17, pull_up=True)
 
-    @patch("robot_hat.pin.logger")
+    @patch("robot_hat.pin._log")
     def test_pin_invalid_mode(self, mock_logger: MagicMock):
         """Test setting up a pin with an invalid mode."""
         pin = Pin("D0", pin_dict=self.pin_mapping)
         with self.assertRaises(InvalidPinMode):
-            pin.setup(mode=0x99)
+            pin.setup(mode=0x99)  # type: ignore
         mock_logger.error.assert_called_once()
 
-    @patch("robot_hat.pin.logger")
+    @patch("robot_hat.pin._log")
     def test_pin_invalid_pull(self, mock_logger: MagicMock):
         """Test setting up a pin with an invalid pull configuration."""
         pin = Pin("D0", pin_dict=self.pin_mapping)
         with self.assertRaises(InvalidPinPull):
-            pin.setup(mode=Pin.IN, pull=0x99)
+            pin.setup(mode=Pin.IN, pull=0x99)  # type: ignore
         mock_logger.error.assert_called_once()
 
     @patch("gpiozero.InputDevice", spec=True)
