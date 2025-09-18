@@ -4,11 +4,23 @@ import logging
 import threading
 import weakref
 from functools import partial
-from typing import Any, Awaitable, Callable, Optional, TypeVar, Union, overload
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    overload,
+)
 
 _log = logging.getLogger(__name__)
 
 Listener = Union[Callable[..., Any], Callable[..., Awaitable[Any]]]
+StoredListener = Union[Listener, weakref.WeakMethod]
+EventsMap = Dict[str, List[StoredListener]]
 
 T = TypeVar("T", bound=Listener)
 
@@ -27,7 +39,7 @@ class EventEmitter:
     """
 
     def __init__(self):
-        self.events = {}
+        self.events: EventsMap = {}
         self.lock = threading.Lock()
 
     @overload
@@ -135,23 +147,24 @@ class EventEmitter:
         emitter.off("event_name", my_listener)
         ```
         """
-        if event_name not in self.events:
-            _log.warning(
-                "Attempted to remove a listener from non-existent event '%s'",
-                event_name,
-            )
-            return
-        if not listener:
-            del self.events[event_name]
-            return
+        with self.lock:
+            if event_name not in self.events:
+                _log.debug(
+                    "Attempted to remove a listener from non-existent event '%s'",
+                    event_name,
+                )
+                return
+            if not listener:
+                del self.events[event_name]
+                return
 
-        self.events[event_name] = [
-            l
-            for l in self.events[event_name]
-            if EventEmitter.resolve_listener(l) != listener
-        ]
-        if not self.events[event_name]:
-            del self.events[event_name]
+            self.events[event_name] = [
+                l
+                for l in self.events[event_name]
+                if EventEmitter.resolve_listener(l) != listener
+            ]
+            if not self.events[event_name]:
+                del self.events[event_name]
 
     def emit(self, event_name: str, *args, **kwargs) -> None:
         """
