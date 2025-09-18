@@ -20,8 +20,7 @@ class Grayscale:
     ### Example usage
 
     ```python
-    from robot_hat.adc import ADC
-    from robot_hat.grayscale import Grayscale
+    from robot_hat.sunfounder import ADC, ADXL345, Grayscale
 
     # Initialize ADC channels
     pin0 = ADC(0)  # Initialize ADC object for channel 0
