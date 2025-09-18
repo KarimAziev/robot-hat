@@ -16,7 +16,7 @@ from robot_hat.utils import constrain, parse_int_suffix
 if TYPE_CHECKING:
     from robot_hat import Pin
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class I2CDCMotor(MotorCalibration, MotorABC):
@@ -88,7 +88,7 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         self._speed: float = 0
 
         self.driver.set_pwm_freq(frequency)
-        logger.debug(f"{self.name}: PWM frequency set to {frequency} Hz.")
+        _log.debug(f"{self.name}: PWM frequency set to {frequency} Hz.")
 
     @property
     def speed(self) -> float:
@@ -127,13 +127,13 @@ class I2CDCMotor(MotorCalibration, MotorABC):
 
         if calibrated_speed >= 0:
             self.direction_pin.low()
-            logger.debug(f"{self.name}: set direction to forward.")
+            _log.debug(f"{self.name}: set direction to forward.")
         else:
             self.direction_pin.high()
-            logger.debug(f"{self.name}: set direction to reverse.")
+            _log.debug(f"{self.name}: set direction to reverse.")
 
         self.driver.set_pwm_duty_cycle(self.channel, duty)
-        logger.debug(
+        _log.debug(
             f"{self.name}: speed set to {calibrated_speed}% (duty cycle {duty}%)."
         )
         self._speed = calibrated_speed
@@ -144,7 +144,7 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         """
         self.driver.set_pwm_duty_cycle(self.channel, 0)
         self._speed = 0
-        logger.debug(f"{self.name}: motor stopped.")
+        _log.debug(f"{self.name}: motor stopped.")
 
     def close(self) -> None:
         """
@@ -152,7 +152,7 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         """
         self.driver.close()
         self.direction_pin.close()
-        logger.debug(f"{self.name}: resources closed.")
+        _log.debug(f"{self.name}: resources closed.")
 
     def __repr__(self) -> str:
         return f"<Motor(name={self.name}, max_speed={self.max_speed}, current_speed={self._speed})>"

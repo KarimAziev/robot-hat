@@ -19,7 +19,7 @@ from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.motor.mixins.motor_calibration import MotorCalibration
 from robot_hat.utils import constrain
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class GPIODCMotor(MotorCalibration, MotorABC):
@@ -77,7 +77,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         self._motor = Motor(
             forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=pwm
         )
-        logger.debug(
+        _log.debug(
             f"Initialized motor {self.name} with forward_pin={forward_pin}, backward_pin={backward_pin}, pwm_pin={pwm_pin}"
         )
 
@@ -130,10 +130,10 @@ class GPIODCMotor(MotorCalibration, MotorABC):
 
         if self._pwm:
             scale = abs(speed) / self.max_speed
-            logger.debug(f"Motor set {log_direction}: {speed} (scaled {scale:.2f}).")
+            _log.debug(f"Motor set {log_direction}: {speed} (scaled {scale:.2f}).")
             command(cast(int, scale))
         else:
-            logger.debug(f"Motor set full {log_direction} (digital).")
+            _log.debug(f"Motor set full {log_direction} (digital).")
             command(1)
             speed = self.max_speed
 
@@ -143,7 +143,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         """
         Stop the motor.
         """
-        logger.debug("Motor stopped.")
+        _log.debug("Motor stopped.")
         self._motor.stop()
         self._speed = 0
 
@@ -151,7 +151,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         """
         Close the underlying resources.
         """
-        logger.debug("Closing motor.")
+        _log.debug("Closing motor.")
         if self._motor and hasattr(self._motor, "close"):
             self._motor.close()
 
@@ -284,39 +284,37 @@ def main():
         name="right",
     )
 
-    logger.info("Motor test sequence starting. Press CTRL+C to exit.")
+    _log.info("Motor test sequence starting. Press CTRL+C to exit.")
 
     try:
         while True:
-            logger.info(f"Motors running forward at {args.forward_speed1}% speed.")
+            _log.info(f"Motors running forward at {args.forward_speed1}% speed.")
             motorA.set_speed(args.forward_speed1)
             motorB.set_speed(args.forward_speed1)
             sleep(args.forward_duration)
 
-            logger.info(f"Motors running forward at {args.forward_speed2}% speed.")
+            _log.info(f"Motors running forward at {args.forward_speed2}% speed.")
             motorA.set_speed(args.forward_speed2)
             motorB.set_speed(args.forward_speed2)
             sleep(args.forward_duration)
 
-            logger.info("Stopping motors.")
+            _log.info("Stopping motors.")
             motorA.stop()
             motorB.stop()
             sleep(args.pause)
 
-            logger.info(
-                f"Motors running backward at {abs(args.backward_speed)}% speed."
-            )
+            _log.info(f"Motors running backward at {abs(args.backward_speed)}% speed.")
             motorA.set_speed(args.backward_speed)
             motorB.set_speed(args.backward_speed)
             sleep(args.backward_duration)
 
-            logger.info("Stopping motors.")
+            _log.info("Stopping motors.")
             motorA.stop()
             motorB.stop()
             sleep(args.pause)
 
     except KeyboardInterrupt:
-        logger.info("Exiting and cleaning up GPIO...")
+        _log.info("Exiting and cleaning up GPIO...")
 
     finally:
         motorA.stop()

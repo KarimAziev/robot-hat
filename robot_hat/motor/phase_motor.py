@@ -6,7 +6,7 @@ from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.motor.mixins.motor_calibration import MotorCalibration
 from robot_hat.utils import constrain
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class PhaseMotor(MotorCalibration, MotorABC):
@@ -51,7 +51,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         self._speed: float = 0
 
         self._motor = PhaseEnableMotor(phase=phase_pin, enable=enable_pin, pwm=pwm)
-        logger.debug(
+        _log.debug(
             f"Initialized PhaseMotor {self.name} with phase_pin={phase_pin}, enable_pin={enable_pin}"
         )
 
@@ -90,22 +90,22 @@ class PhaseMotor(MotorCalibration, MotorABC):
         if speed > 0:
             if self._pwm:
                 scale = speed / self.max_speed
-                logger.debug(
+                _log.debug(
                     f"{self.name}: Running forward at {speed}% (scale {scale:.2f})."
                 )
                 self._motor.forward(cast(int, scale))
             else:
-                logger.debug(f"{self.name}: Running full forward (digital mode).")
+                _log.debug(f"{self.name}: Running full forward (digital mode).")
                 self._motor.forward(1)
         elif speed < 0:
             if self._pwm:
                 scale = abs(speed) / self.max_speed
-                logger.debug(
+                _log.debug(
                     f"{self.name}: Running backward at {speed}% (scale {scale:.2f})."
                 )
                 self._motor.backward(cast(int, scale))
             else:
-                logger.debug(f"{self.name}: Running full backward (digital mode).")
+                _log.debug(f"{self.name}: Running full backward (digital mode).")
                 self._motor.backward(1)
         else:
             self.stop()
@@ -116,7 +116,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         """
         Stop the motor.
         """
-        logger.debug(f"{self.name}: Motor stopped.")
+        _log.debug(f"{self.name}: Motor stopped.")
         self._motor.stop()
         self._speed = 0
 
@@ -127,7 +127,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         try:
             self._motor.close()
         except Exception as e:
-            logger.exception(f"Error closing motor resources: {e}")
+            _log.exception(f"Error closing motor resources: {e}")
 
 
 def main():
@@ -210,31 +210,31 @@ def main():
         name="phase_motor",
     )
 
-    logger.info("PhaseMotor test sequence starting. Press CTRL+C to exit.")
+    _log.info("PhaseMotor test sequence starting. Press CTRL+C to exit.")
     try:
         while True:
-            logger.info(f"Running forward at {args.forward_speed1}% speed.")
+            _log.info(f"Running forward at {args.forward_speed1}% speed.")
             motor.set_speed(args.forward_speed1)
             sleep(args.forward_duration)
 
-            logger.info(f"Running forward at {args.forward_speed2}% speed.")
+            _log.info(f"Running forward at {args.forward_speed2}% speed.")
             motor.set_speed(args.forward_speed2)
             sleep(args.forward_duration)
 
-            logger.info("Stopping motor.")
+            _log.info("Stopping motor.")
             motor.stop()
             sleep(args.pause)
 
-            logger.info(f"Running backward at {abs(args.backward_speed)}% speed.")
+            _log.info(f"Running backward at {abs(args.backward_speed)}% speed.")
             motor.set_speed(args.backward_speed)
             sleep(args.backward_duration)
 
-            logger.info("Stopping motor.")
+            _log.info("Stopping motor.")
             motor.stop()
             sleep(args.pause)
 
     except KeyboardInterrupt:
-        logger.info("Exiting and cleaning up resources...")
+        _log.info("Exiting and cleaning up resources...")
 
     finally:
         motor.stop()
