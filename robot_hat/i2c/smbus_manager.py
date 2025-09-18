@@ -1,14 +1,17 @@
 import logging
 import threading
-from typing import Dict, Union
+from typing import TYPE_CHECKING, Dict, Union
 
-from robot_hat.i2c.i2c_bus import I2CBus
+from robot_hat.exceptions import InvalidBusType
+
+if TYPE_CHECKING:
+    from robot_hat.i2c.i2c_bus import I2CBus
 
 _log = logging.getLogger(__name__)
 
 
 class SMBusManager:
-    _instances: Dict[str, I2CBus] = {}
+    _instances: Dict[str, "I2CBus"] = {}
     _lock = threading.RLock()
 
     @classmethod
@@ -18,11 +21,11 @@ class SMBusManager:
         elif isinstance(bus, str):
             filepath = bus
         else:
-            raise TypeError("Unexpected type(bus)={}".format(type(bus)))
+            raise InvalidBusType("Unexpected type(bus)={}".format(type(bus)))
         return filepath
 
     @classmethod
-    def _on_bus_close(cls, closed_bus: I2CBus) -> None:
+    def _on_bus_close(cls, closed_bus: "I2CBus") -> None:
         normalized_bus = cls._normalize_bus(closed_bus._bus)
         with cls._lock:
             if normalized_bus in cls._instances:
@@ -30,7 +33,7 @@ class SMBusManager:
                 cls._instances.pop(normalized_bus, None)
 
     @classmethod
-    def get_bus(cls, bus: Union[int, str], force: bool = False) -> I2CBus:
+    def get_bus(cls, bus: Union[int, str], force: bool = False) -> "I2CBus":
         """
         Return a singleton I2CBus instance for the given bus.
         If an instance does not exist yet, one is created and stored.
@@ -49,6 +52,8 @@ class SMBusManager:
             "Creating I2CBus instance for bus %s (force=%s)", normalized_bus, force
         )
         try:
+            from robot_hat.i2c.i2c_bus import I2CBus
+
             new_instance = I2CBus(normalized_bus, force)
             new_instance.emitter.on("close", cls._on_bus_close)
         except Exception as e:
@@ -101,6 +106,9 @@ class SMBusManager:
 
 
 if __name__ == "__main__":
+    from robot_hat.utils import setup_env_vars
+
+    setup_env_vars()
     bus0 = SMBusManager.get_bus(0)
     bus1 = SMBusManager.get_bus(1)
     bus0_again = SMBusManager.get_bus(0)

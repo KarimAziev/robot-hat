@@ -5,6 +5,7 @@ from robot_hat.exceptions import (
     FileDBValidationError,
     GrayscaleTypeError,
     IMUInitializationError,
+    InvalidBusType,
     InvalidCalibrationModeError,
     InvalidChannel,
     InvalidChannelName,
@@ -74,5 +75,6 @@ __all__ = [
     "MotorValidationError",
     "UltrasonicEchoPinError",
     "UnsupportedMotorConfigError",
+    "InvalidBusType",
     "version",
 ]

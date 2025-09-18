@@ -148,3 +148,7 @@ class MotorFactoryError(Exception):
 
 class UnsupportedMotorConfigError(MotorFactoryError, TypeError):
     """Raised when an unsupported motor config type is passed to MotorFactory.create_motor."""
+
+
+class InvalidBusType(TypeError):
+    """Raised when an unsupported bus type is passed to SMBusManager."""
