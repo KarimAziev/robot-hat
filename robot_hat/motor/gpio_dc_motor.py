@@ -135,7 +135,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         else:
             _log.debug(f"Motor set full {log_direction} (digital).")
             command(1)
-            speed = self.max_speed
+            speed = sign * self.max_speed
 
         self._speed = speed
 

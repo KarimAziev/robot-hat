@@ -6,7 +6,7 @@ from robot_hat.motor.gpio_dc_motor import GPIODCMotor
 
 class TestGPIOMotor(unittest.TestCase):
     def setUp(self):
-        patcher = patch("robot_hat.motor.gpio_dc_motor.Motor")
+        patcher = patch("gpiozero.Motor")
         self.addCleanup(patcher.stop)
         self.MockMotor = patcher.start()
 
