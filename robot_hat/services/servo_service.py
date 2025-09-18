@@ -101,6 +101,7 @@ class ServoService:
         from robot_hat import ServoCalibrationMode, ServoService
 
         cam_tilt_servo = ServoService(
+            name="tilt",
             servo=my_servo_instance,
             min_angle=-35,  # Maximum downward tilt
             max_angle=65,   # Maximum upward tilt
