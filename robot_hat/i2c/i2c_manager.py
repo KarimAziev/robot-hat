@@ -23,6 +23,11 @@ from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import ADCAddressNotFound
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
 
+if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
+    from robot_hat.mock.smbus2 import MockSMBus as SMBus
+else:
+    from smbus2 import SMBus
+
 _log = logging.getLogger(__name__)
 
 
@@ -83,10 +88,6 @@ class I2C(object):
         """
 
         super().__init__(*args, **kwargs)
-        if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
-            from robot_hat.mock.smbus2 import MockSMBus as SMBus
-        else:
-            from smbus2 import SMBus
 
         if isinstance(bus, int):
             self._smbus = SMBus(bus)
