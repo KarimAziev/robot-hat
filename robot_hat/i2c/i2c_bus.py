@@ -66,15 +66,20 @@ class I2CBus(SMBusABC):
         _log.debug("Closing SMBus on bus %s", self._bus)
         try:
             self._smbus.close()
-        except Exception as err:
-            _log.error("Error closing SMBus: %s", err)
+        except TimeoutError as err:
+            _log.error("Timeout closing SMBus '%s': %s", self._bus, err)
+        except OSError as err:
+            _log.error("OS Error closing SMBus '%s': %s", self._bus, err)
+        except Exception:
+            _log.error("Unexpected error closing SMBus '%s'", self._bus, exc_info=True)
         finally:
             self.emitter.emit("close", self)
             self.emitter.off("close")
 
     @RETRY_DECORATOR
     def enable_pec(self, enable: bool = False) -> None:
-        """Enable or disable Packet Error Checking (PEC) on the bus.
+        """
+        Enable or disable Packet Error Checking (PEC) on the bus.
 
         Args:
             enable: Whether to enable PEC.
