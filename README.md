@@ -205,7 +205,7 @@ setup_env_vars()  # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT
 
 pwm_config = PWMDriverConfig(
     name="PCA9685",  # 'PCA9685' or 'Sunfounder', or register a custom driver.
-    address=0x14,  # I2C address of the device
+    address=0x40,  # I2C address of the device
     bus=1,  # The I2C bus number used to communicate with the PWM driver chip
     # The parameters below are optional and have default values:
     frame_width=20000,
