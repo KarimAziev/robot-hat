@@ -1,25 +1,20 @@
 import logging
 import os
 from types import TracebackType
-from typing import TYPE_CHECKING, List, Optional, Sequence, Type, Union
+from typing import TYPE_CHECKING, List, Optional, Sequence, Type, Union, cast
 
 from robot_hat.common.event_emitter import EventEmitter
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
+from robot_hat.i2c.smbus_protocol import SMBusProtocol
 from robot_hat.interfaces.smbus_abc import SMBusABC
-
-USE_MOCK = os.getenv("ROBOT_HAT_MOCK_SMBUS")
-
-if USE_MOCK != "1":
-    from smbus2 import SMBus as SMBus2
-else:
-    from robot_hat.mock.smbus2 import MockSMBus as SMBus2
-
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg
 
 
 _log = logging.getLogger(__name__)
+
+SMBus: Optional[Type[SMBusProtocol]] = None
 
 
 class I2CBus(SMBusABC):
@@ -38,8 +33,17 @@ class I2CBus(SMBusABC):
             bus: Bus identifier to open.
             force: Whether to open/operate in force mode.
         """
+        global SMBus
+
+        if SMBus is None:
+            if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
+                from robot_hat.mock.smbus2 import MockSMBus as RealSMBus
+            else:
+                from smbus2 import SMBus as RealSMBus
+            SMBus = cast(Type[SMBusProtocol], RealSMBus)
+
         self._bus = bus
-        self._smbus = SMBus2(bus, force)
+        self._smbus = SMBus(bus, force)
         self.emitter = EventEmitter()
         _log.debug("SMBus initialized on bus %s with force=%s", bus, force)
 
@@ -404,4 +408,4 @@ class I2CBus(SMBusABC):
         Exit context manager and perform cleanup by delegating to the SMBus.
         """
         _log.debug("Exiting I2CBus context manager")
-        self._smbus.__exit__(exc_type, exc_val, exc_tb)
+        self._smbus.__exit__(exc_type=exc_type, exc_val=exc_val, exc_tb=exc_tb)

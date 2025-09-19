@@ -8,7 +8,6 @@ from robot_hat.i2c.i2c_manager import I2C
 
 
 class TestI2C(unittest.TestCase):
-
     @patch("robot_hat.i2c.i2c_manager.SMBus")
     def test_initialize_successful(self, mock_smbus: MagicMock) -> None:
         mock_bus: MagicMock = MagicMock()

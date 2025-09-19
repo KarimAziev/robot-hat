@@ -17,21 +17,19 @@ communicate with one another using just two lines:
 import errno
 import logging
 import os
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Type, Union, cast
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import ADCAddressNotFound
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
-
-if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
-    from robot_hat.mock.smbus2 import MockSMBus as SMBus
-else:
-    from smbus2 import SMBus
+from robot_hat.i2c.smbus_protocol import SMBusProtocol
 
 _log = logging.getLogger(__name__)
 
+SMBus: Optional[Type[SMBusProtocol]] = None
 
-class I2C(object):
+
+class I2C:
     """
     A class to manage communication between a Raspberry Pi and devices that
     support the I2C protocol. I2C stands for Inter-Integrated Circuit and is
@@ -86,10 +84,16 @@ class I2C(object):
             address: The address or list of addresses of I2C devices.
             bus: I2C bus number. Default is 1.
         """
-
+        global SMBus
         super().__init__(*args, **kwargs)
 
         if isinstance(bus, int):
+            if SMBus is None:
+                if os.getenv("ROBOT_HAT_MOCK_SMBUS") == "1":
+                    from robot_hat.mock.smbus2 import MockSMBus as RealSMBus
+                else:
+                    from smbus2 import SMBus as RealSMBus
+                SMBus = cast(Type[SMBusProtocol], RealSMBus)
             self._smbus = SMBus(bus)
             self._own_bus: bool = True
             _log.debug("Created own SMBus on bus %d", bus)
@@ -220,7 +224,7 @@ class I2C(object):
 
         Args:
             reg: Register address.
-            data (list): List of data blocks to write.
+            data: List of data blocks to write.
 
         Returns:
             None
@@ -384,7 +388,7 @@ class I2C(object):
             - **Bytearray (bytearray)**: Treated as a list of bytes. The bytearray is converted to a list before transmission.
 
         Args:
-            data (Union[int, list, bytearray]): Input data to write. This can be:
+            data: Input data to write. This can be:
                 - An integer, which is either a single byte or a sequence of bytes.
                 - A list of integers, where each integer represents a byte.
                 - A bytearray, which is treated similarly to a list of bytes.
@@ -457,8 +461,7 @@ class I2C(object):
         message is logged, but the method will continue reading subsequent bytes.
 
         Args:
-            length (int): The number of bytes to read from the I2C device. Defaults to 1.
-                          The length must be a positive integer.
+            length: The number of bytes to read from the I2C device. The length must be a positive integer.
 
         Returns:
             list: A list containing `length` bytes read from the device. If any read
@@ -509,7 +512,7 @@ class I2C(object):
         integers, or bytearray) and converts these inputs into a sequence of bytes to be transferred.
 
         Args:
-            data (Union[int, list, bytearray]): The data to write. This can be:
+            data: The data to write. This can be:
                 - A single integer: It can represent one or more bytes (0xFFFF is 2 bytes: [0xFF, 0xFF]).
                 - A list of integers: Each integer represents a byte (e.g., `[0x12, 0x34]`).
                 - A bytearray: Treated similarly to a list of bytes.
@@ -565,12 +568,12 @@ class I2C(object):
         encountered during the read operation.
 
         Args:
-            length (int): The number of bytes to read from the specified memory address.
-            memaddr (int): The register (address) from which to read data.
+            length: The number of bytes to read from the specified memory address.
+            memaddr: The register (address) from which to read data.
 
         Returns:
-            List[int]: Returns a list of bytes read from the register. If an error occurs,
-                                 this method will log an error and return `None`.
+            Returns a list of bytes read from the register. If an error occurs,
+            this method will log an error and return `None`.
 
         Transfer Details:
             - The method reads `length` bytes starting from `memaddr` using the internal
