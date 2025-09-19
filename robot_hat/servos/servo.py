@@ -200,13 +200,13 @@ def parse_args():
     servo_group.add_argument(
         "--min-pulse",
         type=int,
-        default=-90,
+        default=-500,
         help="The minimum pulse width (in microseconds) corresponding to the servo's physical movement.",
     )
     servo_group.add_argument(
         "--max-pulse",
         type=int,
-        default=90,
+        default=2500,
         help="The maximum logical angle (in degrees) that can be commanded to the servo.",
     )
     servo_group.add_argument(
