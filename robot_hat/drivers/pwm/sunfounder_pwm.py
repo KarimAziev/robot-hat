@@ -6,7 +6,7 @@ This driver controls all channels on a Sunfounder PWM device via I2C.
 
 import logging
 import math
-from typing import Optional, Union
+from typing import Union
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import InvalidChannelNumber
@@ -137,42 +137,60 @@ class SunfounderPWM(PWMDriverABC):
         """
         Set the pulse width (in microseconds) for a given channel.
 
-        The channel-to-timer mapping is as follows:
-          • Channels 0–15: timer = channel // 4
-          • Channels 16–17: timer = 4
-          • Channel 18:    timer = 5
-          • Channel 19:    timer = 6
+        Converts the pulse width in microseconds to timer ticks (0..ARR) based on the
+        current frame width and ARR selected by set_pwm_freq(), then writes the value
+        to the channel register.
 
-        The method writes the pulse width to the corresponding channel register.
+        Channel-to-timer mapping:
+          • Channels 0-15: timer = channel // 4
+          • Channels 16-17: timer = 4
+          • Channel 18:     timer = 5
+          • Channel 19:     timer = 6
 
         Args:
-            channel: The PWM channel number (0–19).
-            pulse: The pulse width in microseconds.
+            channel: The PWM channel number (0-19).
+            pulse:   The pulse width in microseconds.
         """
         if not (0 <= channel <= 19):
-            msg = f"Channel must be in range 0–19, got {channel}"
+            msg = f"Channel must be in range 0-19, got {channel}"
             _log.error(msg)
             raise InvalidChannelNumber(msg)
 
-        timer_index: Optional[int] = None
         if channel < 16:
             timer_index = channel // 4
         elif channel in (16, 17):
             timer_index = 4
         elif channel == 18:
             timer_index = 5
-        elif channel == 19:
+        else:
             timer_index = 6
+
+        # Ensure frequency/ARR was configured
+        if self._arr is None:
+            raise RuntimeError(
+                "set_pwm_freq() must be called before set_servo_pulse()."
+            )
+
+        ticks_float = (float(pulse) / float(self._frame_width)) * self._arr
+        ticks = int(round(ticks_float))
+        if ticks < 0:
+            ticks = 0
+        elif ticks > self._arr:
+            ticks = self._arr
 
         reg = self.REG_CHN + channel
         _log.debug(
-            "Setting pulse width %d µs on channel %d (using timer %d) to register 0x%02X",
+            "Setting servo pulse %d µs -> %d ticks (ARR=%d, frame=%d µs) on channel %d "
+            "(using timer %d) to register 0x%02X",
             pulse,
+            ticks,
+            self._arr,
+            self._frame_width,
             channel,
             timer_index,
             reg,
         )
-        self._i2c_write(reg, pulse)
+        self._i2c_write(reg, ticks)
 
     def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
         """
