@@ -5,7 +5,7 @@ from typing import Literal, Union
 from robot_hat.data_types.config.motor import MotorDirection
 from robot_hat.interfaces.motor_abc import MotorABC
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 MotorZeroDirection = Literal[0]
 
@@ -147,12 +147,12 @@ class MotorService:
         Usage:
             >>> controller.stop_all()
         """
-        logger.debug("Stopping motors")
+        _log.debug("Stopping motors")
         self._stop_all()
         time.sleep(0.002)
         self._stop_all()
         time.sleep(0.002)
-        logger.debug("Motors Stopped")
+        _log.debug("Motors Stopped")
 
     def move(self, speed: float, direction: MotorServiceDirection) -> None:
         """
@@ -163,11 +163,11 @@ class MotorService:
         - direction: 1 for forward, -1 for backward, 0 for stopping.
         """
         if direction == 0 and abs(speed) > 0:
-            logger.warning(
+            _log.warning(
                 "Non-zero speed provided with direction 0; motors will be stopped."
             )
-        assert self.left_motor
-        assert self.right_motor
+        assert self.left_motor, "Left motor is None"
+        assert self.right_motor, "Right motor is None"
 
         if direction == 0:
             self.stop_all()
@@ -207,8 +207,8 @@ class MotorService:
         Usage:
             >>> controller.update_left_motor_calibration_speed(5, persist=True)
         """
-        assert self.left_motor
-        assert self.right_motor
+        assert self.left_motor, "Left motor is None"
+        assert self.right_motor, "Right motor is None"
         return self.left_motor.update_calibration_speed(value, persist)
 
     def update_right_motor_calibration_speed(
@@ -227,8 +227,8 @@ class MotorService:
         Usage:
             >>> controller.update_right_motor_calibration_speed(-3, persist=False)
         """
-        assert self.left_motor
-        assert self.right_motor
+        assert self.left_motor, "Left motor is None"
+        assert self.right_motor, "Right motor is None"
         return self.right_motor.update_calibration_speed(value, persist)
 
     def update_right_motor_calibration_direction(
@@ -247,7 +247,7 @@ class MotorService:
         Usage:
             >>> controller.update_left_motor_calibration_direction(-1, persist=True)
         """
-        assert self.right_motor
+        assert self.right_motor, "Right motor is None"
         return self.right_motor.update_calibration_direction(value, persist)
 
     def update_left_motor_calibration_direction(
@@ -266,7 +266,7 @@ class MotorService:
         Usage:
             >>> controller.update_right_motor_calibration_direction(1, persist=False)
         """
-        assert self.left_motor
+        assert self.left_motor, "Left motor is None"
         return self.left_motor.update_calibration_direction(value, persist)
 
     def reset_calibration(self) -> None:
@@ -305,7 +305,7 @@ class MotorService:
                 try:
                     motor.close()
                 except Exception as e:
-                    logger.error("Error closing motor: %s", e)
+                    _log.error("Error closing motor: %s", e)
         self.right_motor = None
         self.left_motor = None
 
@@ -344,8 +344,8 @@ class MotorService:
         - direction: 1 for forward, -1 for backward.
         - current_angle: Steering angle for turning (e.g., -100 to 100).
         """
-        assert self.left_motor
-        assert self.right_motor
+        assert self.left_motor, "Left motor is None"
+        assert self.right_motor, "Right motor is None"
 
         speed1 = speed * direction
         speed2 = -speed * direction
