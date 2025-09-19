@@ -20,7 +20,7 @@ import os
 from typing import Any, List, Optional, Type, Union, cast
 
 from robot_hat.data_types.bus import BusType
-from robot_hat.exceptions import ADCAddressNotFound
+from robot_hat.exceptions import I2CAddressNotFound
 from robot_hat.i2c.retry_decorator import RETRY_DECORATOR
 from robot_hat.i2c.smbus_protocol import SMBusProtocol
 
@@ -106,7 +106,7 @@ class I2C:
 
         if addr is None:
             _log.error("I2C address %s not found", address)
-            raise ADCAddressNotFound("I2C address not found")
+            raise I2CAddressNotFound("I2C address not found")
 
         self._address: int = addr
         _log.debug(

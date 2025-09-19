@@ -1,12 +1,11 @@
 import unittest
 
-from robot_hat.exceptions import MotorValidationError
-from robot_hat.motor.mixins.motor_calibration import MotorCalibration
+from robot_hat import MotorCalibrationMixin, MotorValidationError
 
 
 class TestMotorCalibrationMixin(unittest.TestCase):
     def setUp(self):
-        self.mc = MotorCalibration()
+        self.mc = MotorCalibrationMixin()
 
     def test_initial_values_default(self):
         self.assertEqual(self.mc.calibration_direction, 1)
@@ -15,7 +14,9 @@ class TestMotorCalibrationMixin(unittest.TestCase):
         self.assertEqual(self.mc.speed_offset, 0)
 
     def test_initial_values_custom(self):
-        mc2 = MotorCalibration(calibration_direction=-1, calibration_speed_offset=0.5)
+        mc2 = MotorCalibrationMixin(
+            calibration_direction=-1, calibration_speed_offset=0.5
+        )
         self.assertEqual(mc2.calibration_direction, -1)
         self.assertEqual(mc2.direction, -1)
         self.assertEqual(mc2.calibration_speed_offset, 0.5)
@@ -23,7 +24,7 @@ class TestMotorCalibrationMixin(unittest.TestCase):
 
     def test_init_with_invalid_direction_raises(self):
         with self.assertRaises(MotorValidationError):
-            MotorCalibration(calibration_direction=0)  # type: ignore
+            MotorCalibrationMixin(calibration_direction=0)  # type: ignore
 
     def test_direction_setter_validation(self):
         with self.assertRaises(MotorValidationError):

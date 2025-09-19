@@ -3,8 +3,7 @@ import unittest
 from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
-from robot_hat.exceptions import ADCAddressNotFound
-from robot_hat.i2c.i2c_manager import I2C
+from robot_hat import I2C, ADCAddressNotFound
 
 
 class TestI2C(unittest.TestCase):

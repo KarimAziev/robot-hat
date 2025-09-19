@@ -2,15 +2,15 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
-from robot_hat.exceptions import (
+from robot_hat import (
     InvalidPin,
     InvalidPinInterruptTrigger,
     InvalidPinMode,
     InvalidPinName,
     InvalidPinNumber,
     InvalidPinPull,
+    Pin,
 )
-from robot_hat.pin import Pin
 
 
 class TestPin(unittest.TestCase):

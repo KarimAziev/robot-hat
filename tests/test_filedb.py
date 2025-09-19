@@ -1,8 +1,7 @@
 import os
 import unittest
 
-from robot_hat.exceptions import FileDBValidationError
-from robot_hat.filedb import FileDB
+from robot_hat import FileDB, FileDBValidationError
 
 
 class TestFileDB(unittest.TestCase):

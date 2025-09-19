@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from robot_hat.motor.gpio_dc_motor import GPIODCMotor
+from robot_hat import GPIODCMotor
 
 
 class TestGPIOMotor(unittest.TestCase):

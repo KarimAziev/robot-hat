@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock
 
-from robot_hat.services.motor_service import MotorService
+from robot_hat import MotorService
 
 
 class TestMotorController(unittest.TestCase):

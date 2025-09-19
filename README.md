@@ -66,9 +66,9 @@ Three types of motors are currently supported: GPIO-driven motors, phase motors,
 GPIO motors are motors that are controlled entirely via direct GPIO calls; no I²C address or external PWM driver is needed. Examples include the Waveshare RPi Motor Driver Board with the MC33886 module.
 
 ```python
-from robot_hat.data_types.config.motor import GPIODCMotorConfig
-from robot_hat.factories.motor_factory import MotorFactory
-from robot_hat.services.motor_service import MotorService
+from robot_hat import GPIODCMotorConfig, MotorFactory, MotorService, setup_env_vars
+
+setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
 
 left_motor = MotorFactory.create_motor(
     config=GPIODCMotorConfig(
@@ -108,6 +108,7 @@ motor_service.move(speed, -1)
 
 # stop
 motor_service.stop_all()
+
 ```
 
 ### I2C-driven DC motors
@@ -115,18 +116,22 @@ motor_service.stop_all()
 I2C-driven motors rely on an external PWM driver (e.g., PCA9685, Sunfounder) to control motor speed via I²C.
 
 ```python
-from robot_hat.data_types.config.motor import I2CDCMotorConfig
-from robot_hat.data_types.config.pwm import PWMDriverConfig
-from robot_hat.factories.motor_factory import MotorFactory
-from robot_hat.factories.pwm_factory import PWMFactory
-from robot_hat.services.motor_service import MotorService
+from robot_hat import (
+    I2CDCMotorConfig,
+    MotorFactory,
+    MotorService,
+    PWMDriverConfig,
+    PWMFactory,
+)
+
+setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
 
 driver_cfg = PWMDriverConfig(
     name="Sunfounder",  # 'PCA9685', 'Sunfounder', or a custom driver.
     bus=1,
     frame_width=20000,
     freq=50,
-    address=0x14
+    address=0x14,
 )
 driver = PWMFactory.create_pwm_driver(driver_cfg, bus=1)
 
@@ -154,6 +159,7 @@ motor_service = MotorService(
         driver=driver,
     ),
 )
+
 
 speed = 40
 motor_service.move(speed, 1)
@@ -200,24 +206,28 @@ Here's how to use `ServoCalibrationMode` in your servo configuration:
 For steering purposes (e.g., controlling the front wheels of a robotic car):
 
 ```python
-from robot_hat.utils import setup_env_vars
+from robot_hat import (
+    PWMDriverConfig,
+    PWMFactory,
+    Servo,
+    ServoCalibrationMode,
+    ServoService,
+    setup_env_vars,
+)
 
-setup_env_vars()  # automatically set up GPIOZERO_PIN_FACTORY and other environment variables
-from robot_hat.data_types.config.pwm import PWMDriverConfig
-from robot_hat.factories import PWMFactory
-from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
-from robot_hat.servos.servo import Servo
+setup_env_vars()  # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
+
 
 pwm_config = PWMDriverConfig(
-    name="PCA9685",  # 'PCA9685', 'Sunfounder', or a custom driver.
-    address=0x40,  # I2C address of the device
+    name="PCA9685",  # 'PCA9685' or 'Sunfounder', or register a custom driver.
+    address=0x14,  # I2C address of the device
     bus=1,  # The I2C bus number used to communicate with the PWM driver chip
     # The parameters below are optional and have default values:
     frame_width=20000,
     freq=50,
 )
 driver = PWMFactory.create_pwm_driver(
-    bus=pwm_config.bus,  # either a bus number or an smbus instance
+    bus=pwm_config.bus,  # either a bus number or an smbus instance.
     config=pwm_config,
 )
 
@@ -225,11 +235,15 @@ steering_servo = ServoService(
     servo=Servo(
         driver=driver,
         channel="P1",  # Either an integer or a string with a numeric suffix.
-        # Optional parameters with default values:
+        # The parameters below are optional and have default values:
+        # The minimum and maximum logical angles (in degrees) that can be commanded to the servo.
         min_angle=-90.0,
         max_angle=90.0,
+        # The minimum and maximum pulse widths (in microseconds) corresponding to the servo's physical movement.
         min_pulse=500,
         max_pulse=2500,
+        # The minimum and maximum physical angles (in degrees) that the servo can achieve.
+        # These values are used to map the logical angle to the physical angle.
         real_min_angle=-90.0,
         real_max_angle=90.0,
     ),
@@ -247,7 +261,9 @@ steering_servo.reset()  # Reset to the center position.
 
 # Calibration
 print(steering_servo.calibration_offset)  # -14.4
-steering_servo.update_calibration(-10.2)  # temporarily update calibration until reset_calibration is called
+steering_servo.update_calibration(
+    -10.2
+)  # temporarly update calibration until reset_calibration is called
 print(steering_servo.calibration_offset)  # -10.2
 steering_servo.reset_calibration()
 print(steering_servo.calibration_offset)  # -14.4
@@ -257,6 +273,7 @@ steering_servo.reset_calibration()  # resets to persisted value
 print(steering_servo.calibration_offset)  # -1.5
 
 steering_servo.close()  # Close and clean up the servo.
+
 ```
 
 Example 2: Head servos using ServoCalibrationMode.NEGATIVE
@@ -326,73 +343,101 @@ Instead of letting each driver open its own `SMBus`, the example uses `SMBusMana
 import logging
 from typing import Callable, Dict, Optional, Union
 
-from app.exceptions.robot import MotorNotFoundError, RobotI2CBusError, RobotI2CTimeout
-from robot_hat import MotorService, ServoService
-from robot_hat.data_types.config.motor import GPIODCMotorConfig
-from robot_hat.data_types.config.pwm import PWMDriverConfig
-from robot_hat.factories import PWMFactory
-from robot_hat.factories.motor_factory import MotorFactory
-from robot_hat.factories.pwm_factory import PWMFactory
-from robot_hat.i2c.smbus_manager import SMBusManager
-from robot_hat.services.motor_service import MotorService, MotorServiceDirection
-from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
-from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
-from robot_hat.servos.servo import Servo
+from robot_hat import (
+    GPIOAngularServo,
+    GPIODCMotorConfig,
+    MotorABC,
+    MotorConfigType,
+    MotorFactory,
+    MotorService,
+    MotorServiceDirection,
+    PWMDriverConfig,
+    PWMFactory,
+    Servo,
+    ServoCalibrationMode,
+    ServoService,
+    SMBusManager,
+)
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class MyRobotCar:
     def __init__(
         self,
+        pwm_config: Optional[PWMDriverConfig] = None,
+        pan_servo_channel: Union[int, str] = "P0",
+        tilt_servo_channel: Union[int, str] = "P1",
+        steering_servo_channel: Union[int, str] = "P2",
+        left_motor_config: Optional[MotorConfigType] = None,
+        right_motor_config: Optional[MotorConfigType] = None,
     ) -> None:
+
         self.smbus_manager = SMBusManager()
+
+        self.left_motor: Optional[MotorABC] = None
+        self.right_motor: Optional[MotorABC] = None
+        self.cam_pan_servo: Optional[ServoService] = None
+        self.cam_tilt_servo: Optional[ServoService] = None
+        self.steering_servo: Optional[ServoService] = None
+
         self.setup(
-            pwm_config=PWMDriverConfig(
-                name="PCA9685",  # 'PCA9685', 'Sunfounder', or a custom driver.
-                address=0x40,  # I2C address of the device
-                bus=1,
-                # The parameters below are optional and have default values:
-                frame_width=20000,
-                freq=50,
-            )
+            pwm_config=pwm_config,
+            pan_servo_channel=pan_servo_channel,
+            tilt_servo_channel=tilt_servo_channel,
+            steering_servo_channel=steering_servo_channel,
+            left_motor_config=left_motor_config,
+            right_motor_config=right_motor_config,
         )
 
-    def setup(self, pwm_config: PWMDriverConfig):
+    def setup(
+        self,
+        pwm_config: Optional[PWMDriverConfig],
+        pan_servo_channel: Union[int, str],
+        tilt_servo_channel: Union[int, str],
+        steering_servo_channel: Union[int, str],
+        left_motor_config: Optional[MotorConfigType],
+        right_motor_config: Optional[MotorConfigType],
+    ):
+        self._setup_servo(
+            pwm_config=pwm_config,
+            pan_servo_channel=pan_servo_channel,
+            tilt_servo_channel=tilt_servo_channel,
+            steering_servo_channel=steering_servo_channel,
+        )
+
+        self._setup_motors(
+            left_motor_config=left_motor_config, right_motor_config=right_motor_config
+        )
+
+    def _setup_servo(
+        self,
+        pwm_config: Optional[PWMDriverConfig],
+        pan_servo_channel: Union[int, str],
+        tilt_servo_channel: Union[int, str],
+        steering_servo_channel: Union[int, str],
+    ) -> None:
         self.cam_pan_servo = self._make_servo(
-            name="cam_pan", pwm_config=pwm_config, channel="P0"
+            name="cam_pan", pwm_config=pwm_config, channel=pan_servo_channel
         )
         self.cam_tilt_servo = self._make_servo(
-            name="cam_pan", pwm_config=pwm_config, channel="P1"
+            name="cam_tilt", pwm_config=pwm_config, channel=tilt_servo_channel
         )
         self.steering_servo = self._make_servo(
-            name="cam_pan", pwm_config=pwm_config, channel="P2"
+            name="steering", pwm_config=pwm_config, channel=steering_servo_channel
         )
-        self.left_motor = MotorFactory.create_motor(
-            config=GPIODCMotorConfig(
-                calibration_direction=1,
-                name="left_motor",
-                max_speed=100,
-                forward_pin=6,
-                backward_pin=13,
-                enable_pin=12,
-                pwm=True,
+
+    def _setup_motors(
+        self,
+        left_motor_config: Optional[MotorConfigType],
+        right_motor_config: Optional[MotorConfigType],
+    ) -> None:
+        if left_motor_config and right_motor_config:
+            self.left_motor = MotorFactory.create_motor(config=left_motor_config)
+            self.right_motor = MotorFactory.create_motor(config=right_motor_config)
+            self.motor_controller = MotorService(
+                left_motor=self.left_motor, right_motor=self.right_motor
             )
-        )
-        self.right_motor = MotorFactory.create_motor(
-            config=GPIODCMotorConfig(
-                calibration_direction=1,
-                name="left_motor",
-                max_speed=100,
-                forward_pin=6,
-                backward_pin=13,
-                enable_pin=12,
-                pwm=True,
-            )
-        )
-        self.motor_controller = MotorService(
-            left_motor=self.left_motor, right_motor=self.right_motor
-        )
 
     def _make_servo(
         self,
@@ -443,8 +488,6 @@ class MyRobotCar:
         - speed: The base speed at which to move.
         - direction: 1 for forward, -1 for backward, 0 for stop.
         """
-        if not self.motor_controller:
-            raise MotorNotFoundError("Motors not found or not configured")
         self.motor_controller.move(speed, direction)
 
     @property
@@ -484,12 +527,11 @@ class MyRobotCar:
             try:
                 self.stop()
                 self.motor_controller.close()
-            except RobotI2CTimeout as e:
-                logger.error("I2C timeout error closing motors %s", e)
-            except RobotI2CBusError as e:
-                logger.error("I2C bus error closing motors %s", e)
+            except (TimeoutError, OSError) as e:
+                err_msg = str(e)
+                _log.error(err_msg)
             except Exception as e:
-                logger.error(
+                _log.error(
                     "Unexpected error while closing motor controller %s",
                     e,
                     exc_info=True,
@@ -500,9 +542,7 @@ class MyRobotCar:
                     try:
                         motor.close()
                     except Exception as e:
-                        logger.error("Error closing motor %s", e)
-
-        self._motor_addresses = []
+                        _log.error("Error closing motor %s", e)
 
         self.right_motor = None
         self.left_motor = None
@@ -517,9 +557,43 @@ class MyRobotCar:
                     servo_service.close()
                 except (TimeoutError, OSError) as e:
                     err_msg = str(e)
-                    logger.error(err_msg)
+                    _log.error(err_msg)
                 except Exception as e:
-                    logger.error("Error closing servo %s", e)
+                    _log.error("Error closing servo %s", e)
+
+
+if __name__ == "__main__":
+    from robot_hat.utils import setup_env_vars
+
+    setup_env_vars()
+    robot_car = MyRobotCar(
+        left_motor_config=GPIODCMotorConfig(
+            calibration_direction=1,
+            name="left_motor",
+            max_speed=100,
+            forward_pin=6,
+            backward_pin=13,
+            enable_pin=12,
+            pwm=True,
+        ),
+        right_motor_config=GPIODCMotorConfig(
+            calibration_direction=1,
+            name="right_motor",
+            max_speed=100,
+            forward_pin=20,
+            backward_pin=21,
+            enable_pin=26,
+            pwm=True,
+        ),
+        pwm_config=PWMDriverConfig(
+            name="PCA9685",
+            address=0x40,
+            bus=1,
+        ),
+    )
+    robot_car.move(50, 1)
+    robot_car.stop()
+    robot_car.cleanup()
 
 ```
 
@@ -531,9 +605,6 @@ class MyRobotCar:
 Scan and communicate with connected I2C devices.
 
 ```python
-import os
-
-from robot_hat.utils import setup_env_vars
 from robot_hat import I2C
 
 # Initialize I2C connection
@@ -549,6 +620,7 @@ print("I2C Data Read:", data)
 # Scan for connected devices
 devices = i2c_device.scan()
 print("I2C Devices Detected:", devices)
+
 ```
 
 ### Ultrasonic sensor for distance measurement
@@ -556,17 +628,17 @@ print("I2C Devices Detected:", devices)
 Measure distance using the `HC-SR04` ultrasonic sensor module.
 
 ```python
-from robot_hat.pin import Pin
-from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
+from robot_hat import Pin, Ultrasonic
 
 # Initialize Ultrasonic Sensor
-trig_pin = Pin("GPIO27")  # or an integer or other pin mapping
-echo_pin = Pin(17)        # or a string or other pin mapping
+trig_pin = Pin("GPIO27")  # or integer or other pin mapping
+echo_pin = Pin(17)  # or string or other pin mapping
 ultrasonic = Ultrasonic(trig_pin, echo_pin)
 
 # Measure distance
 distance_cm = ultrasonic.read(times=5)
 print(f"Distance: {distance_cm} cm")
+
 ```
 
 ### Reading battery voltage
@@ -605,9 +677,7 @@ The base class manages the I2C/SMBus instance when the constructor receives eith
 import logging
 from typing import Optional
 
-from robot_hat.factories import register_pwm_driver
-from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
-from robot_hat.data_types.bus import BusType
+from robot_hat import BusType, PWMDriverABC, register_pwm_driver
 
 _log = logging.getLogger(__name__)
 
@@ -623,27 +693,44 @@ class MyDriver(PWMDriverABC):
         frame_width: Optional[int] = 20000,
         **kwargs
     ) -> None:
+        # Let the base class resolve or wrap the bus parameter
         super().__init__(bus=bus, address=address)
         self._frame_width = frame_width if frame_width is not None else 20000
         _log.debug("Initialized MyDriver at 0x%02X on bus %s", address, bus)
 
     def set_pwm_freq(self, freq: int) -> None:
+        # implement frequency setup for your chip
         _log.debug("MyDriver.set_pwm_freq(%d)", freq)
 
     def set_servo_pulse(self, channel: int, pulse: int) -> None:
+        # convert pulse (µs) to whatever units your driver needs and write
         _log.debug("MyDriver.set_servo_pulse(channel=%d, pulse=%d)", channel, pulse)
 
     def set_pwm_duty_cycle(self, channel: int, duty: int) -> None:
         if not (0 <= duty <= 100):
             raise ValueError("Duty must be between 0 and 100")
         _log.debug("MyDriver.set_pwm_duty_cycle(channel=%d, duty=%d)", channel, duty)
+
+
+if __name__ == "__main__":
+    from robot_hat import PWMDriverConfig, PWMFactory, setup_env_vars
+
+    setup_env_vars()
+    pwm_config = PWMDriverConfig(
+        name=MyDriver.DRIVER_TYPE,
+        address=0x40,  # I2C address of the device
+        bus=1,
+    )
+
+    my_driver = PWMFactory.create_pwm_driver(config=pwm_config)
+    print(my_driver.DRIVER_TYPE)
+
 ```
 
 Use it from config
 
 ```python
-from robot_hat.data_types.config.pwm import PWMDriverConfig
-from robot_hat.factories import PWMFactory
+from robot_hat import PWMFactory, PWMDriverConfig
 from .my_driver import MyDriver  # ensure your module is imported
 
 pwm_config = PWMDriverConfig(

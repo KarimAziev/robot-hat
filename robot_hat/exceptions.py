@@ -6,6 +6,14 @@ class ADCAddressNotFound(Exception):
     pass
 
 
+class I2CAddressNotFound(Exception):
+    """
+    Exception raised when the I2C address is not found.
+    """
+
+    pass
+
+
 class InvalidPin(ValueError):
     """
     Exception raised when the specified pin is invalid or not found.

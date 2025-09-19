@@ -1,9 +1,12 @@
 import unittest
 from unittest.mock import Mock
 
-from robot_hat.exceptions import InvalidCalibrationModeError
-from robot_hat.interfaces.servo_abc import ServoABC
-from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
+from robot_hat import (
+    InvalidCalibrationModeError,
+    ServoABC,
+    ServoCalibrationMode,
+    ServoService,
+)
 
 
 class FakeServo(ServoABC):
