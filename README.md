@@ -534,8 +534,6 @@ Scan and communicate with connected I2C devices.
 import os
 
 from robot_hat.utils import setup_env_vars
-
-# from robot_hat import I2C
 from robot_hat import I2C
 
 # Initialize I2C connection
