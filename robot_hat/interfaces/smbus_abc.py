@@ -217,7 +217,7 @@ class SMBusABC(ABC):
     @abstractmethod
     def process_call(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
-    ):
+    ) -> int:
         """
         Perform an SMBus "process call" operation.
 
@@ -231,9 +231,7 @@ class SMBusABC(ABC):
             force: If provided, overrides the instance's
                 default `force` behavior for this operation.
 
-        Returns:
-            Backend-dependent return value (commonly an int for the 16-bit
-            response).
+        Returns a 16-bit response in a single transaction.
         """
 
         pass
