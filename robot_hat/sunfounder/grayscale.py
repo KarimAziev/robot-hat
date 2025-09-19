@@ -20,14 +20,15 @@ class Grayscale:
     ### Example usage
 
     ```python
-    from robot_hat.sunfounder import ADC, ADXL345, Grayscale
+    from robot_hat.sunfounder import  Grayscale
+    from robot_hat import SunfounderADC
 
-    # Initialize ADC channels
-    pin0 = ADC(0)  # Initialize ADC object for channel 0
-    pin1 = ADC(1)  # Initialize ADC object for channel 1
-    pin2 = ADC(2)  # Initialize ADC object for channel 2
+    # Initialize SunfounderADC channels
+    pin0 = SunfounderADC(0)  # Initialize ADC object for channel 0
+    pin1 = SunfounderADC(1)  # Initialize ADC object for channel 1
+    pin2 = SunfounderADC(2)  # Initialize ADC object for channel 2
 
-    # Initialize Grayscale module with ADC pins and a reference (optional)
+    # Initialize Grayscale module with SunfounderADC pins and a reference (optional)
     grayscale = Grayscale(pin0, pin1, pin2, reference=[900, 900, 900])
 
     # Set reference manually
@@ -44,6 +45,7 @@ class Grayscale:
     # Read grayscale values for all channels
     all_values = grayscale.read_all()
     print(f"All channel values: {all_values}")
+
     ```
     """
 
