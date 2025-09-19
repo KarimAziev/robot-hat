@@ -632,7 +632,7 @@ class I2C:
 
         return True if self.check_address(self.address) else False
 
-    def close(self):
+    def close(self) -> None:
         """
         Close the I2C bus connection if this instance owns the SMBus object.
 
