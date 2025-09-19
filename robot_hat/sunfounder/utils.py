@@ -44,7 +44,7 @@ def reset_mcu_sync(pin: Union[int, str] = 5) -> None:
     mcu_reset.close()
 
 
-def run_command(cmd) -> Tuple[Union[int, None], str]:
+def run_command(cmd: str) -> Tuple[Union[int, None], str]:
     """
     Run command and return status and output
 

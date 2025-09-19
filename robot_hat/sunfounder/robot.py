@@ -9,7 +9,7 @@ T = TypeVar("T", int, float, str)
 
 class Robot:
     """
-    Represents a programmable robot with multiple servos.
+    Represents a programmable Sunfounder's robot with multiple servos.
 
     Manages servo control, movements, calibration, and configuration.
     The class is initialized with a list of servo pins and utilizes a
