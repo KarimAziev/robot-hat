@@ -229,7 +229,7 @@ if __name__ == "__main__":
     try:
         import time
 
-        with SunfounderPWM(address=0x40, bus=1) as pwm:
+        with SunfounderPWM(address=0x14, bus=1) as pwm:
             pwm.set_pwm_freq(50)
             while True:
                 # Increase pulse width from 500µs to 2500µs.

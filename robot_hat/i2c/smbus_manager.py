@@ -113,7 +113,7 @@ if __name__ == "__main__":
     bus1 = SMBusManager.get_bus(1)
     bus0_again = SMBusManager.get_bus(0)
 
-    print("bus0 is bus0_again:", bus0 is bus0_again)
+    print("bus0 is bus0_again:", bus0 is bus0_again)  # bus0 is bus0_again: True
 
     SMBusManager.close_bus(0)
     SMBusManager.close_all()

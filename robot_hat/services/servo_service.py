@@ -313,7 +313,7 @@ class ServoService:
             maximum speed, and calibration details.
         """
         return (
-            f"<Servo(name={self.name}, min_angle={self.min_angle}, max_angle={self.max_angle}"
+            f"<Servo(name={self.name}, min_angle={self.min_angle}, max_angle={self.max_angle}, "
             f"current_angle={self.current_angle}, "
             f"calibration_offset={self.calibration_offset}, _persisted_calibration_offset={self.calibration_offset})>"
         )

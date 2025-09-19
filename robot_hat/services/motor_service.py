@@ -235,25 +235,6 @@ class MotorService:
         self, value: MotorDirection, persist=False
     ) -> MotorDirection:
         """
-        Update the direction calibration for the left motor.
-
-        Args:
-            value: New calibration direction (+1 or -1).
-            persist: Whether to make the calibration persistent across resets (default: False).
-
-        Returns:
-            int: Updated direction calibration.
-
-        Usage:
-            >>> controller.update_left_motor_calibration_direction(-1, persist=True)
-        """
-        assert self.right_motor, "Right motor is None"
-        return self.right_motor.update_calibration_direction(value, persist)
-
-    def update_left_motor_calibration_direction(
-        self, value: MotorDirection, persist=False
-    ) -> MotorDirection:
-        """
         Update the direction calibration for the right motor.
 
         Args:
@@ -265,6 +246,25 @@ class MotorService:
 
         Usage:
             >>> controller.update_right_motor_calibration_direction(1, persist=False)
+        """
+        assert self.right_motor, "Right motor is None"
+        return self.right_motor.update_calibration_direction(value, persist)
+
+    def update_left_motor_calibration_direction(
+        self, value: MotorDirection, persist=False
+    ) -> MotorDirection:
+        """
+        Update the direction calibration for the left motor.
+
+        Args:
+            value: New calibration direction (+1 or -1).
+            persist: Whether to make the calibration persistent across resets (default: False).
+
+        Returns:
+            int: Updated direction calibration.
+
+        Usage:
+            >>> controller.update_left_motor_calibration_direction(-1, persist=True)
         """
         assert self.left_motor, "Left motor is None"
         return self.left_motor.update_calibration_direction(value, persist)
