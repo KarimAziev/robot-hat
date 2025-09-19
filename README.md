@@ -5,7 +5,7 @@
 
 This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling **motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
 
-The motivation comes from dissatisfaction with the code quality, safety, and unnecessary `sudo` requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi).
+The motivation comes from dissatisfaction with the code quality, safety, and unnecessary sudo requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi).
 
 Another reason is to provide a unified way to use different servo and motor controllers without writing custom code (or copying untyped, poorly written examples) for every hardware vendor.
 
@@ -28,10 +28,13 @@ Unlike the aforementioned libraries:
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [I2C-driven DC motors](#i2c-driven-dc-motors)
 >     - [Controlling a servo motor with ServoCalibrationMode](#controlling-a-servo-motor-with-servocalibrationmode)
->     - [Combined example with shared bus instance](#combined-example-with-shared-bus-instance)
+>     - [Shared I2C bus instance](#shared-i2c-bus-instance)
+>     - [Combined example with vehicle robot (shared bus instance, servos and motors)](#combined-example-with-vehicle-robot-shared-bus-instance-servos-and-motors)
 >     - [I2C example](#i2c-example)
 >     - [Ultrasonic sensor for distance measurement](#ultrasonic-sensor-for-distance-measurement)
 >     - [Reading battery voltage](#reading-battery-voltage)
+>       - [INA219](#ina219)
+>       - [Sunfounder module](#sunfounder-module)
 >   - [Adding custom drivers](#adding-custom-drivers)
 >     - [How to make your driver discoverable](#how-to-make-your-driver-discoverable)
 >   - [Comparison with Other Libraries](#comparison-with-other-libraries)
@@ -93,13 +96,8 @@ right_motor = MotorFactory.create_motor(
     )
 )
 
-
-# move forward
-speed = 40
-motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
 speed = 40
 motor_service.move(speed, 1)
-
 # increase speed
 motor_service.move(motor_service.speed + 10, 1)
 
@@ -159,19 +157,6 @@ motor_service = MotorService(
         driver=driver,
     ),
 )
-
-
-speed = 40
-motor_service.move(speed, 1)
-
-# increase speed
-motor_service.move(motor_service.speed + 10, 1)
-
-# move backward
-motor_service.move(speed, -1)
-
-# stop
-motor_service.stop_all()
 ```
 
 ### Controlling a servo motor with ServoCalibrationMode
@@ -201,7 +186,7 @@ The `ServoService` provides a high-level abstraction for managing servo operatio
 
 Here's how to use `ServoCalibrationMode` in your servo configuration:
 
-**Example 1**: Steering servo using **ServoCalibrationMode.SUM**
+**Example 1**: Steering servo using `ServoCalibrationMode.SUM`
 
 For steering purposes (e.g., controlling the front wheels of a robotic car):
 
@@ -276,7 +261,7 @@ steering_servo.close()  # Close and clean up the servo.
 
 ```
 
-Example 2: Head servos using ServoCalibrationMode.NEGATIVE
+**Example 2**: Head servos using `ServoCalibrationMode.NEGATIVE`
 
 For tilting a camera head (e.g., up-and-down movement):
 
@@ -300,11 +285,9 @@ cam_tilt_servo.set_angle(25)  # Tilt up
 cam_tilt_servo.reset()  # Center position
 ```
 
-Custom calibration mode
+**Example 3**: Custom calibration mode
 
 If the predefined modes (`SUM` or `NEGATIVE`) don’t meet your requirements, you can provide a custom calibration function. The function should accept `angle` and `calibration_offset` as inputs and return the calibrated angle.
-
-Example:
 
 ```python
 def custom_calibration_function(angle: float, offset: float) -> float:
@@ -327,14 +310,52 @@ cam_tilt_servo = ServoService(
 cam_tilt_servo.set_angle(10)  # Custom logic will process the input angle
 ```
 
-### Combined example with shared bus instance
+### Shared I2C bus instance
+
+Share I2C buses via SMBusManager where possible to avoid device contention and duplicated resources. SMBusManager.get_bus(n) returns the same bus instance for the same bus number, so multiple callers will get a single shared object:
+
+```python
+from robot_hat import SMBusManager
+
+bus0 = SMBusManager.get_bus(0)
+bus1 = SMBusManager.get_bus(1)
+bus0_again = SMBusManager.get_bus(0)
+
+print(bus0 is bus0_again)  # True
+```
+
+You can explicitly close a bus or all buses when your program is shutting down:
+
+```python
+SMBusManager.close_bus(0)   # close bus 0
+SMBusManager.close_all()    # close all managed buses
+```
+
+Most classes that accept a bus parameter will accept either a bus number or a bus instance. Prefer passing the shared bus instance to ensure all devices use the same underlying SMBus:
+
+```python
+from robot_hat import SMBusManager, PWMFactory, I2C
+
+shared_bus = SMBusManager.get_bus(1)
+
+pwm_driver = PWMFactory.create_pwm_driver(
+    bus=shared_bus,
+    config=pwm_config,
+)
+
+i2c_device = I2C(address=[0x15, 0x17], bus=shared_bus)
+```
+
+Note: only one underlying bus instance is created per bus number (in the example above, bus 1 is created once and reused).
+
+> [!CAUTION]
+> not call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Before calling `SMBusManager.close_bus(...)` or `SMBusManager.close_all()`, make sure all device objects are stopped/closed or otherwise no longer accessing the bus.
+
+### Combined example with vehicle robot (shared bus instance, servos and motors)
 
 This example shows how to share a single I²C/SMBus instance across multiple drivers and devices (servos, PWM controllers, sensors, etc.) in a robot application.
 
 Instead of letting each driver open its own `SMBus`, the example uses `SMBusManager` to create or reuse a single I2CBus object and pass it into PWM/motor/ADC drivers. Sharing the bus avoids duplicate opens, file-descriptor leaks, and inconsistent behavior when multiple parts of your program talk to devices on the same physical I²C bus.
-
-> [!NOTE]
-> Do not call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Closing emits a "close" event and removes the instance; further accesses must obtain a new bus instance.
 
 <details><summary>Show example</summary>
 <p>
@@ -645,19 +666,103 @@ print(f"Distance: {distance_cm} cm")
 
 Currently, two battery drivers are supported: **INA219** and the built-in driver in Sunfounder's Robot Hat.
 
-Example with **INA219** (tested on Waveshare UPS Module 3S)
+#### INA219
+
+Simple example with **INA219** (tested on Waveshare UPS Module 3S)
 
 ```python
-from robot_hat.services.battery.ups_s3_battery import Battery
+from robot_hat import INA219Battery
 
-battery = Battery(channel="A4", address=0x41, bus=1)
-voltage = battery.get_battery_voltage()  # Read battery voltage
+battery = INA219Battery(address=0x41, bus=1)
 ```
 
-Example with **Sunfounder module**
+**More about custom INA219 configuration**
+
+The INA219 requires a calibration that depends on your shunt resistor and the maximum current you expect to measure. The library exposes `INA219Config` and a helper constructor `INA219Config.from_shunt(shunt_res_ohms, max_expected_current_a, ...)`, which:
+
+- selects a sensible PGA gain for the expected shunt voltage,
+- computes the Current_LSB and CAL register value,
+- derives the Power_LSB (per datasheet: 20 × Current_LSB),
+- allows tuning ADC averaging/resolution and the device operating mode.
+
+Key points / units
+
+- `shunt_res_ohms`: Ohms of the external shunt resistor (must be > 0).
+- `max_expected_current_a`: maximum expected current in amperes (> 0).
+- `current_lsb` returned in the config is in mA per bit (the dataclass stores it in mA units).
+- `calibration_value` is the 16-bit calibration register written to the device.
+- `power_lsb` is in W per bit.
+- `from_shunt()` will raise `ValueError` if the expected shunt voltage exceeds the INA219's 320 mV limit.
+
+<details><summary>Show example with custom INA219 config</summary>
+
+**Example**: configure INA219 for a 0.01 Ω shunt and up to 5 A expected current
+
+<p>
 
 ```python
-from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
+from robot_hat import INA219Battery
+from robot_hat.data_types.config.ina219 import (
+    ADCResolution,
+    BusVoltageRange,
+    INA219Config,
+    Mode,
+)
+ # Build a configuration from your shunt resistor and expected max current.
+ # Here: R_shunt = 0.01 Ω, I_max = 5 A => V_shunt_max = 0.05 V (50 mV), fits within INA219 ranges.
+
+custom_cfg = INA219Config.from_shunt(
+    shunt_res_ohms=0.01,  # 10 milliohm shunt
+    max_expected_current_a=5.0,  # up to 5 A
+    bus_voltage_range=BusVoltageRange.RANGE_32V,  # defaults to 32V range (optional)
+    bus_adc_resolution=ADCResolution.ADCRES_12BIT_128S,  # high averaging for noise suppression
+    shunt_adc_resolution=ADCResolution.ADCRES_12BIT_128S,  # same for shunt ADC
+    mode=Mode.SHUNT_AND_BUS_CONTINUOUS,  # continuous shunt + bus measurement
+    nice_current_lsb_step_mA=0.1,  # round Current_LSB up to 0.1 mA/bit steps (optional)
+)
+
+# Inspect derived values (helpful for diagnostics)
+print("Derived INA219 config:", custom_cfg)
+# current_lsb is stored in mA/bit in the dataclass:
+print("Current LSB (mA/bit):", custom_cfg.current_lsb)
+print("Calibration register value:", custom_cfg.calibration_value)
+print("Power LSB (W/bit):", custom_cfg.power_lsb)
+
+# Create Battery instance with custom configuration
+battery = INA219Battery(address=0x41, bus=1, config=custom_cfg)
+
+# Read values
+bus_v = battery.get_bus_voltage_v()  # bus voltage (V)
+shunt_mv = battery.get_shunt_voltage_mv()  # shunt voltage (mV)
+battery_v = battery.get_battery_voltage()  # bus + shunt (V)
+current_ma = battery.get_current_ma()  # current (mA)
+power_w = battery.get_power_w()  # power (W)
+
+print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
+print(f"Battery (bus + shunt): {battery_v:.3f} V")
+print(f"Current: {current_ma:.3f} mA, Power: {power_w:.3f} W")
+
+# If you need to change calibration / averaging at runtime:
+new_cfg = INA219Config.from_shunt(
+    shunt_res_ohms=0.01,
+    max_expected_current_a=3.0,  # lower I_max -> different calibration
+    bus_adc_resolution=ADCResolution.ADCRES_12BIT_32S,
+    shunt_adc_resolution=ADCResolution.ADCRES_12BIT_32S,
+)
+battery.update_config(new_cfg)  # writes new CAL and CONFIG registers
+
+# Close when finished (closes bus if driver opened it)
+battery.close()
+
+```
+
+</p>
+</details>
+
+#### Sunfounder module
+
+```python
+from robot_hat import SunfounderBattery
 
 battery = SunfounderBattery(channel="A4", address=[0x14, 0x15], bus=1)
 
