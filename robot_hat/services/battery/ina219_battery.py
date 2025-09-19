@@ -7,9 +7,17 @@ from robot_hat.interfaces.battery_abc import BatteryABC
 
 class Battery(INA219, BatteryABC):
     """
-    A class to manage battery-specific readings using the UPS Module 3S.
+    Battery helper built on top of the INA219 I2C sensor driver.
 
-    https://www.waveshare.com/wiki/UPS_Module_3S
+    This class provides battery-specific convenience methods while reusing the
+    INA219 low-level driver. It is intended for use with battery monitoring
+    modules that expose the INA219 (for example Waveshare UPS_Module_3S
+    (UPS_Module_3S (https://www.waveshare.com/wiki/UPS_Module_3S))).
+
+    Note:
+    - This class does not change INA219 calibration behavior; use INA219Config
+      (or INA219Config.from_shunt()) to select calibration parameters
+      appropriate for your shunt resistor and expected current.
     """
 
     def __init__(

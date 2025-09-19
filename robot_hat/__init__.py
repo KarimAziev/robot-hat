@@ -62,8 +62,8 @@ from robot_hat.music import Music
 from robot_hat.pin import Pin
 from robot_hat.sensors.imu.sh3001 import Sh3001
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
+from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
 from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
-from robot_hat.services.battery.ups_s3_battery import Battery as UpsS3Battery
 from robot_hat.services.motor_service import (
     MotorService,
     MotorServiceDirection,
@@ -157,7 +157,7 @@ __all__ = [
     "ServoABC",
     "Sh3001",
     "SunfounderADC",
-    "UpsS3Battery",
+    "INA219Battery",
     "SunfounderBattery",
     "SunfounderGrayscale",
     "SunfounderRobot",
