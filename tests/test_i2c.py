@@ -3,7 +3,7 @@ import unittest
 from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
-from robot_hat import I2C, ADCAddressNotFound
+from robot_hat import I2C, I2CAddressNotFound
 
 
 class TestI2C(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestI2C(unittest.TestCase):
         mock_smbus.return_value = mock_bus
 
         with patch.object(I2C, "check_address", return_value=None):
-            with self.assertRaises(ADCAddressNotFound):
+            with self.assertRaises(I2CAddressNotFound):
                 I2C(address=0x99)
 
         mock_logger.error.assert_called_once_with("I2C address %s not found", 0x99)
