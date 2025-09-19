@@ -81,7 +81,7 @@ class MotorService:
     from robot_hat.services.motor_service import MotorService
 
     driver_cfg = PWMDriverConfig(
-        name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x40
+        name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x14
     )
     driver = PWMFactory.create_pwm_driver(driver_cfg, bus=1)
 
