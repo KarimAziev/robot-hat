@@ -174,13 +174,13 @@ def parse_args():
         help="PWM channel to which the servo is connected (default: 0).",
     )
     servo_group.add_argument(
-        "--min_angle",
+        "--min-angle",
         type=int,
         default=-90,
         help="The minimum logical angle (in degrees) that can be commanded to the servo. (default -90)",
     )
     servo_group.add_argument(
-        "--max_angle",
+        "--max-angle",
         type=int,
         default=90,
         help="The maximum logical angle (in degrees) that can be commanded to the servo.",
@@ -200,7 +200,7 @@ def parse_args():
     servo_group.add_argument(
         "--min-pulse",
         type=int,
-        default=-500,
+        default=500,
         help="The minimum pulse width (in microseconds) corresponding to the servo's physical movement.",
     )
     servo_group.add_argument(
