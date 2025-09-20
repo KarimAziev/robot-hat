@@ -60,7 +60,7 @@ from robot_hat.motor.mixins.motor_calibration import (
 )
 from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
-from robot_hat.pin import Pin
+from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
@@ -92,6 +92,8 @@ __all__ = [
     "Ultrasonic",
     "Music",
     "Pin",
+    "PinModeType",
+    "PinPullType",
     "I2CDCMotor",
     "MotorFactory",
     "MotorService",

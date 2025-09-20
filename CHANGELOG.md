@@ -33,10 +33,25 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
 - SunFounder compatibility
   - Legacy SunFounder PWM moved to `robot_hat.sunfounder.pwm.PWM`. Recommended: use `robot_hat.drivers.pwm.sunfounder_pwm.SunfounderPWM` via `PWMFactory`.
   - `reset_mcu_sync` moved to `robot_hat.sunfounder.utils` and now accepts an optional `pin` argument (default `5`).
-- Pin naming
-  - `Pin` now accepts integers and gpiozero-recognized names (e.g., `"GPIO17"`, header names like `"J8:11"`, and, depending on pin factory, `"BOARD11"`/`"WPI0"`). The exact aliases available depend on the configured gpiozero pin factory.
-- Address descriptions
   - `get_value_description` removed. `get_address_description` resides under `robot_hat.sunfounder.address_descriptions`.
+- Pin naming
+  `Pin` now accepts not only Sunfounder mappings (prefixed with "D") but also gpiozero-recognized names. You can also pass your own mapping into Pin using the pin_dict parameter. This should be a dictionary of pin names and GPIO numbers.
+
+  If you wish to use physical (BOARD) numbering, you can specify the pin number as "BOARD11", or you can specify pins as "header:number" (e.g., "J8:11"), meaning physical pin 11 on header J8 (the GPIO header on modern Pis).
+
+  You can also use wiringPi pin numbering (another physical layout) by using the "WPI" prefix, e.g., "WPI0".
+
+  Hence, the following lines are all equivalent:
+
+  ```python
+  pin = Pin(17)
+  pin = Pin("GPIO17")
+  pin = Pin("BCM17")  # Broadcom numbering
+  pin = Pin("D0")     # Sunfounder numbering
+  pin = Pin("BOARD11")  # physical numbering
+  pin = Pin("J8:11")    # physical numbering
+  pin = Pin("WPI0")     # wiringPi numbering
+  ```
 
 ## Added
 

@@ -36,17 +36,17 @@ from robot_hat.exceptions import (
     InvalidPinPull,
 )
 
-_log = logging.getLogger(__name__)
-
 if TYPE_CHECKING:
     from gpiozero import Button, HeaderInfo, InputDevice, OutputDevice, PinInfo
 
-
-PinMode = Literal[0x01, 0x02]
-PinPull = Literal[0x11, 0x12]
+_log = logging.getLogger(__name__)
 
 
-class Pin(object):
+PinModeType = Literal[0x01, 0x02]
+PinPullType = Literal[0x11, 0x12]
+
+
+class Pin:
     """
     A class to manage the pins and perform various operations like setting up
     pin modes, reading or writing values to the pin, and configuring interrupts.
@@ -67,6 +67,34 @@ class Pin(object):
     - IRQ_FALLING (0x21): Interrupt on falling edge.
     - IRQ_RISING (0x22): Interrupt on rising edge.
     - IRQ_RISING_FALLING (0x23): Interrupt on both rising and falling edges.
+
+    Pin numbering.
+    --------------
+
+    Pin accepts either a GPIO pin number (int) or a string name.
+
+    When a string is passed, it must be either:
+    - a name recognized by gpiozero's pin factory (for example "GPIO17",
+      "BCM17", physical/BOARD names such as "BOARD11", header notation such as
+      "J8:11", or wiringPi names such as "WPI0"), or
+    - a name from a custom mapping. By default, Sunfounder's labels ("D0", "D1",
+      ...) are used.
+
+    You can also provide your custom mapping via the `pin_dict` parameter.
+    `pin_dict` must be a dict that maps string names to GPIO numbers.
+
+    Hence, the following lines are all equivalent:
+
+    ```python
+    pin = Pin(17)
+    pin = Pin("GPIO17")
+    pin = Pin("BCM17")  # Broadcom numbering
+    pin = Pin("D0")     # Sunfounder numbering
+    pin = Pin("BOARD11")  # physical numbering
+    pin = Pin("J8:11")    # physical numbering
+    pin = Pin("WPI0")     # wiringPi numbering
+    ```
+
     """
 
     DEFAULT_PIN_MAPPING: ClassVar[Dict[str, int]] = {
@@ -120,23 +148,19 @@ class Pin(object):
     def __init__(
         self,
         pin: Union[int, str],
-        mode: Optional[PinMode] = None,
-        pull: Optional[PinPull] = None,
+        mode: Optional[PinModeType] = None,
+        pull: Optional[PinPullType] = None,
         pin_dict: Dict[str, int] = DEFAULT_PIN_MAPPING,
-        *args,
-        **kwargs,
     ):
         """
         Initialize a GPIO Pin.
 
         Args:
         - `pin`: Pin identifier, either as a GPIO pin number (int) or a named string.
-        - `mode`: Mode of the pin, either `Pin.OUT` for output or `Pin.IN` for input. Default is None.
+        - `mode`: Optional mode of the pin, either `Pin.OUT` for output or `Pin.IN` for input.
         - `pull`: Configure internal pull-up or pull-down resistors.
         - `pin_dict`: The dictionary of pin names and corresponding pin numbers defaults to the `DEFAULT_PIN_MAPPING`.
 
-        Args:
-            pin (Union[int, str]): Pin identifier, either as a GPIO pin number (int) or a named string.
 
         Raises:
         --------------
@@ -147,7 +171,6 @@ class Pin(object):
         - `InvalidPinPull`: If pull is not valid.
         - `DevicePinFactoryError`: If Device.pin_factory is None.
         """
-        super().__init__(*args, **kwargs)
 
         # Parse pin
         self.dict = pin_dict
@@ -311,7 +334,9 @@ class Pin(object):
             if pin_factory is not None:
                 pin_factory.close()
 
-    def setup(self, mode: Optional[PinMode], pull: Optional[PinPull] = None) -> None:
+    def setup(
+        self, mode: Optional[PinModeType], pull: Optional[PinPullType] = None
+    ) -> None:
         """
         Setup the GPIO pin with a specific mode and optional pull-up/down resistor configuration.
 
@@ -488,7 +513,7 @@ class Pin(object):
 
         if trigger not in [self.IRQ_FALLING, self.IRQ_RISING, self.IRQ_RISING_FALLING]:
             raise InvalidPinInterruptTrigger(
-                "trigger param error, should be Pin.IRQ_FALLING, Pin.IRQ_RISING, Pin.IRQ_RISING_FALLING"
+                "Trigger param error, should be Pin.IRQ_FALLING, Pin.IRQ_RISING, Pin.IRQ_RISING_FALLING"
             )
 
         if pull in [self.PULL_NONE, self.PULL_DOWN, self.PULL_UP]:
@@ -499,7 +524,7 @@ class Pin(object):
                 _pull_up = False
         else:
             raise InvalidPinPull(
-                "pull param error, should be Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
+                "Pull param error, should be Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
             )
 
         pressed_handler = None
