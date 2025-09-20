@@ -4,7 +4,6 @@ import logging
 import threading
 import weakref
 from functools import partial
-from inspect import iscoroutinefunction
 from typing import (
     Any,
     Awaitable,
@@ -212,7 +211,7 @@ class EventEmitter:
                     listener_name,
                 )
                 fn = getattr(resolved_listener, "__func__", resolved_listener)
-                if iscoroutinefunction(fn):
+                if inspect.iscoroutinefunction(fn):
                     coro = cast(
                         Coroutine[Any, Any, Any], resolved_listener(*args, **kwargs)
                     )
