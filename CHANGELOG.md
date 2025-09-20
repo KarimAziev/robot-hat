@@ -1,15 +1,17 @@
-# v2.0.0 (Unreleased)
+# Changelog
+
+## v2.0.0 (2025-09-20)
 
 ⚠️ Major, breaking release. Most public modules, classes, and import paths were moved, renamed, or generalized. Read the [Migration Guide](./docs/migration_guide_v2.md) before upgrading.
 
-## Why this release
+### Why this release
 
 Prior versions assumed SunFounder’s stack everywhere. Extending to other PWM chips (PCA9685), batteries (INA219), IMUs, or GPIO-only solutions required copy/paste.
 v2 introduces ABC interfaces (`ServoABC`, `MotorABC`, `PWMDriverABC`, etc.) and plug-in factories so that any driver can be dropped in without touching the rest of the stack.
 Centralized I2C bus management and retry logic reduces timeouts, resource leaks, and flaky behavior.
 A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*` while the recommended path uses the new driver architecture.
 
-## Breaking changes
+### Breaking changes
 
 - Package refactor
   - Layered architecture: `drivers`, `services`, `interfaces`, `sensors`, `data_types`, `factories`, `i2c`, `sunfounder` (legacy-friendly), etc.
@@ -53,7 +55,7 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
   pin = Pin("WPI0")     # wiringPi numbering
   ```
 
-## Added
+### Added
 
 - New drivers
   - `PCA9685` (`robot_hat.drivers.pwm.pca9685.PCA9685`)
@@ -76,18 +78,18 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
 - Convenience exports
   - Top-level aliases like `SunfounderPWM`, `SunfounderADC`, `SunfounderBattery` are available for convenience.
 
-## Changed
+### Changed
 
 - Best practice: explicitly set the PWM frequency on drivers (e.g., `driver.set_pwm_freq(config.freq)`). `PCA9685` requires this; `SunfounderPWM` defaults to 50 Hz but explicit calls are recommended.
 - `Pin` now accepts not only Sunfounder's mapping (D2, D3 etc), but convient `gpiozero` mappings. It uses gpiozero’s `Device.pin_factory` to resolve names; works across real hardware and mock environments (see `utils.setup_env_vars`). If you wish to use physical (BOARD) numbering you can specify the pin number as "BOARD11”. If you are familiar with the wiringPi pin numbers (another physical layout) you could use "WPI0” instead. Finally, you can specify pins as "header:number”, e.g. "J8:11” meaning physical pin 11 on header J8 (the GPIO header on modern Pis). See also `gpiozero` [documentation](https://gpiozero.readthedocs.io/en/stable/recipes.html#pin-numbering).
 
 - `get_address_description` is available via `robot_hat.sunfounder.address_descriptions`.
 
-## Removed
+### Removed
 
 - `get_value_description` (rarely useful in logs). Use `get_address_description` as needed.
 
-## Migration tips
+### Migration tips
 
 - Servos
   - SunFounder servos require float angles.
@@ -101,7 +103,7 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
   - Catch `I2CAddressNotFound` for open failures.
   - Prefer shared buses via `SMBusManager.get_bus(bus)` and pass to `PWMFactory.create_pwm_driver(bus=...)`.
 
-## Migration tips
+### Migration tips
 
 - SunFounder servos require float angles.
 - ServoService now takes servo=ServoABC and requires a name.
