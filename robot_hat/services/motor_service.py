@@ -27,9 +27,7 @@ class MotorService:
     Example using GPIO-driven DC motors:
     --------------
     ```python
-    from robot_hat.data_types.config.motor import GPIODCMotorConfig
-    from robot_hat.factories.motor_factory import MotorFactory
-    from robot_hat.services.motor_service import MotorService
+    from robot_hat import GPIODCMotorConfig, MotorFactory, MotorService
 
     left_motor = MotorFactory.create_motor(
         config=GPIODCMotorConfig(
@@ -69,16 +67,19 @@ class MotorService:
 
     # stop
     motor_service.stop_all()
+
     ```
 
     Example using I2C-driven DC motors:
     --------------
     ```python
-    from robot_hat.data_types.config.motor import I2CDCMotorConfig
-    from robot_hat.data_types.config.pwm import PWMDriverConfig
-    from robot_hat.factories.motor_factory import MotorFactory
-    from robot_hat.factories.pwm_factory import PWMFactory
-    from robot_hat.services.motor_service import MotorService
+    from robot_hat import (
+        I2CDCMotorConfig,
+        MotorFactory,
+        MotorService,
+        PWMDriverConfig,
+        PWMFactory,
+    )
 
     driver_cfg = PWMDriverConfig(
         name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x14
@@ -111,7 +112,6 @@ class MotorService:
     )
 
     # Usage
-
     speed = 40
     motor_service.move(speed, 1)
 
@@ -123,7 +123,6 @@ class MotorService:
 
     # stop
     motor_service.stop_all()
-
 
     ```
 

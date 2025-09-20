@@ -76,10 +76,7 @@ class MotorFactory:
         # Example 1: I2C-driven DC motor using an explicit PWM driver instance
         --------
         ```python
-        from robot_hat.data_types.config.pwm import PWMDriverConfig
-        from robot_hat.factories.pwm_factory import PWMFactory
-        from robot_hat.data_types.config.motor import I2CDCMotorConfig
-        from robot_hat.factories.motor_factory import MotorFactory
+        from robot_hat import I2CDCMotorConfig, MotorFactory, PWMDriverConfig, PWMFactory
 
         driver_cfg = PWMDriverConfig(
             name="Sunfounder", bus=1, frame_width=20000, freq=50, address=0x14
@@ -96,33 +93,32 @@ class MotorFactory:
         )
 
         i2c_motor = MotorFactory.create_motor(i2c_cfg, driver=driver)
+
         ```
 
 
         # Example 2: GPIO-driven DC motor
         --------
         ```python
-        from robot_hat.data_types.config.motor import GPIODCMotorConfig
-        from robot_hat.factories.motor_factory import MotorFactory
+        from robot_hat import GPIODCMotorConfig, MotorFactory
 
-        cfg_gpio = GPIODCMotorConfig(
-            calibration_direction=1,
-            name="left_motor",
-            max_speed=100,
-            forward_pin=6,
-            backward_pin=13,
-            enable_pin=12,
-            pwm=True,
+        motor = MotorFactory.create_motor(
+            config=GPIODCMotorConfig(
+                calibration_direction=1,
+                name="left_motor",
+                max_speed=100,
+                forward_pin=6,
+                backward_pin=13,
+                enable_pin=12,
+                pwm=True,
+            )
         )
-
-        motor_gpio = MotorFactory.create_motor(cfg_gpio)
         ```
 
         # Example 3: Phase/enable motor
         --------
         ```python
-        from robot_hat.data_types.config.motor import PhaseMotorConfig
-        from robot_hat.factories.motor_factory import MotorFactory
+        from robot_hat import MotorFactory, PhaseMotorConfig
 
         cfg_phase = PhaseMotorConfig(
             calibration_direction=-1,
@@ -162,24 +158,20 @@ class MotorFactory:
         dir_pin: Union[Pin, None] = None,
     ) -> Tuple[MotorABC, MotorABC]:
         """
-        Create a pair of motors (left, right) from two MotorConfigType instances.
+        Create a pair of motors (left, right) from the provided configs.
 
         This is a convenience wrapper around two calls to create_motor.
 
         Parameters
         ----------
-        left_config: MotorConfigType
-            Configuration for the left motor.
-        right_config: MotorConfigType
-            Configuration for the right motor.
-        bus, driver, dir_pin:
-            Same semantics as MotorFactory.create_motor and are passed through to both
+        left_config: Configuration for the left motor.
+        right_config: Configuration for the right motor.
+        bus, driver, dir_pin: Same semantics as MotorFactory.create_motor and are passed through to both
             underlying create_motor calls.
 
         Returns
         -------
-        (tuple[MotorABC, MotorABC])
-            (left_motor, right_motor)
+        A tuple with left and right motor instances.
 
         Example
         -------
@@ -245,17 +237,19 @@ class MotorFactory:
         Example
         -------
         ```python
-        from robot_hat.data_types.config.motor import GPIODCMotorConfig
-        cfg = GPIODCMotorConfig(
-            calibration_direction=1,
-            name="drive_right",
-            max_speed=90,
-            forward_pin=6,
-            backward_pin=13,
-            pwm=True,
-            enable_pin=12,
+        from robot_hat import GPIODCMotorConfig, MotorFactory
+
+        motor = MotorFactory.create_gpio_motor(
+            config=GPIODCMotorConfig(
+                calibration_direction=1,
+                name="left_motor",
+                max_speed=100,
+                forward_pin=6,
+                backward_pin=13,
+                enable_pin=12,
+                pwm=True,
+            )
         )
-        motor = MotorFactory.create_gpio_motor(cfg)
         ```
         """
         is_mock = os.getenv("GPIOZERO_PIN_FACTORY") == "mock"
@@ -313,23 +307,24 @@ class MotorFactory:
         Example
         -------
         ```python
-        from robot_hat.data_types.config.pwm import PWMDriverConfig
-        from robot_hat.data_types.config.motor import I2CDCMotorConfig
-        from robot_hat.factories.pwm_factory import PWMFactory
+        from robot_hat import I2CDCMotorConfig, MotorFactory, PWMDriverConfig, PWMFactory
 
-        pwm_cfg = PWMDriverConfig(name="PCA9685", bus=1, frame_width=20000, freq=50, address=0x40)
+        pwm_cfg = PWMDriverConfig(
+            name="PCA9685", bus=1, frame_width=20000, freq=50, address=0x40
+        )
         driver = PWMFactory.create_pwm_driver(pwm_cfg, bus=1)
 
         i2c_cfg = I2CDCMotorConfig(
             calibration_direction=1,
             name="right_motor",
             max_speed=100,
-            driver=driver_cfg,
+            driver=pwm_cfg,
             channel="P13",
             dir_pin="D5",
         )
 
         motor = MotorFactory.create_i2c_motor(i2c_cfg, driver=driver)
+
         ```
         """
         _log.debug("Initializing I2C motor %s", config)

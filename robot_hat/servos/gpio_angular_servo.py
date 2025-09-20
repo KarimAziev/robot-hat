@@ -20,14 +20,11 @@ class GPIOAngularServo(ServoABC):
 
     Example:
     ```python
-    from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
+    from robot_hat import GPIOAngularServo
+
     servo = GPIOAngularServo(
-                pin=17,
-                min_angle=-42,
-                max_angle=44,
-                min_pulse=1000,
-                max_pulse=2000
-            )
+        pin=17, min_angle=-42, max_angle=44, min_pulse=1000, max_pulse=2000
+    )
     servo.angle(15)
     ```
     """

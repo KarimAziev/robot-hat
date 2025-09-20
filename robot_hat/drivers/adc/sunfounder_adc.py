@@ -40,10 +40,10 @@ class ADC(I2C):
     Example
     --------------
     ```python
-    from robot_hat.adc import ADC
+    from robot_hat import SunfounderADC
 
     # Initialize ADC on channel A0
-    adc = ADC(channel="A4")
+    adc = SunfounderADC(channel="A4")
 
     # Read the ADC value
     value = adc.read()
@@ -52,6 +52,7 @@ class ADC(I2C):
     # Read the voltage
     voltage = adc.read_voltage()
     print(f"Voltage: {voltage} V")
+
     ```
     """
 
