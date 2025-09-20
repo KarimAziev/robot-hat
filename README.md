@@ -1,9 +1,11 @@
 [![PyPI](https://img.shields.io/pypi/v/robot-hat)](https://pypi.org/project/robot-hat/)
 [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
+> ⚠️ Breaking changes in v2.0.0 - This release contains incompatible API changes. Read the [CHANGELOG](./CHANGELOG.md) and the [Migration Guide](./docs/migration_guide_v2.md) before upgrading.
+
 # Robot Hat
 
-This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling **motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
+This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling cd**motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
 
 The motivation comes from dissatisfaction with the code quality, safety, and unnecessary sudo requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi).
 
