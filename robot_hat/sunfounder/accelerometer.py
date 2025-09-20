@@ -4,6 +4,7 @@ This module provides a class for interfacing with an ADXL345 accelerometer senso
 
 from typing import List, Optional, Union
 
+from robot_hat.data_types.bus import BusType
 from robot_hat.i2c.i2c_manager import I2C
 
 
@@ -50,7 +51,7 @@ class ADXL345(I2C):
     _AXISES = [_REG_DATA_X, _REG_DATA_Y, _REG_DATA_Z]
     """List of register addresses for X, Y, Z axis data."""
 
-    def __init__(self, *args, address: int = ADDR, bus: int = 1, **kwargs):
+    def __init__(self, *args, address: int = ADDR, bus: BusType = 1, **kwargs):
         """
         Initializes the ADXL345 sensor.
 
