@@ -5,7 +5,7 @@
 
 # Robot Hat
 
-This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling cd**motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
+This is a Python library for controlling hardware peripherals commonly used in robotics. This library provides APIs for controlling **motors**, **servos**, **ultrasonic sensors**, **analog-to-digital converters (ADCs)**, and more, with a focus on extensibility, ease of use, and modern Python practices.
 
 The motivation comes from dissatisfaction with the code quality, safety, and unnecessary sudo requirements found in many mainstream libraries provided by well-known robotics suppliers, such as [Sunfounder's Robot-HAT](https://github.com/sunfounder/robot-hat/tree/v2.0) or [Freenove's Pidog](https://github.com/Freenove/Freenove_Robot_Dog_Kit_for_Raspberry_Pi).
 
@@ -18,6 +18,7 @@ Unlike the aforementioned libraries:
 - This library scales well for **both small and large robotics projects**. For example, advanced usage is demonstrated in the [Picar-X Racer](https://github.com/KarimAziev/picar-x-racer) project.
 - It offers type safety and portability.
 - It avoids requiring **sudo calls** or introducing unnecessary system dependencies, focusing instead on clean, self-contained operations.
+- Plugin-style extensibility.
 
 <!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
 
@@ -33,6 +34,7 @@ Unlike the aforementioned libraries:
 >     - [Shared I2C bus instance](#shared-i2c-bus-instance)
 >     - [Combined example with vehicle robot (shared bus instance, servos and motors)](#combined-example-with-vehicle-robot-shared-bus-instance-servos-and-motors)
 >     - [I2C example](#i2c-example)
+>     - [GPIO Pin](#gpio-pin)
 >     - [Ultrasonic sensor for distance measurement](#ultrasonic-sensor-for-distance-measurement)
 >     - [Reading battery voltage](#reading-battery-voltage)
 >       - [INA219](#ina219)
@@ -350,8 +352,8 @@ i2c_device = I2C(address=[0x15, 0x17], bus=shared_bus)
 
 Note: only one underlying bus instance is created per bus number (in the example above, bus 1 is created once and reused).
 
-> [!CAUTION]
-> not call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Before calling `SMBusManager.close_bus(...)` or `SMBusManager.close_all()`, make sure all device objects are stopped/closed or otherwise no longer accessing the bus.
+> [!IMPORTANT]
+> Don't call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Before calling `SMBusManager.close_bus(...)` or `SMBusManager.close_all()`, make sure all device objects are stopped/closed or otherwise no longer accessing the bus.
 
 ### Combined example with vehicle robot (shared bus instance, servos and motors)
 
@@ -644,6 +646,122 @@ print("I2C Data Read:", data)
 devices = i2c_device.scan()
 print("I2C Devices Detected:", devices)
 
+```
+
+### GPIO Pin
+
+The `Pin` class wraps gpiozero Input/Output devices and accepts either a GPIO pin number (int) or a string name.
+
+When a string is passed, it must be either:
+
+- a name recognized by gpiozero's pin factory (for example "GPIO17", "BCM17", physical/BOARD names such as "BOARD11", header notation such as "J8:11", or wiringPi names such as "WPI0")
+- a name from a custom mapping. By default, Sunfounder's labels ("D0", "D1", ...) are used.
+
+You can also provide your custom mapping via the `pin_dict` parameter. `pin_dict` must be a dict that maps string names to GPIO numbers.
+
+> [!TIP]
+> For testing on non-Raspberry Pi hosts, set the gpiozero pin factory to "mock" (e.g. via setup_env_vars() or by setting environment variable `GPIOZERO_PIN_FACTORY=mock`) so the examples can run without real hardware.
+
+**Basic example**
+
+```python
+from robot_hat import Pin, setup_env_vars
+
+setup_env_vars()  # optional: set GPIOZERO_PIN_FACTORY, etc
+
+# Create a pin using GPIO number
+led = Pin(17, mode=Pin.OUT)
+
+# Turn on / off
+led.on()
+led.off()
+
+# Alias methods
+led.high()
+led.low()
+
+# Set value using call/operator syntax
+led(1)   # set high (returns 1)
+led(0)   # set low  (returns 0)
+
+# Read back (this will switch the pin to input mode internally)
+value = led.value()
+print("Pin value:", value)
+
+# Clean up when done
+led.close()
+```
+
+> [!NOTE]
+> If you call `value()` with no argument, and the current mode is None or OUT, Pin will switch to IN mode before reading.
+> Calling value(0) or value(1) will ensure the pin is in OUT mode before setting it.
+
+**Initialize from a named mapping or gpiozero names**
+
+```python
+from robot_hat import Pin
+
+# Using the Sunfounder's mapping (e.g., "D0" -> GPIO17)
+pin_d0 = Pin("D0", mode=Pin.OUT)
+pin_d0.on()
+
+# Using gpiozero-style names (resolved by the pin factory)
+pin_by_name = Pin("GPIO27")     # or "BCM27", "BOARD13", "J8:13"
+print(pin_by_name.name())       # -> e.g., "GPIO27"
+```
+
+**Input with internal pull-up/pull-down, and read value**
+
+```python
+from robot_hat import Pin
+
+# Configure as input with internal pull-up resistor
+button = Pin("GPIO27", mode=Pin.IN, pull=Pin.PULL_UP)
+
+# Read current state (returns 0 or 1)
+state = button.value()
+print("Button pressed?" , bool(state))
+
+# The library will create an InputDevice under the hood
+button.close()
+```
+
+**Interrupts (irq) with debounce and pull configuration**
+
+```python
+from robot_hat import Pin
+import time
+
+def on_pressed():
+    print("Pressed!")
+
+def on_released():
+    print("Released!")
+
+sw = Pin("D1")  # mapping or gpiozero name
+# Attach interrupt on both rising and falling edges, 200 ms debounce, enable pull-up
+sw.irq(handler=on_pressed, trigger=Pin.IRQ_RISING_FALLING, bouncetime=200, pull=Pin.PULL_UP)
+
+# Keep running to allow callbacks to run
+try:
+    while True:
+        time.sleep(1)
+except KeyboardInterrupt:
+    pass
+finally:
+    sw.close()
+```
+
+**Custom named mapping**
+
+```python
+from robot_hat import Pin
+
+# Provide your own name -> gpio mapping
+my_mapping = {"MOTOR_EN": 12, "MOTOR_DIR": 20}
+motor_en = Pin("MOTOR_EN", mode=Pin.OUT, pin_dict=my_mapping)
+motor_en.on()
+motor_en.close()
 ```
 
 ### Ultrasonic sensor for distance measurement
