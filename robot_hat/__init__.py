@@ -7,6 +7,7 @@ from robot_hat.data_types.config.motor import (
     PhaseMotorConfig,
 )
 from robot_hat.data_types.config.pwm import PWMDriverConfig
+from robot_hat.data_types.config.sh3001 import SH3001Config
 from robot_hat.drivers.adc.INA219 import INA219
 from robot_hat.drivers.adc.INA219 import ADCResolution as INA219ADCResolution
 from robot_hat.drivers.adc.INA219 import Gain as INA219Gain
@@ -60,7 +61,7 @@ from robot_hat.motor.mixins.motor_calibration import (
 from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin
-from robot_hat.sensors.imu.sh3001 import Sh3001
+from robot_hat.sensors.imu.sh3001 import SH3001
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
 from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
@@ -155,11 +156,12 @@ __all__ = [
     "AbstractIMU",
     "MotorABC",
     "ServoABC",
-    "Sh3001",
+    "SH3001",
     "SunfounderADC",
     "INA219Battery",
     "SunfounderBattery",
     "SunfounderGrayscale",
     "SunfounderRobot",
+    "SH3001Config",
     "version",
 ]
