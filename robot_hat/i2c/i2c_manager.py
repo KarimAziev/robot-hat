@@ -325,7 +325,7 @@ class I2C:
         Check if the I2C device is ready.
 
         Returns:
-            bool: True if the I2C device is ready, False otherwise.
+            True if the I2C device is ready, False otherwise.
         """
 
         addresses = self.scan()
@@ -338,7 +338,7 @@ class I2C:
         Scan the I2C bus for devices using smbus2.
 
         Returns:
-            List[int]: List of I2C addresses of devices found.
+            List of I2C addresses of devices found.
         """
         addresses = []
         _log.debug(f"Scanning I2C bus for devices")
@@ -627,7 +627,7 @@ class I2C:
         Check if the I2C device is available.
 
         Returns:
-            bool: True if the I2C device is available, False otherwise.
+            True if the I2C device is available, False otherwise.
         """
 
         return True if self.check_address(self.address) else False
