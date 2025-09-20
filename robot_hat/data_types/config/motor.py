@@ -65,7 +65,7 @@ class I2CDCMotorConfig(MotorBaseConfig):
             "description": (
                 "A digital output pin used to control the motor's direction."
             ),
-            "examples": ["D4", "D5", 23, 24],
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         }
     )
 
@@ -85,6 +85,7 @@ class GPIODCMotorConfig(MotorBaseConfig):
             "description": (
                 "The GPIO pin that the forward input of the motor driver chip is connected to."
             ),
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         }
     )
     backward_pin: Union[int, str] = field(
@@ -93,6 +94,7 @@ class GPIODCMotorConfig(MotorBaseConfig):
             "description": (
                 "The GPIO pin that the backward input of the motor driver chip is connected to."
             ),
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         }
     )
     pwm: bool = field(
@@ -112,6 +114,7 @@ class GPIODCMotorConfig(MotorBaseConfig):
                 "The GPIO pin that enables the motor. "
                 "Required for **some** motor controller boards."
             ),
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         },
     )
 
@@ -125,7 +128,8 @@ class PhaseMotorConfig(MotorBaseConfig):
     phase_pin: Union[int, str] = field(
         metadata={
             "title": "Phase pin",
-            "description": ("GPIO pin for the phase/direction control signal."),
+            "description": "GPIO pin for the phase/direction control signal.",
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         }
     )
     pwm: bool = field(
@@ -145,6 +149,7 @@ class PhaseMotorConfig(MotorBaseConfig):
                 "The GPIO pin that enables the motor. "
                 "Required for **some** motor controller boards."
             ),
+            "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         },
     )
 
