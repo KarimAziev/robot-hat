@@ -3,7 +3,8 @@ A wrapper for servos driven directly via Raspberry Pi GPIO (using gpiozero's Ang
 """
 
 import logging
-from typing import Union, cast
+from types import TracebackType
+from typing import Optional, Type, Union, cast
 
 from robot_hat.interfaces.servo_abc import ServoABC
 
@@ -62,6 +63,7 @@ class GPIOAngularServo(ServoABC):
             min_pulse_width=min_pulse / 1e6,
             max_pulse_width=max_pulse / 1e6,
         )
+
         _log.debug(
             "Initialized GPIOAngularServo on pin %s with angle range (%.2f, %.2f)",
             pin,
@@ -119,7 +121,23 @@ class GPIOAngularServo(ServoABC):
     def __enter__(self) -> "GPIOAngularServo":
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        if exc_type is not None:
+            _log.error(
+                f"An exception occurred during exiting exception type: {exc_type.__name__}"
+            )
+            if exc_value:
+                _log.error(f"Exception value: {exc_value}")
+
+            import traceback as tb
+
+            if traceback:
+                _log.error(f"Traceback: {''.join(tb.format_tb(traceback))}")
         self.close()
 
 
