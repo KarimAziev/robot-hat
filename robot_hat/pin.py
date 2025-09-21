@@ -151,7 +151,7 @@ class Pin:
         mode: Optional[PinModeType] = None,
         pull: Optional[PinPullType] = None,
         pin_dict: Dict[str, int] = DEFAULT_PIN_MAPPING,
-    ):
+    ) -> None:
         """
         Initialize a GPIO Pin.
 
@@ -220,10 +220,10 @@ class Pin:
         if Device.pin_factory is None:
             raise DevicePinFactoryError("Device Pin Factory is None ")
 
-        def has_letter(s: str):
+        def has_letter(s: str) -> bool:
             return bool(re.search("[A-Za-z]", s))
 
-        def sort_key(s: str):
+        def sort_key(s: str) -> Tuple[Literal[0, 2, 1], str]:
             s = str(s)
             if s.upper().startswith("GPIO"):
                 group = 0
@@ -304,7 +304,7 @@ class Pin:
         return self._dict
 
     @dict.setter
-    def dict(self, value: Dict[str, int]):
+    def dict(self, value: Dict[str, int]) -> Dict[str, int]:
         self._dict = value
         return self._dict
 
