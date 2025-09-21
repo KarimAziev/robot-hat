@@ -7,56 +7,24 @@ A module for playing music, sound effects, and controlling musical notes.
 
 """
 
+import logging
 import math
 import os
-import struct
 import sys
 import threading
 import time
-from typing import Optional
+from array import array
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import ClassVar, List, Optional, Tuple, Union
+
+_log = logging.getLogger(__name__)
 
 
+@dataclass(init=False)
 class Music:
     """
     A class for playing music, sound effects, and controlling musical notes.
-
-    ### Key Features:
-    - Play sound effects and music files.
-    - Generate and play musical notes.
-    - Control musical parameters like tempo, time signature, and key signature.
-
-    ### Attributes:
-        - `FORMAT` (int): Audio format for PyAudio.
-        - `CHANNELS` (int): Number of audio channels (default is 1, mono).
-        - `RATE` (int): Sample rate (default is 44100 Hz).
-        - Various constants for musical keys and note durations.
-
-    ### Methods:
-        - `__init__(self)`: Initialize the music system using pygame.
-        - `time_signature(self, top: Optional[int], bottom: Optional[int])`: Set or get the time signature.
-        - `key_signature(self, key: Optional[int])`: Set or get the key signature.
-        - `tempo(self, tempo: Optional[float], note_value=QUARTER_NOTE)`: Set or get the tempo.
-        - `beat(self, beat)`: Calculate the beat delay in seconds.
-        - `note(self, note, natural=False)`: Get the frequency of a note.
-        - `sound_play(self, filename, volume=None)`: Play a sound effect.
-        - `sound_play_threading(self, filename, volume=None)`: Play a sound effect in a separate thread.
-        - `music_play(self, filename, loops=1, start=0.0, volume=None)`: Play a music file.
-        - `music_set_volume(self, value)`: Set the music volume.
-        - `music_get_volume(self)`: Get the music volume.
-        - `music_stop(self)`: Stop the music.
-        - `music_pause(self)`: Pause the music.
-        - `music_resume(self)`: Resume the music.
-        - `music_unpause(self)`: Unpause the music (resume playing).
-        - `sound_length(self, filename)`: Get the length of a sound effect file.
-        - `get_tone_data(self, freq: float, duration: float)`: Generate tone data for a given frequency and duration.
-        - `play_tone_for(self, freq, duration)`: Play a tone for a specified duration.
-
-    #### Musical Terms:
-    - **Tempo**: The speed of the music, measured in beats per minute (BPM).
-    - **Note**: A specific pitch in music, identified by its frequency.
-    - **Frequency**: The number of sound waves per second, measured in Hertz (Hz). Higher frequencies correspond to higher pitches.
-    - **Duration**: The length of time a note is held.
-    - **Key Signature**: Indicates the key of a piece of music, using sharps or flats.
 
     Example:
 
@@ -69,48 +37,46 @@ class Music:
 
     # Set and get tempo
     music.tempo(120)
-
-    # Play a musical note
-    freq = music.note("C4")
-    music.play_tone_for(freq, 1)  # Play C4 for 1 second
     ```
     """
 
-    CHANNELS = 1
-    RATE = 44100
+    _time_signature: Tuple[int, int] = field(init=False, repr=False)
+    _tempo: Tuple[float, float] = field(init=False, repr=False)
+    _key_signature: int = field(init=False, repr=False)
+    beat_unit: float = field(init=False, repr=False)
 
-    KEY_G_MAJOR = 1
-    KEY_D_MAJOR = 2
-    KEY_A_MAJOR = 3
-    KEY_E_MAJOR = 4
-    KEY_B_MAJOR = 5
-    KEY_F_SHARP_MAJOR = 6
-    KEY_C_SHARP_MAJOR = 7
+    CHANNELS: ClassVar[int] = 1
+    RATE: ClassVar[int] = 44100
 
-    KEY_F_MAJOR = -1
-    KEY_B_FLAT_MAJOR = -2
-    KEY_E_FLAT_MAJOR = -3
-    KEY_A_FLAT_MAJOR = -4
-    KEY_D_FLAT_MAJOR = -5
-    KEY_G_FLAT_MAJOR = -6
-    KEY_C_FLAT_MAJOR = -7
+    KEY_G_MAJOR: ClassVar[int] = 1
+    KEY_D_MAJOR: ClassVar[int] = 2
+    KEY_A_MAJOR: ClassVar[int] = 3
+    KEY_E_MAJOR: ClassVar[int] = 4
+    KEY_B_MAJOR: ClassVar[int] = 5
+    KEY_F_SHARP_MAJOR: ClassVar[int] = 6
+    KEY_C_SHARP_MAJOR: ClassVar[int] = 7
 
-    KEY_SIGNATURE_SHARP = 1
-    KEY_SIGNATURE_FLAT = -1
+    KEY_F_MAJOR: ClassVar[int] = -1
+    KEY_B_FLAT_MAJOR: ClassVar[int] = -2
+    KEY_E_FLAT_MAJOR: ClassVar[int] = -3
+    KEY_A_FLAT_MAJOR: ClassVar[int] = -4
+    KEY_D_FLAT_MAJOR: ClassVar[int] = -5
+    KEY_G_FLAT_MAJOR: ClassVar[int] = -6
+    KEY_C_FLAT_MAJOR: ClassVar[int] = -7
 
-    WHOLE_NOTE = 1
-    HALF_NOTE = 1 / 2
-    QUARTER_NOTE = 1 / 4
-    EIGHTH_NOTE = 1 / 8
-    SIXTEENTH_NOTE = 1 / 16
+    KEY_SIGNATURE_SHARP: ClassVar[int] = 1
+    KEY_SIGNATURE_FLAT: ClassVar[int] = -1
 
-    NOTE_BASE_FREQ = 440
-    """Base note frequency for calculation (A4)"""
-    NOTE_BASE_INDEX = 69
-    """Base note index for calculation (A4) MIDI compatible"""
+    WHOLE_NOTE: ClassVar[float] = 1.0
+    HALF_NOTE: ClassVar[float] = 1.0 / 2.0
+    QUARTER_NOTE: ClassVar[float] = 1.0 / 4.0
+    EIGHTH_NOTE: ClassVar[float] = 1.0 / 8.0
+    SIXTEENTH_NOTE: ClassVar[float] = 1.0 / 16.0
 
-    NOTES = [
-        # List of musical notes corresponding to MIDI note numbers
+    NOTE_BASE_FREQ: ClassVar[float] = 440.0
+    NOTE_BASE_INDEX: ClassVar[int] = 69
+
+    NOTES: ClassVar[List[Optional[str]]] = [
         None,
         None,
         None,
@@ -221,10 +187,9 @@ class Music:
         "B7",
         "C8",
     ]
-    """Notes name, MIDI compatible"""
 
-    def __init__(self):
-        """Initialize music"""
+    def __init__(self) -> None:
+        """Initialize pygame (if available) and set defaults."""
         original_stdout = sys.stdout
         try:
             sys.stdout = open(os.devnull, "w")
@@ -233,265 +198,395 @@ class Music:
             sys.stdout.close()
             sys.stdout = original_stdout
         self.pygame = pygame
-        self.pygame.mixer.init()
+
         self.time_signature(4, 4)
-        self.tempo(120, 1 / 4)
+
+        self.tempo(120.0, self.QUARTER_NOTE)
         self.key_signature(0)
 
-    def time_signature(self, top: Optional[int] = None, bottom: Optional[int] = None):
+    def _pygame_mixer_ensure(self) -> None:
         """
-        Set or get the time signature.
+        Ensures the pygame mixer is initialized properly.
 
-        The time signature is a musical notation denoting the number of beats in a measure and the note value that gets one beat.
+        This method reinitializes the mixer in case it is not already initialized,
+        to avoid errors during playback operations.
+        """
 
-        Args:
-            top (Optional[int]): The top number of the time signature (e.g., 4 in 4/4 time).
-            bottom (Optional[int]): The bottom number of the time signature (e.g., 4 in 4/4 time).
+        try:
+            if not self.pygame.mixer.get_init():
+                self.pygame.mixer.init()
+        except self.pygame.error as err:
+            _log.error("Failed to initialize pygame mixer: %s", err)
+            raise
 
-        Returns:
-            tuple: The current time signature (top, bottom).
+    def time_signature(
+        self, top: Optional[int] = None, bottom: Optional[int] = None
+    ) -> Tuple[int, int]:
+        """
+        Get or set time signature.
+        If both top and bottom are None, returns the current (top, bottom).
+        If bottom is None when setting, bottom is set equal to top.
         """
         if top is None and bottom is None:
             return self._time_signature
+        if top is None:
+            raise TypeError("top must be provided when setting time_signature")
         if bottom is None:
             bottom = top
+        if not (isinstance(top, int) and isinstance(bottom, int)):
+            raise TypeError("time signature components must be integers")
+        if top <= 0 or bottom <= 0:
+            raise ValueError("time signature components must be positive")
         self._time_signature = (top, bottom)
         return self._time_signature
 
-    def key_signature(self, key: Optional[int] = None):
+    def key_signature(self, key: Optional[Union[int, str]] = None) -> int:
         """
-        Set or get the key signature.
+        Get or set key signature.
 
-        The key signature indicates the key of the music, using sharp (#) or flat (b) symbols.
-
-        Args:
-            key (Optional[int/str]): The key signature, which can be an integer (use KEY_XX_MAJOR) or a string ("#", "bb", etc.).
-
-        Returns:
-            int: The current key signature as an integer.
+        Accepts integers or strings composed solely of '#' or 'b' characters
+        to represent the number of sharps or flats respectively.
         """
         if key is None:
             return self._key_signature
         if isinstance(key, str):
-            if "#" in key:
+            if all(c == "#" for c in key):
                 key = len(key) * self.KEY_SIGNATURE_SHARP
-            elif "b" in key:
+            elif all(c == "b" for c in key):
                 key = len(key) * self.KEY_SIGNATURE_FLAT
+            else:
+                raise ValueError(
+                    "key string must consist solely of '#' or 'b' characters"
+                )
+        if not isinstance(key, int):
+            raise TypeError("key signature must be int or string of '#'/'b'")
         self._key_signature = key
         return self._key_signature
 
-    def tempo(self, tempo: Optional[float] = None, note_value=QUARTER_NOTE):
+    def tempo(
+        self, tempo: Optional[float] = None, note_value: float = QUARTER_NOTE
+    ) -> Tuple[float, float]:
         """
-        Set or get the tempo in beats per minute (BPM).
+        Get or set tempo.
 
-        Args:
-            tempo (Optional[float]): The tempo in BPM.
-            note_value (float): The note value for the tempo (default is QUARTER_NOTE).
-
-        Returns:
-            tuple: The current tempo (bpm, note_value).
+        - If tempo is None: return current (bpm, note_value).
+        - When setting: tempo must be positive and note_value must be positive.
         """
-        if tempo is None and note_value is None:
+        if tempo is None:
             return self._tempo
-        if tempo is not None:
-            try:
-                self._tempo = (tempo, note_value)
-                self.beat_unit = 60.0 / tempo
-                return self._tempo
-            except:
-                raise ValueError(f"Tempo must be int not {tempo}")
 
-    def beat(self, beat):
+        try:
+            tempo_f = float(tempo)
+        except (TypeError, ValueError):
+            raise TypeError("tempo must be a real number")
+        if tempo_f <= 0:
+            raise ValueError("tempo must be positive")
+
+        try:
+            note_value_f = float(note_value)
+        except (TypeError, ValueError):
+            raise TypeError("note_value must be a positive real number")
+        if note_value_f <= 0:
+            raise ValueError("note_value must be positive")
+
+        self._tempo = (tempo_f, note_value_f)
+        self.beat_unit = 60.0 / tempo_f
+        return self._tempo
+
+    def beat(self, beat: float) -> float:
         """
-        Calculate the beat delay in seconds from the tempo.
-
-        Args:
-            beat (float): The beat index.
-
-        Returns:
-            float: The beat delay in seconds.
+        Convert beats (can be fractional) into seconds using current tempo.
         """
-        beat = beat / self._tempo[1] * self.beat_unit
-        return beat
+        try:
+            beat_f = float(beat)
+        except (TypeError, ValueError):
+            raise TypeError("beat must be a real number")
 
-    def note(self, note, natural=False):
+        bpm_note_value = self._tempo[1]
+        if bpm_note_value == 0:
+            raise ZeroDivisionError("tempo note value is zero")
+        seconds = beat_f / bpm_note_value * self.beat_unit
+        return seconds
+
+    def note(self, note: Union[str, int], natural: bool = False) -> float:
         """
-        Get the frequency of a musical note.
+        Return frequency (Hz) for a given note.
 
-        Args:
-            note (str/int): The note name (e.g., "C4"). See NOTES for reference.
-            natural (bool): Whether the note should be considered natural (no sharps or flats).
-
-        Returns:
-            float: The frequency of the note in Hertz (Hz).
+        If note is a string, it must be one of Music.NOTES.
+        If natural is False, the current key signature is applied as an integer offset.
         """
         if isinstance(note, str):
-            if note in self.NOTES:
-                note = self.NOTES.index(note)
-            else:
+            if note not in self.NOTES:
                 raise ValueError(f"Note {note} not found, note must be in Music.NOTES")
+            index = self.NOTES.index(note)
+        elif isinstance(note, int):
+            index = int(note)
+        else:
+            raise TypeError("note must be a string or integer index")
+
         if not natural:
-            note += self.key_signature()
-            note = min(max(note, 0), len(self.NOTES) - 1)
-        note_delta = note - self.NOTE_BASE_INDEX
-        freq = self.NOTE_BASE_FREQ * (2 ** (note_delta / 12))
+            offset = self.key_signature()
+            index = index + offset
+            index = max(0, min(index, len(self.NOTES) - 1))
+
+        delta = index - self.NOTE_BASE_INDEX
+        freq = float(self.NOTE_BASE_FREQ) * (2.0 ** (delta / 12.0))
         return freq
 
-    def sound_play(self, filename, volume=None):
-        """
-        Play a sound effect file.
+    def _ensure_pygame(self) -> None:
+        if self.pygame is None:
+            raise RuntimeError("pygame is not available or failed to initialize")
 
-        Args:
-            filename (str): The sound effect file name.
-            volume (Optional[int]): The volume level (0-100). If not provided, the default volume is used.
-
-        Returns:
-            None
+    def sound_play(
+        self, filename: Union[str, os.PathLike, Path], volume: Optional[float] = None
+    ) -> None:
         """
-        sound = self.pygame.mixer.Sound(filename)
+        Play a short sound effect synchronously (blocks for sound length).
+        volume: 0-100 scale when provided.
+        """
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
+        sound = self.pygame.mixer.Sound(str(filename))
         if volume is not None:
-            # Attention:
-            # The volume of sound and music is separate,
-            # and the volume of different sound objects is also separate.
-            sound.set_volume(round(volume / 100.0, 2))
+            try:
+                vol_f = float(volume)
+            except (TypeError, ValueError):
+                raise TypeError("volume must be a number between 0 and 100")
+            vol = max(0.0, min(100.0, vol_f))
+            sound.set_volume(round(vol / 100.0, 2))
         time_delay = round(sound.get_length(), 2)
         sound.play()
         time.sleep(time_delay)
 
-    def sound_play_threading(self, filename, volume=None):
+    def sound_play_threading(
+        self, filename: Union[str, os.PathLike, Path], volume: Optional[float] = None
+    ) -> None:
         """
-        Play a sound effect in a separate thread.
-
-        Args:
-            filename (str): The sound effect file name.
-            volume (Optional[int]): The volume level (0-100). If not provided, the default volume is used.
-
-        Returns:
-            None
+        Play a sound effect asynchronously in a daemon thread.
         """
-        obj = threading.Thread(
+        thread = threading.Thread(
             target=self.sound_play, kwargs={"filename": filename, "volume": volume}
         )
-        obj.start()
+        thread.daemon = True
+        thread.start()
 
-    def music_play(self, filename: str, loops=1, start=0.0, volume=None):
+    def music_play(
+        self,
+        filename: Union[str, os.PathLike, Path],
+        loops: int = 1,
+        start: float = 0.0,
+        volume: Optional[float] = None,
+    ) -> None:
         """
-        Play a music file.
+        Play a music file. Non-blocking.
 
-        Args:
-            filename (str): The music file name.
-            loops (int): Number of loops (0: loop forever, 1: play once, 2: play twice, ...).
-            start (float): Start time in seconds.
-            volume (Optional[int]): The volume level (0-100). If not provided, the default volume is used.
-
-        Returns:
-            None
+        loops: number of times to play (1 = play once, 0 = loop forever in pygame's API).
+        start: start position in seconds.
+        volume: 0-100 scale (optional).
         """
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
         if volume is not None:
             self.music_set_volume(volume)
-        self.pygame.mixer.music.load(filename)
-        self.pygame.mixer.music.play(loops, start)
+        self.pygame.mixer.music.load(str(filename))
+        self.pygame.mixer.music.play(loops, float(start))
 
-    def music_get_volume(self):
-        """
-        Get the music volume level (0-100).
-        """
+    def music_get_volume(self) -> float:
+        """Get the music volume level (0-100)."""
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
         value = round(self.pygame.mixer.music.get_volume() * 100.0, 2)
-        return value
+        return float(value)
 
-    def music_set_volume(self, value):
-        """
-        Set the music volume.
+    def music_set_volume(self, value: float) -> None:
+        """Set the music volume in 0-100 scale."""
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
+        try:
+            vol_f = float(value)
+        except (TypeError, ValueError):
+            raise TypeError("volume must be a number between 0 and 100")
+        vol = max(0.0, min(100.0, vol_f))
+        self.pygame.mixer.music.set_volume(round(vol / 100.0, 2))
 
-        Args:
-            value (int): The volume level (0-100).
-
-        Returns:
-            None
-        """
-        value = round(value / 100.0, 2)
-        self.pygame.mixer.music.set_volume(value)
-
-    def music_stop(self):
-        """
-        Stop the music.
-
-        Returns:
-            None
-        """
+    def music_stop(self) -> None:
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
         self.pygame.mixer.music.stop()
 
-    def music_pause(self):
-        """
-        Pause the music.
-
-        Returns:
-            None
-        """
+    def music_pause(self) -> None:
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
         self.pygame.mixer.music.pause()
 
-    def music_resume(self):
-        """
-        Resume the music.
-
-        Returns:
-            None
-        """
+    def music_resume(self) -> None:
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
         self.pygame.mixer.music.unpause()
 
-    def music_unpause(self):
+    def music_unpause(self) -> None:
+        self.music_resume()
+
+    def sound_length(self, filename: Union[str, os.PathLike, Path]) -> float:
+        self._ensure_pygame()
+        self._pygame_mixer_ensure()
+        s = self.pygame.mixer.Sound(str(filename))
+        return round(s.get_length(), 2)
+
+    def get_tone_data(self, freq: float, duration: float) -> bytes:
         """
-        Unpause the music (resume playing).
+        Generate raw PCM tone data for the given frequency and duration.
 
-        Returns:
-            None
+        Uses array('h').tobytes() for efficient packing. Ensures little-endian
+        output by calling byteswap() on big-endian hosts.
         """
-        self.pygame.mixer.music.unpause()
+        try:
+            freq_f = float(freq)
+        except (TypeError, ValueError):
+            raise TypeError("Frequency must be a real number")
+        if freq_f <= 0:
+            raise ValueError("Frequency must be a positive number")
 
-    def sound_length(self, filename):
-        """
-        Get the length of a sound effect file in seconds.
+        try:
+            duration_f = float(duration)
+        except (TypeError, ValueError):
+            raise TypeError("Duration must be a real number")
+        if duration_f <= 0:
+            raise ValueError("Duration must be a positive number")
 
-        Args:
-            filename (str): The sound effect file name.
-
-        Returns:
-            float: The length of the sound effect in seconds.
-        """
-        music = self.pygame.mixer.Sound(str(filename))
-        return round(music.get_length(), 2)
-
-    def get_tone_data(self, freq: float, duration: float):
-        """
-        Generate tone data for a given frequency and duration.
-
-        Args:
-            freq (float): The frequency of the tone.
-            duration (float): The duration of the tone in seconds.
-
-        Returns:
-            bytes: The tone data as bytes.
-
-        Credit to: Aditya Shankar & Gringo Suave (https://stackoverflow.com/a/53231212/14827323)
-        """
-        duration /= 2.0
-        frame_count = int(self.RATE * duration)
+        frame_count = int(self.RATE * duration_f)
 
         remainder_frames = frame_count % self.RATE
-        wavedata = []
+        wavedata: List[int] = []
 
         for i in range(frame_count):
-            a = self.RATE / freq  # number of frames per wave
+            a = self.RATE / freq_f
             b = i / a
-            c = b * (2 * math.pi)
-            d = math.sin(c) * 32767
+            c = b * (2.0 * math.pi)
+            d = math.sin(c) * 32767.0
             e = int(d)
             wavedata.append(e)
 
-        for i in range(remainder_frames):
+        for _ in range(remainder_frames):
             wavedata.append(0)
 
-        number_of_bytes = str(len(wavedata))
-        wavedata = struct.pack(number_of_bytes + "h", *wavedata)
+        arr = array("h", wavedata)
+        if sys.byteorder != "little":
+            arr.byteswap()
+        return arr.tobytes()
 
-        return wavedata
+
+if __name__ == "__main__":
+    import argparse
+    import os
+
+    EXAMPLES = """Examples:
+    # Play once, wait until finished (default)
+    python -m robot_hat.music my_track.mp3
+
+    # Play once with volume 60 (0-100) and wait
+    python -m robot_hat.music my_track.mp3 --volume 60
+
+    # Play starting at 30 seconds, do not wait (process will exit and playback will stop)
+    python -m robot_hat.music my_track.mp3 --start 30 --no-wait
+
+    # Loop forever
+    python -m robot_hat.music my_track.mp3 --loops -1 --wait
+
+    # Just print the track length (seconds) and exit
+    python -m robot_hat.music my_track.mp3 --length
+    """
+
+    parser = argparse.ArgumentParser(
+        description="Play music files",
+        epilog=EXAMPLES,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "file",
+        nargs="?",
+        help="Absolute, relative or abbreviated (e.g., ~/my-track.mp3) path to music file (mp3, wav, etc.)",
+    )
+    parser.add_argument(
+        "--loops",
+        type=int,
+        default=0,
+        help="Number of extra loops: 0 plays once, 1 plays twice, -1 loops forever (pygame convention).",
+    )
+    parser.add_argument(
+        "--start", type=float, default=0.0, help="Start position in seconds (float)."
+    )
+    parser.add_argument(
+        "--volume",
+        type=float,
+        default=None,
+        help="Music volume 0-100 (optional). If omitted, current volume is used.",
+    )
+    parser.add_argument(
+        "--no-wait",
+        action="store_true",
+        help="Do not wait for playback to finish (process will exit immediately). Note: if the process exits, playback will usually stop).",
+    )
+    parser.add_argument(
+        "--length",
+        action="store_true",
+        help="Print the file length (in seconds) and exit without playing.",
+    )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Increase verbosity (use -v or -vv).",
+    )
+
+    args = parser.parse_args()
+
+    log_level = logging.WARNING
+    if args.verbose >= 2:
+        log_level = logging.DEBUG
+    elif args.verbose == 1:
+        log_level = logging.INFO
+    logging.basicConfig(level=log_level)
+
+    if not args.file:
+        parser.print_help()
+        sys.exit(1)
+
+    track = (
+        os.path.expanduser(args.file)
+        if args.file.startswith("~") and not os.path.exists(args.file)
+        else args.file
+    )
+
+    music = Music()
+
+    if args.length:
+        try:
+            dur = music.sound_length(track)
+            print(f"{dur:.2f}")
+        except Exception as e:
+            _log.error("Failed to read length of %s: %s", track, e)
+            sys.exit(2)
+        sys.exit(0)
+
+    if args.volume is not None:
+        try:
+            music.music_set_volume(args.volume)
+        except Exception as e:
+            _log.error("Failed to set volume: %s", e)
+
+    try:
+        music.music_play(track, loops=args.loops, start=args.start, volume=None)
+    except Exception as e:
+        _log.error("Failed to play %s: %s", track, e)
+        sys.exit(3)
+
+    if not args.no_wait:
+        try:
+            while music.pygame.mixer.music.get_busy():
+                time.sleep(0.1)
+        except KeyboardInterrupt:
+            _log.info("Interrupted, stopping playback")
+            music.music_stop()
+            sys.exit(0)
