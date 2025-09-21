@@ -128,7 +128,7 @@ class MotorService:
 
     """
 
-    def __init__(self, left_motor: "MotorABC", right_motor: "MotorABC"):
+    def __init__(self, left_motor: "MotorABC", right_motor: "MotorABC") -> None:
         """
         Initialize the MotorService.
         """

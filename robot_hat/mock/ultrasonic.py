@@ -28,7 +28,7 @@ def generate_ultrasonic_measurements(
 
 
 class Ultrasonic(UltrasonicOrig):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._current_idx = 0
         self.ultrasonic_sequence = generate_ultrasonic_measurements(400, 20, 10)

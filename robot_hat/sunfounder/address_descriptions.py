@@ -33,5 +33,5 @@ VALUE_DESCRIPTIONS = {
 }
 
 
-def get_address_description(address):
+def get_address_description(address) -> str:
     return ADDRESS_DESCRIPTIONS.get(address, "")

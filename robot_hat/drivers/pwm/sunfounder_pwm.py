@@ -43,7 +43,7 @@ class SunfounderPWM(PWMDriverABC):
         bus: BusType = 1,
         period: int = 4096,
         frame_width: int = 20000,
-    ):
+    ) -> None:
         """
         Initialize the SunfounderPWM device.
 

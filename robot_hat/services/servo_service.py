@@ -35,7 +35,7 @@ class ServoService:
         calibration_mode: Optional[
             Union[ServoCalibrationMode, Callable[[float, float], float]]
         ] = ServoCalibrationMode.SUM,
-    ):
+    ) -> None:
         """
         Initialize the ServoService with the specified configuration.
 
@@ -170,11 +170,11 @@ class ServoService:
         return self._current_angle
 
     @current_angle.setter
-    def current_angle(self, value: float):
+    def current_angle(self, value: float) -> None:
         self._current_angle = value
 
     @staticmethod
-    def apply_negative_calibration(value: float, calibration_value: float):
+    def apply_negative_calibration(value: float, calibration_value: float) -> float:
         """
         Apply a negative calibration adjustment to the given value.
 
@@ -191,7 +191,7 @@ class ServoService:
         return -1 * (value + -1 * calibration_value)
 
     @staticmethod
-    def apply_sum_calibration(value: float, calibration_value: float):
+    def apply_sum_calibration(value: float, calibration_value: float) -> float:
         """
         Apply a sum calibration adjustment to the given value.
 
@@ -304,7 +304,7 @@ class ServoService:
         """
         self.close()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         Provide a string representation of the servo instance.
 

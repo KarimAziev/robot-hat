@@ -27,7 +27,7 @@ class Battery(INA219, BatteryABC):
         config: Optional[INA219Config] = None,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the Battery object.
         """

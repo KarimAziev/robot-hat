@@ -12,7 +12,7 @@ class MotorCalibration:
         self,
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
-    ):
+    ) -> None:
 
         self.direction = calibration_direction
         self.calibration_direction = calibration_direction
@@ -66,7 +66,7 @@ class MotorCalibration:
         return self._calibration_speed_offset
 
     @calibration_speed_offset.setter
-    def calibration_speed_offset(self, value: float):
+    def calibration_speed_offset(self, value: float) -> None:
         self._calibration_speed_offset = value
 
     @property
@@ -74,7 +74,7 @@ class MotorCalibration:
         return self._speed_offset
 
     @speed_offset.setter
-    def speed_offset(self, value: float):
+    def speed_offset(self, value: float) -> None:
         self._speed_offset = value
 
     def reset_calibration_speed(self) -> float:

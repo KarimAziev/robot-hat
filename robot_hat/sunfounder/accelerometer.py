@@ -51,7 +51,7 @@ class ADXL345(I2C):
     _AXISES = [_REG_DATA_X, _REG_DATA_Y, _REG_DATA_Z]
     """List of register addresses for X, Y, Z axis data."""
 
-    def __init__(self, *args, address: int = ADDR, bus: BusType = 1, **kwargs):
+    def __init__(self, *args, address: int = ADDR, bus: BusType = 1, **kwargs) -> None:
         """
         Initializes the ADXL345 sensor.
 

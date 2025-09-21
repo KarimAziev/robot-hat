@@ -76,7 +76,7 @@ class I2C:
         bus: BusType = 1,
         *args: Any,
         **kwargs: Any,
-    ):
+    ) -> None:
         """
         Initialize the I2C bus.
 

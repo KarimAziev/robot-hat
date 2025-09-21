@@ -33,7 +33,7 @@ class MotorBaseConfig:
         }
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.calibration_direction not in [1, -1]:
             raise ValueError(
                 f"`calibration_direction` for motor '{self.name}' must be either 1 or -1."

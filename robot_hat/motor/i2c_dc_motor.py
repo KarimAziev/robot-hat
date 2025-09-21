@@ -49,7 +49,7 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         max_speed: int = 100,
         frequency: int = 50,
         name: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Initialize the Motor with a direction pin and a unified PWM driver.
 

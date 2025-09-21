@@ -61,7 +61,7 @@ class PWMDriverConfig:
         },
     )
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if not (0 <= self.address <= 0x7F):
             raise ValueError(
                 f"I2C address {self.address} is out of valid range (0-0x7F)."

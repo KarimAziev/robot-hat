@@ -60,7 +60,7 @@ class Grayscale:
 
     def __init__(
         self, pin0: ADC, pin1: ADC, pin2: ADC, reference: List[int] = [1000, 1000, 1000]
-    ):
+    ) -> None:
         """
         Initializes a Grayscale module with three ADC channels and optional reference values.
 
@@ -97,7 +97,7 @@ class Grayscale:
         return self._reference
 
     @reference.setter
-    def reference(self, value: List[int]):
+    def reference(self, value: List[int]) -> None:
         """
         Sets the reference values for the grayscale sensors.
 

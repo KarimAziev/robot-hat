@@ -28,7 +28,7 @@ class FileDB(object):
 
     db: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """
         Ensures that the database file exists when the class is initialized.
 

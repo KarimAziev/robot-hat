@@ -49,7 +49,7 @@ class Ultrasonic:
     SOUND_SPEED = 343.3
     """Speed of sound in m/s."""
 
-    def __init__(self, trig: Pin, echo: Pin, timeout: float = 0.1):
+    def __init__(self, trig: Pin, echo: Pin, timeout: float = 0.1) -> None:
         """
         Initialize the Ultrasonic sensor with specified trigger and echo pins.
 
@@ -70,8 +70,8 @@ class Ultrasonic:
         Perform a single distance measurement.
 
         Returns:
-            float: The measured distance in centimeters. Returns -1 if there is a timeout,
-                   and -2 if the measurement fails.
+            The measured distance in centimeters. Returns -1 if there is a
+            timeout, and -2 if the measurement fails.
 
         Raises:
             `UltrasonicEchoPinError`: If the echo pin is not properly initialized.

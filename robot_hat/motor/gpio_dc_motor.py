@@ -50,7 +50,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         name: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Initialize the motor with the specified GPIO pins.
 
@@ -97,7 +97,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         """
         return constrain(speed, -self.max_speed, self.max_speed)
 
-    def set_speed(self, speed: float):
+    def set_speed(self, speed: float) -> None:
         """
         Set the motor's speed and direction.
 
@@ -139,7 +139,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
 
         self._speed = speed
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the motor.
         """
@@ -147,7 +147,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         self._motor.stop()
         self._speed = 0
 
-    def close(self):
+    def close(self) -> None:
         """
         Close the underlying resources.
         """
@@ -162,7 +162,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         self.close()
 
 
-def main():
+def main() -> None:
     import argparse
     from time import sleep
 

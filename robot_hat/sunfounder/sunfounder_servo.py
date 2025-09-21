@@ -81,7 +81,7 @@ class Servo(PWM, ServoABC):
         address: Optional[Union[int, List[int]]] = None,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the servo motor class.
 

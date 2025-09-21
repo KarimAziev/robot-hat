@@ -98,7 +98,7 @@ class PWM(I2C):
         address: Optional[Union[int, List[int]]] = None,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the PWM module.
 

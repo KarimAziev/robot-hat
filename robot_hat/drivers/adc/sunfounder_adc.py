@@ -62,7 +62,7 @@ class ADC(I2C):
         address: Union[int, List[int]] = ADC_DEFAULT_ADDRESSES,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the ADC.
 

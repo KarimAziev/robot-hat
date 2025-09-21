@@ -28,7 +28,7 @@ class Motor(MotorCalibration, MotorABC):
         period=4095,
         prescaler=10,
         name: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Initialize the motor instance.
 

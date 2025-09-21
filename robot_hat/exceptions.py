@@ -131,7 +131,7 @@ class InvalidCalibrationModeError(Exception):
     Raised when an invalid calibration mode is provided to the ServoService.
     """
 
-    def __init__(self, mode, message="Invalid calibration mode provided."):
+    def __init__(self, mode, message="Invalid calibration mode provided.") -> None:
         super().__init__(f"{message} Received: {mode}")
         self.mode = mode
 

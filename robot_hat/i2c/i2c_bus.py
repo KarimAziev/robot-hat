@@ -226,7 +226,7 @@ class I2CBus(SMBusABC):
     @RETRY_DECORATOR
     def process_call(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
-    ):
+    ) -> int:
         """
         Perform an SMBus process call: write then read back in one transaction.
 

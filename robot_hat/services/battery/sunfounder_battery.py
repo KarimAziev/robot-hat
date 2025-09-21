@@ -21,7 +21,7 @@ class Battery(ADC, BatteryABC):
         address: Union[int, List[int]] = ADC_DEFAULT_ADDRESSES,
         *args,
         **kwargs,
-    ):
+    ) -> None:
         """
         Initialize the Battery object.
 

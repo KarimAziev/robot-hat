@@ -1,7 +1,8 @@
 import errno
 import logging
 import os
-from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Union
+from types import TracebackType
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Type, Union
 
 from robot_hat.interfaces.smbus_abc import SMBusABC
 
@@ -91,7 +92,7 @@ def ina219_bus_voltage_conversion(bus_voltage: float) -> int:
 
 
 class MockSMBus(SMBusABC):
-    def __init__(self, bus: Union[None, int, str], force: bool = False):
+    def __init__(self, bus: Union[None, int, str], force: bool = False) -> None:
         self.bus = bus
         self.force = force
         self.fd = None
@@ -187,7 +188,7 @@ class MockSMBus(SMBusABC):
 
     def process_call(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
-    ):
+    ) -> int:
         logger.debug("write_word_data %s to register '%s'", value, register)
         self._set_address(i2c_addr, force)
         return self._command_responses["word"]
@@ -216,7 +217,7 @@ class MockSMBus(SMBusABC):
         register: int,
         data: Sequence[int],
         force: Optional[bool] = None,
-    ):
+    ) -> List[int]:
         logger.debug("block_process_call %s to register '%s'", data, register)
         self._set_address(i2c_addr, force)
         return self._command_responses["block"]
@@ -227,7 +228,7 @@ class MockSMBus(SMBusABC):
         register: int,
         data: Sequence[int],
         force: Optional[bool] = None,
-    ):
+    ) -> None:
         logger.debug("write_i2c_block_data %s to register %s", data, register)
         self._set_address(i2c_addr, force)
         return
@@ -278,15 +279,20 @@ class MockSMBus(SMBusABC):
     def enable_pec(self, enable=True) -> None:
         self.pec = int(enable)
 
-    def __enter__(self):
+    def __enter__(self) -> "MockSMBus":
         """Enter handler."""
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
         """Exit handler."""
         self.close()
 
-    def _set_address(self, address: int, force: Optional[bool] = None):
+    def _set_address(self, address: int, force: Optional[bool] = None) -> None:
         """
         Set i2c slave address to use for subsequent calls.
 

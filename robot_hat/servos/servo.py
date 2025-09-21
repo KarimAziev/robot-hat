@@ -158,103 +158,102 @@ class Servo(ServoABC):
         )
 
 
-def parse_args():
+def main() -> None:
     import argparse
-
-    parser = argparse.ArgumentParser(
-        description="Demo: Sweep a servo using a PCA9685 driver."
-    )
-    pwm_config_group = parser.add_argument_group(title="PWM config")
-    servo_group = parser.add_argument_group(title="Servo")
-
-    servo_group.add_argument(
-        "--channel",
-        type=int,
-        default=0,
-        help="PWM channel to which the servo is connected (default: 0).",
-    )
-    servo_group.add_argument(
-        "--min-angle",
-        type=int,
-        default=-90,
-        help="The minimum logical angle (in degrees) that can be commanded to the servo. (default -90)",
-    )
-    servo_group.add_argument(
-        "--max-angle",
-        type=int,
-        default=90,
-        help="The maximum logical angle (in degrees) that can be commanded to the servo.",
-    )
-    servo_group.add_argument(
-        "--real-min-angle",
-        type=int,
-        default=-90,
-        help="The minimum physical angle (in degrees) that the servo can achieve.",
-    )
-    servo_group.add_argument(
-        "--real-max-angle",
-        type=int,
-        default=90,
-        help="The maximum physical angle (in degrees) that the servo can achieve.",
-    )
-    servo_group.add_argument(
-        "--min-pulse",
-        type=int,
-        default=500,
-        help="The minimum pulse width (in microseconds) corresponding to the servo's physical movement.",
-    )
-    servo_group.add_argument(
-        "--max-pulse",
-        type=int,
-        default=2500,
-        help="The maximum logical angle (in degrees) that can be commanded to the servo.",
-    )
-    servo_group.add_argument(
-        "--step",
-        type=int,
-        default=10,
-        help="Angle step in degrees for each move (default: 10).",
-    )
-    servo_group.add_argument(
-        "--delay",
-        type=float,
-        default=0.1,
-        help="Delay in seconds between each movement (default: 0.1).",
-    )
-
-    pwm_config_group.add_argument(
-        "--driver",
-        default="PCA9685",
-        choices=["PCA9685", "Sunfounder"],
-        help="PWM driver to use.",
-    )
-    pwm_config_group.add_argument(
-        "--address",
-        type=lambda x: int(x, 0),
-        default="0x40",
-        help="I2C address of the PWM driver (default: 0x40). Prefix with '0x' for hex values.",
-    )
-    pwm_config_group.add_argument(
-        "--bus", type=int, default=1, help="I2C bus number (default: 1)."
-    )
-    pwm_config_group.add_argument(
-        "--freq",
-        type=float,
-        default=50,
-        help="PWM frequency in Hz (default: 50). Typical for servos.",
-    )
-    pwm_config_group.add_argument(
-        "--frame_width",
-        type=int,
-        default=20000,
-        help="Frame Width in µs.",
-    )
-
-    return parser.parse_args()
-
-
-def main():
     import time
+
+    def parse_args() -> argparse.Namespace:
+
+        parser = argparse.ArgumentParser(
+            description="Demo: Sweep a servo using a PCA9685 driver."
+        )
+        pwm_config_group = parser.add_argument_group(title="PWM config")
+        servo_group = parser.add_argument_group(title="Servo")
+
+        servo_group.add_argument(
+            "--channel",
+            type=int,
+            default=0,
+            help="PWM channel to which the servo is connected (default: 0).",
+        )
+        servo_group.add_argument(
+            "--min-angle",
+            type=int,
+            default=-90,
+            help="The minimum logical angle (in degrees) that can be commanded to the servo. (default -90)",
+        )
+        servo_group.add_argument(
+            "--max-angle",
+            type=int,
+            default=90,
+            help="The maximum logical angle (in degrees) that can be commanded to the servo.",
+        )
+        servo_group.add_argument(
+            "--real-min-angle",
+            type=int,
+            default=-90,
+            help="The minimum physical angle (in degrees) that the servo can achieve.",
+        )
+        servo_group.add_argument(
+            "--real-max-angle",
+            type=int,
+            default=90,
+            help="The maximum physical angle (in degrees) that the servo can achieve.",
+        )
+        servo_group.add_argument(
+            "--min-pulse",
+            type=int,
+            default=500,
+            help="The minimum pulse width (in microseconds) corresponding to the servo's physical movement.",
+        )
+        servo_group.add_argument(
+            "--max-pulse",
+            type=int,
+            default=2500,
+            help="The maximum logical angle (in degrees) that can be commanded to the servo.",
+        )
+        servo_group.add_argument(
+            "--step",
+            type=int,
+            default=10,
+            help="Angle step in degrees for each move (default: 10).",
+        )
+        servo_group.add_argument(
+            "--delay",
+            type=float,
+            default=0.1,
+            help="Delay in seconds between each movement (default: 0.1).",
+        )
+
+        pwm_config_group.add_argument(
+            "--driver",
+            default="PCA9685",
+            choices=["PCA9685", "Sunfounder"],
+            help="PWM driver to use.",
+        )
+        pwm_config_group.add_argument(
+            "--address",
+            type=lambda x: int(x, 0),
+            default="0x40",
+            help="I2C address of the PWM driver (default: 0x40). Prefix with '0x' for hex values.",
+        )
+        pwm_config_group.add_argument(
+            "--bus", type=int, default=1, help="I2C bus number (default: 1)."
+        )
+        pwm_config_group.add_argument(
+            "--freq",
+            type=float,
+            default=50,
+            help="PWM frequency in Hz (default: 50). Typical for servos.",
+        )
+        pwm_config_group.add_argument(
+            "--frame_width",
+            type=int,
+            default=20000,
+            help="Frame Width in µs.",
+        )
+
+        return parser.parse_args()
 
     args = parse_args()
 

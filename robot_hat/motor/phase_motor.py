@@ -26,7 +26,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         calibration_speed_offset: float = 0,
         max_speed: int = 100,
         name: Optional[str] = None,
-    ):
+    ) -> None:
         """
         Initialize the motor with the specified GPIO pins.
 
@@ -74,7 +74,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         """
         return constrain(speed, -self.max_speed, self.max_speed)
 
-    def set_speed(self, speed: float):
+    def set_speed(self, speed: float) -> None:
         """
         Set the motor's speed and direction. Accepts values from
         -max_speed to +max_speed and converts them to the 0.0 to 1.0 PWM scale.
@@ -112,7 +112,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
 
         self._speed = speed
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stop the motor.
         """
@@ -120,7 +120,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         self._motor.stop()
         self._speed = 0
 
-    def close(self):
+    def close(self) -> None:
         """
         Close the underlying GPIO resources.
         """
@@ -130,7 +130,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
             _log.exception(f"Error closing motor resources: {e}")
 
 
-def main():
+def main() -> None:
     import argparse
     from time import sleep
 
