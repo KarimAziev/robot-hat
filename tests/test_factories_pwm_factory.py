@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock, patch
 
+from robot_hat.data_types.bus import BusType
 from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.factories.pwm_factory import (
     PWM_DRIVER_REGISTRY,
@@ -8,7 +9,6 @@ from robot_hat.factories.pwm_factory import (
     register_pwm_driver,
 )
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
-from tests.test_data_types_bus import BusType
 
 
 class MockPWMDriver(PWMDriverABC):
@@ -238,7 +238,7 @@ class TestPWMFactory(unittest.TestCase):
 
         self.assertIsInstance(driver.bus, type(driver._bus))
         self.assertEqual(driver.address, self.config.address)
-        self.assertEqual(driver.frame_width, self.config.frame_width)
+        self.assertEqual(driver.frame_width, self.config.frame_width)  # type: ignore
 
     def test_pwm_driver_registry_global_state(self):
         """Test that PWM_DRIVER_REGISTRY is a global state."""
