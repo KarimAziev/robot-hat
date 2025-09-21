@@ -75,7 +75,7 @@ class TestPWMFactory(unittest.TestCase):
         class TestDriver(PWMDriverABC):
             DRIVER_TYPE = "TestDriver"
 
-            def __init__(self, bus=None, address=0x40, frame_width=20000):
+            def __init__(self, bus: BusType, address=0x40, frame_width=20000):
                 super().__init__(bus=bus, address=address)
                 self.frame_width = frame_width
 
@@ -144,7 +144,7 @@ class TestPWMFactory(unittest.TestCase):
             self.assertIsInstance(driver, MockPWMDriver)
             self.assertIsInstance(driver.bus, type(driver._bus))
             self.assertEqual(driver.address, 0x40)
-            self.assertEqual(driver.frame_width, 20000)
+            self.assertEqual(driver.frame_width, 20000)  # type: ignore
 
             mock_log.debug.assert_called()
 
