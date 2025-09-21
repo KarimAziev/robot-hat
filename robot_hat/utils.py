@@ -91,7 +91,7 @@ def mapping(x: T, in_min: T, in_max: T, out_min: T, out_max: T) -> T:
     return result
 
 
-def constrain(x: T, min_val: T, max_val: T):
+def constrain(x: T, min_val: T, max_val: T) -> T:
     """
     Constrains value to be within a range.
     """
