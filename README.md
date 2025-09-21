@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/robot-hat)](https://pypi.org/project/robot-hat/)
 [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
-> ⚠️ Breaking changes in v2.0.0 - This release contains incompatible API changes. Read the [CHANGELOG](./CHANGELOG.md) and the [Migration Guide](./docs/migration_guide_v2.md) before upgrading.
+> ⚠️ Breaking changes in v2.0.0 - This release contains incompatible API changes. Read the [CHANGELOG](https://github.com/KarimAziev/robot-hat/blob/main/CHANGELOG.md) and the [Migration Guide](https://github.com/KarimAziev/robot-hat/blob/v2.0.0/docs/migration_guide_v2.md) before upgrading.
 
 # Robot Hat
 
