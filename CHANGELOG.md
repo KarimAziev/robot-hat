@@ -1,5 +1,9 @@
 # Changelog
 
+## v2.1.0 (2025-10-09)
+
+Added support for INA226.
+
 ## v2.0.0 (2025-09-20)
 
 ⚠️ Major, breaking release. Most public modules, classes, and import paths were moved, renamed, or generalized. Read the [Migration Guide](./docs/migration_guide_v2.md) before upgrading.
