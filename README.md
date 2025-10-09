@@ -38,6 +38,7 @@ Unlike the aforementioned libraries:
 >     - [Ultrasonic sensor for distance measurement](#ultrasonic-sensor-for-distance-measurement)
 >     - [Reading battery voltage](#reading-battery-voltage)
 >       - [INA219](#ina219)
+>       - [INA226](#ina226)
 >       - [Sunfounder module](#sunfounder-module)
 >   - [Adding custom drivers](#adding-custom-drivers)
 >     - [How to make your driver discoverable](#how-to-make-your-driver-discoverable)
@@ -784,7 +785,7 @@ print(f"Distance: {distance_cm} cm")
 
 ### Reading battery voltage
 
-Currently, two battery drivers are supported: **INA219** and the built-in driver in Sunfounder's Robot Hat.
+Currently, such battery drivers are supported: **INA219**, **INA226** and the built-in driver in Sunfounder's Robot Hat.
 
 #### INA219
 
@@ -878,6 +879,41 @@ battery.close()
 
 </p>
 </details>
+
+#### INA226
+
+The INA226 driver in this library exposes a config dataclass (`INA226Config`) and a driver (`INA226`). A small Battery helper (`robot_hat.services.battery.ina226_battery.Battery`) wraps the driver to provide a battery-focused API (get_battery_voltage, close).
+
+**Simple example**
+
+```python
+from robot_hat.services.battery.ina226_battery import Battery as INA226Battery
+from robot_hat.data_types.config.ina226 import INA226Config
+
+# Build a config derived from your shunt resistor and max expected current.
+# shunt_ohms must be > 0. max_expected_amps is optional (if omitted the code uses a
+# device-limited derivation).
+cfg = INA226Config.from_shunt(
+    shunt_ohms=0.002,           # 2 milliohm shunt
+    max_expected_amps=50.0      # expected up to 50 A (example)
+)
+
+# Create Battery helper (driver opens SMBus if you pass bus number)
+battery = INA226Battery(bus=1, address=0x40, config=cfg)
+
+
+bus_v = battery.get_bus_voltage_v()      # bus voltage in volts (V)
+shunt_mv = battery.get_shunt_voltage_mv()# shunt voltage in millivolts (mV)
+battery_v = battery.get_battery_voltage()# bus + shunt in volts (V)
+current_ma = battery.get_current_ma()    # current in milliamps (mA)
+power_mw = battery.get_power_mw()        # power in milliwatts (mW)
+
+print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
+print(f"Battery (bus + shunt): {battery_v:.3f} V")
+print(f"Current: {current_ma:.3f} mA, Power: {power_mw:.3f} mW")
+
+battery.close()
+```
 
 #### Sunfounder module
 

@@ -1,4 +1,8 @@
 from robot_hat.data_types.bus import BusType
+from robot_hat.data_types.config.ina226 import AvgMode as INA226AvgMode
+from robot_hat.data_types.config.ina226 import ConversionTime as INA226ConversionTime
+from robot_hat.data_types.config.ina226 import INA226Config
+from robot_hat.data_types.config.ina226 import Mode as INA226Mode
 from robot_hat.data_types.config.motor import (
     GPIODCMotorConfig,
     I2CDCMotorConfig,
@@ -13,6 +17,7 @@ from robot_hat.drivers.adc.INA219 import ADCResolution as INA219ADCResolution
 from robot_hat.drivers.adc.INA219 import Gain as INA219Gain
 from robot_hat.drivers.adc.INA219 import INA219Config
 from robot_hat.drivers.adc.INA219 import Mode as INA219Mode
+from robot_hat.drivers.adc.INA226 import INA226
 from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
 from robot_hat.drivers.pwm.pca9685 import PCA9685
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
@@ -64,6 +69,7 @@ from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
+from robot_hat.services.battery.ina226_battery import Battery as INA226Battery
 from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
 from robot_hat.services.motor_service import (
     MotorService,
@@ -145,6 +151,12 @@ __all__ = [
     "INA219Mode",
     "INA219ADCResolution",
     "INA219",
+    "INA226",
+    "INA226AvgMode",
+    "INA226ConversionTime",
+    "INA226Battery",
+    "INA226Config",
+    "INA226Mode",
     "I2CAddressNotFound",
     "PCA9685",
     "PWMFactory",
