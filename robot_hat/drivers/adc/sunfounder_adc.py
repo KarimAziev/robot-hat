@@ -59,7 +59,7 @@ class ADC(I2C):
     def __init__(
         self,
         channel: Union[str, int],
-        address: Union[int, List[int]] = ADC_DEFAULT_ADDRESSES,
+        address: Union[int, List[int]] = ADC_DEFAULT_ADDRESSES.copy(),
         *args,
         **kwargs,
     ) -> None:
