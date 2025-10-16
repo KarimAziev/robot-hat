@@ -61,7 +61,7 @@ class TestBatteryFactory(unittest.TestCase):
             pass
 
         with self.assertRaises(TypeError):
-            BatteryFactory.create_battery(CustomConfig())
+            BatteryFactory.create_battery(CustomConfig())  # type: ignore
 
 
 if __name__ == "__main__":
