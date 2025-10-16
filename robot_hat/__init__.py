@@ -1,8 +1,19 @@
 from robot_hat.data_types.bus import BusType
+from robot_hat.data_types.config.battery import (
+    BatteryConfigType,
+    INA219BatteryConfig,
+    INA226BatteryConfig,
+    INA260BatteryConfig,
+    SunfounderBatteryConfig,
+)
 from robot_hat.data_types.config.ina226 import AvgMode as INA226AvgMode
 from robot_hat.data_types.config.ina226 import ConversionTime as INA226ConversionTime
 from robot_hat.data_types.config.ina226 import INA226Config
 from robot_hat.data_types.config.ina226 import Mode as INA226Mode
+from robot_hat.data_types.config.ina260 import AveragingCount as INA260AveragingCount
+from robot_hat.data_types.config.ina260 import ConversionTime as INA260ConversionTime
+from robot_hat.data_types.config.ina260 import INA260Config
+from robot_hat.data_types.config.ina260 import Mode as INA260Mode
 from robot_hat.data_types.config.motor import (
     GPIODCMotorConfig,
     I2CDCMotorConfig,
@@ -18,6 +29,7 @@ from robot_hat.drivers.adc.INA219 import Gain as INA219Gain
 from robot_hat.drivers.adc.INA219 import INA219Config
 from robot_hat.drivers.adc.INA219 import Mode as INA219Mode
 from robot_hat.drivers.adc.INA226 import INA226
+from robot_hat.drivers.adc.INA260 import INA260
 from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
 from robot_hat.drivers.pwm.pca9685 import PCA9685
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
@@ -45,6 +57,7 @@ from robot_hat.exceptions import (
     UltrasonicEchoPinError,
     UnsupportedMotorConfigError,
 )
+from robot_hat.factories.battery_factory import BatteryFactory
 from robot_hat.factories.motor_factory import MotorFactory
 from robot_hat.factories.pwm_factory import PWMFactory, register_pwm_driver
 from robot_hat.filedb import FileDB
@@ -70,6 +83,7 @@ from robot_hat.sensors.imu.sh3001 import SH3001
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
 from robot_hat.services.battery.ina226_battery import Battery as INA226Battery
+from robot_hat.services.battery.ina260_battery import Battery as INA260Battery
 from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
 from robot_hat.services.motor_service import (
     MotorService,
@@ -127,6 +141,7 @@ __all__ = [
     "GrayscaleTypeError",
     "IMUInitializationError",
     "InvalidCalibrationModeError",
+    "BatteryFactory",
     "InvalidChannel",
     "InvalidChannelName",
     "InvalidChannelNumber",
@@ -155,8 +170,19 @@ __all__ = [
     "INA226AvgMode",
     "INA226ConversionTime",
     "INA226Battery",
+    "INA226BatteryConfig",
     "INA226Config",
     "INA226Mode",
+    "INA260",
+    "INA260AveragingCount",
+    "INA260Battery",
+    "INA260BatteryConfig",
+    "INA260Config",
+    "INA260ConversionTime",
+    "INA260Mode",
+    "INA219BatteryConfig",
+    "BatteryConfigType",
+    "SunfounderBatteryConfig",
     "I2CAddressNotFound",
     "PCA9685",
     "PWMFactory",

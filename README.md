@@ -915,6 +915,43 @@ print(f"Current: {current_ma:.3f} mA, Power: {power_mw:.3f} mW")
 battery.close()
 ```
 
+#### INA260
+
+The INA260 variant integrates a fixed 2 mΩ shunt, so calibration values are part of the config defaults. The battery helper (`robot_hat.services.battery.ina260_battery.Battery`) combines bus voltage with the shunt drop to give the pack voltage, just like the INA219/INA226 helpers.
+
+**Simple example**
+
+```python
+from robot_hat.services.battery.ina260_battery import Battery as INA260Battery
+from robot_hat.data_types.config.ina260 import (
+    AveragingCount,
+    ConversionTime,
+    INA260Config,
+    Mode,
+)
+
+config = INA260Config(
+    averaging_count=AveragingCount.COUNT_16,
+    voltage_conversion_time=ConversionTime.TIME_1_1_MS,
+    current_conversion_time=ConversionTime.TIME_1_1_MS,
+    mode=Mode.CONTINUOUS,
+)
+
+battery = INA260Battery(bus=1, address=0x40, config=config)
+
+bus_v = battery.get_bus_voltage_v()
+shunt_mv = battery.get_shunt_voltage_mv()
+battery_v = battery.get_battery_voltage()
+current_ma = battery.get_current_ma()
+power_mw = battery.get_power_mw()
+
+print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
+print(f"Battery: {battery_v:.2f} V, Current: {current_ma/1000:.3f} A")
+print(f"Power: {power_mw/1000:.3f} W")
+
+battery.close()
+```
+
 #### Sunfounder module
 
 ```python
@@ -925,6 +962,25 @@ battery = SunfounderBattery(channel="A4", address=[0x14, 0x15], bus=1)
 voltage = battery.get_battery_voltage()  # Read battery voltage
 print(f"Battery Voltage: {voltage} V")
 ```
+
+#### Battery Factory
+
+When you need to choose a battery helper dynamically, use the unified factory and
+config dataclasses. Each helper has a matching config in
+`robot_hat.data_types.config.battery`.
+
+```python
+from robot_hat import BatteryFactory, INA260BatteryConfig
+
+battery = BatteryFactory.create_battery(
+    INA260BatteryConfig(bus=1, address=0x40)
+)
+
+print(battery.get_battery_voltage())
+```
+
+The factory supports INA219, INA226, INA260, and the legacy Sunfounder helper via
+`SunfounderBatteryConfig`.
 
 ## Adding custom drivers
 
