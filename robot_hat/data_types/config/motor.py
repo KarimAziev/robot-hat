@@ -146,8 +146,8 @@ class PhaseMotorConfig(MotorBaseConfig):
         metadata={
             "title": "PWM (enable) pin",
             "description": (
-                "The GPIO pin that enables the motor. "
-                "Required for **some** motor controller boards."
+                "The GPIO pin that the enable (speed) "
+                "input of the motor driver chip is connected to."
             ),
             "examples": ["D4", "D5", "GPIO17", "BCM17", "BOARD11", "WPI0", 23, 24],
         },
