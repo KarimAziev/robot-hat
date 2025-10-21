@@ -6,6 +6,7 @@ from robot_hat.data_types.config.battery import (
     INA260BatteryConfig,
     SunfounderBatteryConfig,
 )
+from robot_hat.data_types.config.ina219 import BusVoltageRange as INA219BusVoltageRange
 from robot_hat.data_types.config.ina226 import AvgMode as INA226AvgMode
 from robot_hat.data_types.config.ina226 import ConversionTime as INA226ConversionTime
 from robot_hat.data_types.config.ina226 import INA226Config
@@ -181,6 +182,7 @@ __all__ = [
     "INA260ConversionTime",
     "INA260Mode",
     "INA219BatteryConfig",
+    "INA219BusVoltageRange",
     "BatteryConfigType",
     "SunfounderBatteryConfig",
     "I2CAddressNotFound",
