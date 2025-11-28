@@ -1,9 +1,14 @@
 # Changelog
 
-## v2.2.1 (2025-11-28)
+## v2.2.2 (2025-11-28)
 
 - Excluded test files from distribution.
 - `RPI.GPIO` installation is skipped on unsupported platforms, like MacOS.
+- Replace `black` and `isort` with `ruff` for linting and formatting.
+
+## v2.2.1 (2025-10-21)
+
+- Add `INA219BusVoltageRange` to top level exports.
 
 ## v2.2.0 (2025-10-16)
 
