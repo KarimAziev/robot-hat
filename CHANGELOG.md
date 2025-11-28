@@ -1,13 +1,20 @@
 # Changelog
 
+## v2.2.1 (2025-11-28)
+
+- Excluded test files from distribution.
+- `RPI.GPIO` installation is skipped on unsupported platforms, like MacOS.
+
 ## v2.2.0 (2025-10-16)
 
 ### Added
+
 - INA260 driver, configuration dataclass, and battery service, plus an updated example showing continuous readings.
 - Battery factory with config dataclasses covering INA219, INA226, INA260, and the legacy Sunfounder helper.
 - Unit tests for INA260 support and the new battery factory.
 
 ### Changed
+
 - README updated with INA260 information and battery factory usage.
 
 ## v2.1.0 (2025-10-09)

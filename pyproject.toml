@@ -2,6 +2,9 @@
 requires = ["setuptools", "setuptools_scm", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+exclude = ["tests*", "test*"]
+
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
 local_scheme = "dirty-tag"
@@ -20,7 +23,7 @@ dependencies = [
     "pygame",
     "smbus2",
     "gpiozero",
-    "RPi.GPIO",
+    "RPi.GPIO; sys_platform == 'linux' and (platform_machine == 'armv6l' or platform_machine == 'armv7l' or platform_machine == 'aarch64')",
     "tenacity",
 ]
 keywords = ["i2c", "raspberrypi"]
