@@ -13,6 +13,7 @@ communicate with one another using just two lines:
 - **Slave**: The device that responds to the master's request.
 - Each I2C device has a unique address that allows the master to communicate with specific devices.
 """
+
 import sys
 import errno
 import logging
@@ -152,7 +153,11 @@ class I2C:
             return addr
         except OSError as e:
             # Ignore devices that don't acknowledge (errno corresponds to "No such device or address")
-            if sys.platform != "win32" and sys.platform != "darwin" and e.errno != errno.EREMOTEIO:
+            if (
+                sys.platform != "win32"
+                and sys.platform != "darwin"
+                and e.errno != errno.EREMOTEIO
+            ):
                 _log.debug(f"OSError at I2C address 0x{addr:02x}: {e}")
         except Exception as e:
             _log.error("Unexpected error at I2C address 0x%02x: %s", addr, e)
@@ -358,7 +363,11 @@ class I2C:
                 _log.debug("Found I2C device at 0x%02x", address)
             except OSError as e:
                 # Ignore devices that don't acknowledge (errno corresponds to "No such device or address")
-                if sys.platform != "win32" and sys.platform != "darwin" and e.errno != errno.EREMOTEIO:
+                if (
+                    sys.platform != "win32"
+                    and sys.platform != "darwin"
+                    and e.errno != errno.EREMOTEIO
+                ):
                     _log.debug(f"OSError at I2C address 0x{address:02x}: {e}")
                 continue
             except Exception as e:
