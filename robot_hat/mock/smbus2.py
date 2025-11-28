@@ -5,6 +5,7 @@ from types import TracebackType
 from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Type, Union
 
 from robot_hat.interfaces.smbus_abc import SMBusABC
+import sys
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg
@@ -154,7 +155,12 @@ class MockSMBus(SMBusABC):
     ) -> None:
         logger.debug("write_byte: %s", value)
         if i2c_addr not in I2C_ALLOWED_ADDRESES:
-            raise OSError(errno.EREMOTEIO, "No such device or address")
+            raise OSError(
+                errno.EREMOTEIO
+                if sys.platform != "win32" and sys.platform != "darwin"
+                else errno.ENXIO,
+                "No such device or address",
+            )
         self._set_address(i2c_addr, force)
         return
 

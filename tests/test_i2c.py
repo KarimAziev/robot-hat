@@ -4,6 +4,7 @@ from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 from robot_hat import I2C, I2CAddressNotFound
+import sys
 
 
 class TestI2C(unittest.TestCase):
@@ -118,7 +119,13 @@ class TestI2C(unittest.TestCase):
             mock_bus,
             "write_byte",
             side_effect=lambda addr, _: (
-                None if addr in [0x10, 0x20] else OSError(errno.EREMOTEIO)
+                None
+                if addr in [0x10, 0x20]
+                else OSError(
+                    errno.EREMOTEIO
+                    if sys.platform != "win32" and sys.platform != "darwin"
+                    else errno.ENXIO
+                )
             ),
         ):
             i2c: I2C = I2C(address=0x10)
