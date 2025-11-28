@@ -139,9 +139,9 @@ class Grayscale:
         Raises:
             GrayscaleTypeError: If the reference values are not set.
         """
-        if self._reference == None:
+        if self._reference is None:
             raise GrayscaleTypeError("Reference value is not set")
-        if datas == None:
+        if datas is None:
             datas = self.read_all()
         return [0 if data > self._reference[i] else 1 for i, data in enumerate(datas)]
 
@@ -175,7 +175,7 @@ class Grayscale:
             A list of grayscale intensity values for the specified channel
             or all channels.
         """
-        if channel == None:
+        if channel is None:
             return self.read_all()
         else:
             return self.pins[channel].read()

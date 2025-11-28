@@ -93,7 +93,9 @@ class Servo(PWM, ServoABC):
         self.channel_description = (
             channel
             if isinstance(channel, str)
-            else f"P{channel}" if isinstance(channel, int) else "unknown"
+            else f"P{channel}"
+            if isinstance(channel, int)
+            else "unknown"
         )
 
         logger.debug(f"Initted {self.channel_description} at address {address}")

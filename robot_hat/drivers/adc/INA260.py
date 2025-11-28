@@ -146,7 +146,7 @@ if __name__ == "__main__":
         voltage_v = driver.get_bus_voltage_v()
         power_mw = driver.get_power_mw()
         print(
-            f"Current: {current_ma:.2f} mA | Voltage: {voltage_v:.3f} V | Power: {power_mw/1000.0:.3f} W"
+            f"Current: {current_ma:.2f} mA | Voltage: {voltage_v:.3f} V | Power: {power_mw / 1000.0:.3f} W"
         )
     finally:
         driver.close()

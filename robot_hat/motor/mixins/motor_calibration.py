@@ -13,7 +13,6 @@ class MotorCalibration:
         calibration_direction: MotorDirection = 1,
         calibration_speed_offset: float = 0,
     ) -> None:
-
         self.direction = calibration_direction
         self.calibration_direction = calibration_direction
         self.calibration_speed_offset = calibration_speed_offset

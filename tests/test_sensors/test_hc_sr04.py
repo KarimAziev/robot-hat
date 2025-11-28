@@ -8,7 +8,6 @@ from robot_hat.pin import Pin, PinModeType, PinPullType
 
 
 class FakeTime:
-
     def __init__(self, start: float = 0.0, small_step: float = 1e-6):
         self.current = float(start)
         self.small_step = float(small_step)

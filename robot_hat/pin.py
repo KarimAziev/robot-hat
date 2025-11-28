@@ -353,14 +353,17 @@ class Pin:
         if mode in [None, self.OUT, self.IN]:
             self._mode = mode
         else:
-            msg = f"Mode param error, should be None, Pin.OUT, Pin.IN"
+            msg = f"Mode param error, should be None, Pin.OUT {Pin.OUT}"
+            f" or Pin.IN {Pin.IN}"
             _log.error(msg)
             raise InvalidPinMode(msg)
 
         if pull in [self.PULL_NONE, self.PULL_DOWN, self.PULL_UP]:
             self._pull = pull
         else:
-            msg = f"Pull param error, should be None, Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
+            msg = "Pull param error, should be None, "
+            f"Pin.PULL_NONE ({Pin.PULL_NONE}), Pin.PULL_DOWN "
+            f"({Pin.PULL_DOWN}) or Pin.PULL_UP ({Pin.PULL_UP})"
             _log.error(msg)
             raise InvalidPinPull(msg)
 
@@ -426,7 +429,7 @@ class Pin:
         Raises:
             ValueError: If the mode is not valid or the pin is not properly initialized.
         """
-        if value == None:
+        if value is None:
             if self._mode in [None, self.OUT]:
                 self.setup(self.IN)
             result: Optional[int] = self.gpio.value if self.gpio else None
@@ -513,7 +516,10 @@ class Pin:
 
         if trigger not in [self.IRQ_FALLING, self.IRQ_RISING, self.IRQ_RISING_FALLING]:
             raise InvalidPinInterruptTrigger(
-                "Trigger param error, should be Pin.IRQ_FALLING, Pin.IRQ_RISING, Pin.IRQ_RISING_FALLING"
+                "Trigger param error, should be "
+                f"Pin.IRQ_FALLING ({Pin.IRQ_FALLING}), "
+                f"Pin.IRQ_RISING ({Pin.IRQ_RISING}) or "
+                f"Pin.IRQ_RISING_FALLING ({Pin.IRQ_RISING_FALLING}"
             )
 
         if pull in [self.PULL_NONE, self.PULL_DOWN, self.PULL_UP]:
@@ -524,14 +530,15 @@ class Pin:
                 _pull_up = False
         else:
             raise InvalidPinPull(
-                "Pull param error, should be Pin.PULL_NONE, Pin.PULL_DOWN, Pin.PULL_UP"
+                f"Pull param error, should be Pin.PULL_NONE ({Pin.PULL_NONE}), "
+                f"Pin.PULL_DOWN ({Pin.PULL_DOWN}) or Pin.PULL_UP ({Pin.PULL_UP})"
             )
 
         pressed_handler = None
         released_handler = None
 
         if not isinstance(self.gpio, Button):
-            if self.gpio != None:
+            if self.gpio is not None:
                 self.gpio.close()
             self.gpio = Button(
                 pin=self._pin_num,

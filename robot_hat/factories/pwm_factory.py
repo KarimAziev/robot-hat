@@ -64,7 +64,7 @@ class PWMFactory:
         Returns:
             An instance of a class implementing PWM driver.
         """
-        import robot_hat.drivers.pwm  # type: ignore
+        import robot_hat.drivers.pwm  # type: ignore  # noqa: F401
 
         driver_cls = PWM_DRIVER_REGISTRY[config.name]
 

@@ -163,7 +163,6 @@ def main() -> None:
     import time
 
     def parse_args() -> argparse.Namespace:
-
         parser = argparse.ArgumentParser(
             description="Demo: Sweep a servo using a PCA9685 driver."
         )
@@ -287,7 +286,6 @@ def main() -> None:
     )
 
     try:
-
         with PWMFactory.create_pwm_driver(pwm_config) as pwm_driver:
             pwm_driver.set_pwm_freq(args.freq)
 

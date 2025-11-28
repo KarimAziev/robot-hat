@@ -1154,7 +1154,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 4. **Install in Development Mode**:
    ```bash
-   pip install -e ".[dev]"  # Installs all dev dependencies (e.g., black, isort, pre-commit)
+   pip install -e ".[dev]"  # Installs all dev dependencies (e.g., ruff, pre-commit)
    ```
 
 ---
@@ -1198,4 +1198,4 @@ These can be installed locally for testing or uploaded to PyPI for distribution.
 ## Notes & Recommendations
 
 - The library uses `setuptools_scm` for versioning, which dynamically determines the version based on Git tags. Use proper semantic versioning (e.g., `v1.0.0`) in your repository for best results.
-- Development tools like `black` (code formatter) and `isort` (import sorter) are automatically installed with `[dev]` dependencies.
+- Development tools like `ruff` (formatter, import organizer, and linter) are automatically installed with `[dev]` dependencies.

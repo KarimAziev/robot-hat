@@ -9,7 +9,6 @@ from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 
 class TestPCA9685(unittest.TestCase):
     def _patch_pwm_driver_init(self, mock_bus):
-
         def fake_init(self, *args, **kwargs):
             if "bus" in kwargs:
                 bus = kwargs["bus"]

@@ -55,8 +55,8 @@ class FileDB(object):
         if file_path.exists():
             if file_path.is_dir():
                 raise IsADirectoryError(
-                    f"Could not create file %s, there is a folder with the same name",
-                    file,
+                    f"Could not create file {file}, there is a folder "
+                    "with the same name"
                 )
         else:
             try:

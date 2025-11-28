@@ -260,7 +260,7 @@ if __name__ == "__main__":
             _log.info(f"PSU Voltage:   {(bus_voltage + shunt_voltage):6.3f} V")
             _log.info(f"Shunt Voltage: {shunt_voltage:9.6f} V")
             _log.info(f"Load Voltage:  {bus_voltage:6.3f} V")
-            _log.info(f"Current:       {current/1000.0:9.6f} A")  # convert mA to A
+            _log.info(f"Current:       {current / 1000.0:9.6f} A")  # convert mA to A
             _log.info(f"Power:         {power:6.3f} W")
 
             _log.info(f"Percent:       {percent:3.1f}%")

@@ -199,7 +199,6 @@ if __name__ == "__main__":
     # Example usage: sweep servo on channel 0
 
     try:
-
         with PCA9685(address=0x40, bus=1) as pwm:
             pwm.set_pwm_freq(50)
             while True:

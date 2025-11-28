@@ -12,7 +12,6 @@ class TestMotorController(unittest.TestCase):
         self.controller = MotorService(self.left_motor, self.right_motor)
 
     def test_stop_all(self):
-
         self.controller.stop_all()
 
         self.assertEqual(self.left_motor.stop.call_count, 2)
@@ -37,7 +36,6 @@ class TestMotorController(unittest.TestCase):
         self.assertEqual(result, -3)
 
     def test_update_left_motor_calibration_direction(self):
-
         self.left_motor.update_calibration_direction.return_value = 1
 
         result = self.controller.update_left_motor_calibration_direction(
@@ -49,7 +47,6 @@ class TestMotorController(unittest.TestCase):
         self.assertEqual(result, 1)
 
     def test_update_right_motor_calibration_direction(self):
-
         self.right_motor.update_calibration_direction.return_value = -1
         result = self.controller.update_right_motor_calibration_direction(
             -1, persist=True
@@ -99,7 +96,6 @@ class TestMotorController(unittest.TestCase):
         self.assertEqual(self.controller.speed, 50)
 
     def test_reset_calibration(self):
-
         self.controller.reset_calibration()
 
         self.left_motor.reset_calibration_direction.assert_called_once()

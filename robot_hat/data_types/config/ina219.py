@@ -163,7 +163,7 @@ class INA219Config:
         if v_shunt_max_v > v_shunt_full_scale_v + 1e-12:
             max_allowed_current_a = v_shunt_full_scale_v / shunt_res_ohms
             raise ValueError(
-                f"Expected shunt drop {v_shunt_max_v*1000:.1f} mV exceeds 320 mV limit. "
+                f"Expected shunt drop {v_shunt_max_v * 1000:.1f} mV exceeds 320 mV limit. "
                 f"Lower I_max to <= {max_allowed_current_a:.3f} A or reduce R_shunt."
             )
 

@@ -161,9 +161,9 @@ class EventEmitter:
                 return
 
             self.events[event_name] = [
-                l
-                for l in self.events[event_name]
-                if EventEmitter.resolve_listener(l) != listener
+                listener_ref
+                for listener_ref in self.events[event_name]
+                if EventEmitter.resolve_listener(listener_ref) != listener
             ]
             if not self.events[event_name]:
                 del self.events[event_name]
