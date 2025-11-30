@@ -77,6 +77,17 @@ class ADC(I2C):
         else:
             logger.error("ADC device address not found")
 
+        normalized_channel = self._normalize_channel(channel)
+        channel_reg = self._channel_to_register(normalized_channel)
+
+        # Preserve the legacy public attribute while tracking helpers internally.
+        self._channel_index = normalized_channel
+        self._channel_reg = channel_reg
+        self.channel = channel_reg
+
+    @staticmethod
+    def _normalize_channel(channel: Union[str, int]) -> int:
+        """Convert channel identifiers (e.g. "A4") to an integer index."""
         if (
             channel not in ADC_ALLOWED_CHANNELS_PIN_NAMES
             and channel not in ADC_ALLOWED_CHANNELS
@@ -86,11 +97,27 @@ class ADC(I2C):
             )
 
         if isinstance(channel, str):
-            channel = int(channel[1:])
+            return int(channel[1:])
+        return int(channel)
 
-        channel = ADC_MAX_CHAN_VAL - channel
-        # Convert to Register value
-        self.channel = channel | 0x10
+    @staticmethod
+    def _channel_to_register(channel_index: int) -> int:
+        """Translate a channel index into the device register value."""
+        return (ADC_MAX_CHAN_VAL - channel_index) | 0x10
+
+    def _read_raw_value_for_reg(self, channel_reg: int) -> int:
+        """Read a raw ADC value for the provided register selector."""
+        self.write([channel_reg, 0, 0])
+
+        msb, lsb = self.read(2)  # read two bytes
+
+        logger.debug(
+            "ADC Most Significant Byte: '%s', Least Significant Byte: '%s'", msb, lsb
+        )
+
+        value = (msb << 8) + lsb
+        logger.debug("ADC combined value: '%s'", value)
+        return value
 
     def read_raw_value(self) -> int:
         """
@@ -99,18 +126,13 @@ class ADC(I2C):
         Returns:
             int: ADC value (0-4095).
         """
-        self.write([self.channel, 0, 0])
+        return self._read_raw_value_for_reg(self._channel_reg)
 
-        msb, lsb = self.read(2)  # read two bytes
-
-        logger.debug(
-            "ADC Most Significant Byte: '%s', Least Significant Byte: '%s'", msb, lsb
-        )
-
-        # Combine MSB (Most Significant Byte) and LSB (Least Significant Byte)
-        value = (msb << 8) + lsb
-        logger.debug("ADC combined value: '%s'", value)
-        return value
+    def read_raw_value_channel(self, channel: Union[str, int]) -> int:
+        """Read the raw ADC value from a different channel without re-instantiating."""
+        channel_index = self._normalize_channel(channel)
+        channel_reg = self._channel_to_register(channel_index)
+        return self._read_raw_value_for_reg(channel_reg)
 
     def read_voltage(self) -> float:
         """
@@ -119,9 +141,14 @@ class ADC(I2C):
         Returns:
             float: Voltage value (0-3.3 V).
         """
-        # Read ADC value
         value = self.read_raw_value()
-
         voltage = value * 3.3 / 4095
         logger.debug(f"ADC raw voltage: {voltage}")
+        return voltage
+
+    def read_voltage_channel(self, channel: Union[str, int]) -> float:
+        """Read and convert the voltage for a specific channel."""
+        value = self.read_raw_value_channel(channel)
+        voltage = value * 3.3 / 4095
+        logger.debug("ADC raw voltage on channel %s: %s", channel, voltage)
         return voltage

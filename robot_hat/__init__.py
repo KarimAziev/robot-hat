@@ -1,3 +1,4 @@
+from robot_hat.data_types import BatteryMetrics
 from robot_hat.data_types.bus import BusType
 from robot_hat.data_types.config.battery import (
     BatteryConfigType,
@@ -185,6 +186,7 @@ __all__ = [
     "INA219BusVoltageRange",
     "BatteryConfigType",
     "SunfounderBatteryConfig",
+    "BatteryMetrics",
     "I2CAddressNotFound",
     "PCA9685",
     "PWMFactory",

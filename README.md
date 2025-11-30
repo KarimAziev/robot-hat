@@ -907,12 +907,19 @@ battery = INA226Battery(bus=1, address=0x40, config=cfg)
 bus_v = battery.get_bus_voltage_v()      # bus voltage in volts (V)
 shunt_mv = battery.get_shunt_voltage_mv()# shunt voltage in millivolts (mV)
 battery_v = battery.get_battery_voltage()# bus + shunt in volts (V)
+pack_current_a = battery.get_battery_current()  # convenience helper in amps (A)
 current_ma = battery.get_current_ma()    # current in milliamps (mA)
 power_mw = battery.get_power_mw()        # power in milliwatts (mW)
 
 print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
 print(f"Battery (bus + shunt): {battery_v:.3f} V")
+print(f"Pack current: {pack_current_a:.2f} A")
 print(f"Current: {current_ma:.3f} mA, Power: {power_mw:.3f} mW")
+
+metrics = battery.get_battery_metrics()
+print(
+    f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A"
+)
 
 battery.close()
 ```
@@ -944,12 +951,19 @@ battery = INA260Battery(bus=1, address=0x40, config=config)
 bus_v = battery.get_bus_voltage_v()
 shunt_mv = battery.get_shunt_voltage_mv()
 battery_v = battery.get_battery_voltage()
+pack_current_a = battery.get_battery_current()
 current_ma = battery.get_current_ma()
 power_mw = battery.get_power_mw()
 
 print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
 print(f"Battery: {battery_v:.2f} V, Current: {current_ma/1000:.3f} A")
+print(f"Pack current via helper: {pack_current_a:.2f} A")
 print(f"Power: {power_mw/1000:.3f} W")
+
+metrics = battery.get_battery_metrics()
+print(
+    f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A"
+)
 
 battery.close()
 ```
@@ -959,10 +973,27 @@ battery.close()
 ```python
 from robot_hat import SunfounderBattery
 
-battery = SunfounderBattery(channel="A4", address=[0x14, 0x15], bus=1)
+battery = SunfounderBattery(
+    channel="A4",
+    address=[0x14, 0x15],
+    bus=1,
+    # Optional: add a second ADC channel wired across a shunt to read current.
+    current_channel="A3",
+    sense_resistance_ohms=0.01,
+)
 
-voltage = battery.get_battery_voltage()  # Read battery voltage
+voltage = battery.get_battery_voltage()
 print(f"Battery Voltage: {voltage} V")
+
+current = battery.get_battery_current()
+print(f"Battery Current: {current} A")
+
+metrics = battery.get_battery_metrics()
+print(f"Combined metrics helper: {metrics.voltage} V / {metrics.current} A")
+
+If you omit `current_channel` and `sense_resistance_ohms`,
+`get_battery_current()` raises `NotImplementedError` to signal that the
+legacy Sunfounder hardware only exposes voltage out of the box.
 ```
 
 #### Battery Factory

@@ -92,6 +92,29 @@ def ina219_bus_voltage_conversion(bus_voltage: float) -> int:
     return int(bus_voltage / 0.004) << 3
 
 
+def ina219_shunt_voltage_conversion(shunt_voltage: float) -> int:
+    """Convert a shunt voltage (volts) into the INA219 shunt register value."""
+
+    return int(shunt_voltage / 0.00001)
+
+
+def ina219_current_conversion(current_a: float, current_lsb_ma: float = 0.1) -> int:
+    """Convert a current (amps) into the INA219 current register value."""
+
+    current_ma = current_a * 1000.0
+    if current_lsb_ma <= 0:
+        current_lsb_ma = 0.1
+    return int(current_ma / current_lsb_ma)
+
+
+def ina219_power_conversion(power_w: float, power_lsb_w: float = 0.002) -> int:
+    """Convert a power reading (watts) into the INA219 power register value."""
+
+    if power_lsb_w <= 0:
+        power_lsb_w = 0.002
+    return int(power_w / power_lsb_w)
+
+
 class MockSMBus(SMBusABC):
     def __init__(self, bus: Union[None, int, str], force: bool = False) -> None:
         self.bus = bus
@@ -102,6 +125,7 @@ class MockSMBus(SMBusABC):
         self._force_last = None
 
         self._discharge_sequences = {}
+        self._discharge_profile = None
 
         self._command_responses = {
             "byte": 0x10,
@@ -239,6 +263,98 @@ class MockSMBus(SMBusABC):
         self._set_address(i2c_addr, force)
         return
 
+    def _load_discharge_profile(self) -> dict:
+        if self._discharge_profile is None:
+            amount_env = os.getenv("ROBOT_HAT_DISCHARGE_POINTS")
+            rate_env = os.getenv("ROBOT_HAT_DISCHARGE_RATE")
+
+            amount = int(amount_env) if amount_env is not None else None
+            if amount is not None and amount < 2:
+                amount = 2
+
+            rate = int(rate_env) if rate_env is not None else None
+            if amount is None and rate is None:
+                rate = 10
+
+            start_voltage = float(os.getenv("ROBOT_HAT_START_VOLTAGE_MOCK", "12.6"))
+            end_voltage = float(os.getenv("ROBOT_HAT_END_VOLTAGE_MOCK", "8.0"))
+            start_current = float(os.getenv("ROBOT_HAT_START_CURRENT_MOCK", "5.0"))
+            end_current = float(os.getenv("ROBOT_HAT_END_CURRENT_MOCK", "0.5"))
+            shunt_resistance = float(
+                os.getenv("ROBOT_HAT_SHUNT_RESISTANCE_MOCK", "0.01")
+            )
+            current_lsb_ma = float(os.getenv("ROBOT_HAT_CURRENT_LSB_MOCK_MA", "0.1"))
+            power_lsb_w = float(os.getenv("ROBOT_HAT_POWER_LSB_MOCK_W", "0.002"))
+
+            if start_voltage < end_voltage:
+                start_voltage, end_voltage = end_voltage, start_voltage
+            if start_current < end_current:
+                start_current, end_current = end_current, start_current
+
+            self._discharge_profile = {
+                "amount": amount,
+                "rate": rate,
+                "start_voltage": start_voltage,
+                "end_voltage": end_voltage,
+                "start_current": start_current,
+                "end_current": end_current,
+                "shunt_resistance": shunt_resistance,
+                "current_lsb_ma": current_lsb_ma,
+                "power_lsb_w": power_lsb_w,
+            }
+
+        return self._discharge_profile
+
+    def _ensure_discharge_sequence(self, register: int) -> List[int]:
+        profile = self._load_discharge_profile()
+
+        sequence = self._discharge_sequences.get(register)
+        if sequence:
+            return sequence
+
+        generator_kwargs = {}
+        if profile["amount"] is not None:
+            generator_kwargs["amount"] = profile["amount"]
+        else:
+            generator_kwargs["rate"] = profile["rate"]
+
+        if register == 1:
+            start = profile["start_current"] * profile["shunt_resistance"]
+            end = profile["end_current"] * profile["shunt_resistance"]
+            conversion_fn = ina219_shunt_voltage_conversion
+        elif register == 2:
+            start = profile["start_voltage"]
+            end = profile["end_voltage"]
+            conversion_fn = ina219_bus_voltage_conversion
+        elif register == 3:
+            start = profile["start_voltage"] * profile["start_current"]
+            end = profile["end_voltage"] * profile["end_current"]
+            conversion_fn = lambda power: ina219_power_conversion(
+                power, profile["power_lsb_w"]
+            )
+        elif register == 4:
+            start = profile["start_current"]
+            end = profile["end_current"]
+            conversion_fn = lambda current: ina219_current_conversion(
+                current, profile["current_lsb_ma"]
+            )
+        else:
+            start = profile["start_voltage"]
+            end = profile["end_voltage"]
+            conversion_fn = ina219_bus_voltage_conversion
+
+        if start < end:
+            start, end = end, start
+
+        sequence = generate_discharge_sequence(
+            start,
+            end,
+            conversion_fn=conversion_fn,
+            **generator_kwargs,
+        )
+        self._discharge_sequences[register] = sequence
+        return sequence
+
     def read_i2c_block_data(
         self, i2c_addr: int, register: int, length: int, force: Optional[bool] = None
     ) -> List[int]:
@@ -246,28 +362,10 @@ class MockSMBus(SMBusABC):
         self._set_address(i2c_addr, force)
 
         if register in (1, 2, 3, 4):
-            if register not in self._discharge_sequences:
-                DISCHARGE_RATE = os.getenv("ROBOT_HAT_DISCHARGE_RATE")
-                START_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_START_VOLTAGE_MOCK")
-                END_VOLTAGE_MOCK = os.getenv("ROBOT_HAT_END_VOLTAGE_MOCK")
-                rate = int(DISCHARGE_RATE) if DISCHARGE_RATE is not None else 10
-                start_voltage = (
-                    float(START_VOLTAGE_MOCK)
-                    if START_VOLTAGE_MOCK is not None
-                    else 12.6
-                )
-                end_voltage = (
-                    float(END_VOLTAGE_MOCK) if END_VOLTAGE_MOCK is not None else 8.0
-                )
-                self._discharge_sequences[register] = generate_discharge_sequence(
-                    start_voltage=start_voltage,
-                    end_voltage=end_voltage,
-                    rate=rate,
-                    conversion_fn=ina219_bus_voltage_conversion,
-                )
-            sequence = self._discharge_sequences[register]
+            sequence = self._ensure_discharge_sequence(register)
             if len(sequence) < length:
                 data = sequence if sequence else [0] * length
+                self._discharge_sequences[register] = []
             else:
                 data = sequence[:length]
                 self._discharge_sequences[register] = sequence[length:]

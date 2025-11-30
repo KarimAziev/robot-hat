@@ -76,6 +76,8 @@ class BatteryFactory:
             return SunfounderBattery(
                 channel=config.channel,
                 address=config.address,
+                current_channel=config.current_channel,
+                sense_resistance_ohms=config.sense_resistance_ohms,
                 **kwargs,
             )
 

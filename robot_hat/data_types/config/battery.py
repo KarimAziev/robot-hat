@@ -45,6 +45,8 @@ class SunfounderBatteryConfig:
     address: Union[int, List[int]] = field(
         default_factory=lambda: ADC_DEFAULT_ADDRESSES.copy()
     )
+    current_channel: Optional[Union[str, int]] = None
+    sense_resistance_ohms: Optional[float] = None
 
 
 BatteryConfigType = Union[

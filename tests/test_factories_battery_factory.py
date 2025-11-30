@@ -54,7 +54,31 @@ class TestBatteryFactory(unittest.TestCase):
 
         BatteryFactory.create_battery(config)
 
-        mock_battery.assert_called_once_with(channel="A2", address=[0x14])
+        mock_battery.assert_called_once_with(
+            channel="A2",
+            address=[0x14],
+            current_channel=None,
+            sense_resistance_ohms=None,
+        )
+
+    @patch("robot_hat.factories.battery_factory.SunfounderBattery")
+    def test_create_sunfounder_battery_with_current_measurement(self, mock_battery):
+        config = SunfounderBatteryConfig(
+            channel="A2",
+            address=[0x14],
+            current_channel="A1",
+            sense_resistance_ohms=0.01,
+        )
+
+        BatteryFactory.create_battery(config, extra_flag=True)
+
+        mock_battery.assert_called_once_with(
+            channel="A2",
+            address=[0x14],
+            current_channel="A1",
+            sense_resistance_ohms=0.01,
+            extra_flag=True,
+        )
 
     def test_unsupported_config_type_raises(self):
         class CustomConfig:

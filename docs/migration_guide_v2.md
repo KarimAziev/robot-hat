@@ -459,8 +459,28 @@ Two batteries are available:
 ```python
 from robot_hat.services.battery.sunfounder_battery import Battery as SunfounderBattery
 
-battery = SunfounderBattery(channel="A4")
+battery = SunfounderBattery(
+    channel="A4",
+    current_channel="A3",
+    sense_resistance_ohms=0.01,
+)
 print(battery.get_battery_voltage())
+print(battery.get_battery_current())
+
+metrics = battery.get_battery_metrics()
+print(metrics)
+
+# Omit the optional arguments above if you only need voltage; in that case
+# `get_battery_current()` will raise `NotImplementedError` to match the
+# legacy hardware capabilities.
+
+If you keep the legacy wiring (voltage divider only) simply leave out
+`current_channel` and `sense_resistance_ohms`. The helper will continue to
+return scaled voltage, and `get_battery_current()` will raise
+`NotImplementedError` to remind you that no current sense path is available.
+
+New in this release: the `get_battery_metrics()` convenience method returns a
+`BatteryMetrics` dataclass bundling both voltage and current readings.
 ```
 
 Or top-level alias:

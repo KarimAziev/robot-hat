@@ -1,5 +1,6 @@
 from typing import Optional
 
+from robot_hat.data_types import BatteryMetrics
 from robot_hat.data_types.bus import BusType
 from robot_hat.drivers.adc.INA226 import INA226, INA226Config
 from robot_hat.interfaces.battery_abc import BatteryABC
@@ -36,6 +37,18 @@ class Battery(INA226, BatteryABC):
         measured_voltage = bus_voltage + shunt_voltage_v
         return round(measured_voltage, 2)
 
+    def get_battery_current(self) -> float:
+        """Get the battery current in amps."""
+        current_ma = self.get_current_ma()
+        return round(current_ma / 1000.0, 2)
+
     def close(self) -> None:
         """Close underlying resources (SMBus) if owned."""
         super().close()
+
+    def get_battery_metrics(self) -> BatteryMetrics:
+        """Return both voltage and current readings."""
+        return BatteryMetrics(
+            voltage=self.get_battery_voltage(),
+            current=self.get_battery_current(),
+        )
