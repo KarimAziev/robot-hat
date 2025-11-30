@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.3.0 (2025-11-30)
+
+### Added
+
+- `BatteryABC.get_battery_current()` convenience method with implementations for INA219/INA226/INA260 helpers.
+- Optional current-sensing support for the Sunfounder battery helper via configurable shunt channel/resistance.
+- `BatteryABC.get_battery_metrics()` returning a `BatteryMetrics` dataclass that bundles voltage and current readings.
+
+### Changed
+
+- Sunfounder ADC driver now exposes channel helpers so services can read multiple channels without re-instantiation.
+
 ## v2.2.2 (2025-11-28)
 
 - Excluded test files from distribution.
