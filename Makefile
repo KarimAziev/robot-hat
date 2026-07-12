@@ -1,18 +1,24 @@
-.PHONY: test pyright-check ruff-format-check ruff-lint all
+.PHONY: test test-verbose pyright-check ruff-format-check ruff-lint all
 
 PYTHON ?= python
 VENV_ACTIVATE ?= .venv/bin/activate
+RUN_IN_VENV = if [ -f "$(VENV_ACTIVATE)" ]; then . "$(VENV_ACTIVATE)"; fi;
+
+UNITTEST_FLAGS ?=
 
 ruff-lint:
-	if [ -f "$(VENV_ACTIVATE)" ]; then . "$(VENV_ACTIVATE)"; fi; ruff check .
+	$(RUN_IN_VENV) ruff check .
 
 ruff-format-check:
-	if [ -f "$(VENV_ACTIVATE)" ]; then . "$(VENV_ACTIVATE)"; fi; ruff format --check .
+	$(RUN_IN_VENV) ruff format --check .
 
 test:
-	if [ -f "$(VENV_ACTIVATE)" ]; then . "$(VENV_ACTIVATE)"; fi; $(PYTHON) -m unittest discover
+	$(RUN_IN_VENV) $(PYTHON) -m unittest discover $(UNITTEST_FLAGS)
+
+test-verbose:
+	$(MAKE) test UNITTEST_FLAGS=-v
 
 pyright-check:
-	if [ -f "$(VENV_ACTIVATE)" ]; then . "$(VENV_ACTIVATE)"; fi; pyright ./tests ./robot_hat
+	$(RUN_IN_VENV) pyright ./tests ./robot_hat
 
 all: test pyright-check ruff-format-check ruff-lint
