@@ -93,6 +93,7 @@ from robot_hat.services.motor_service import (
     MotorZeroDirection,
 )
 from robot_hat.services.servo_service import ServoCalibrationMode, ServoService
+from robot_hat.services.single_motor_service import SingleMotorService
 from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
 from robot_hat.servos.servo import Servo
 from robot_hat.sunfounder.grayscale import Grayscale as SunfounderGrayscale
@@ -119,6 +120,7 @@ __all__ = [
     "I2CDCMotor",
     "MotorFactory",
     "MotorService",
+    "SingleMotorService",
     "Servo",
     "GPIOAngularServo",
     "ServoCalibrationMode",

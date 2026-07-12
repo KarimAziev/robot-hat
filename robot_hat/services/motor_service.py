@@ -1,18 +1,14 @@
-import logging
-import time
-from typing import Literal, Union
+from typing import Optional, Sequence
 
 from robot_hat.data_types.config.motor import MotorDirection
+from robot_hat.data_types.motor import MotorServiceDirection, MotorZeroDirection
 from robot_hat.interfaces.motor_abc import MotorABC
+from robot_hat.services.base_motor_service import BaseMotorService
 
-_log = logging.getLogger(__name__)
-
-MotorZeroDirection = Literal[0]
-
-MotorServiceDirection = Union[MotorDirection, MotorZeroDirection]
+__all__ = ["MotorService", "MotorServiceDirection", "MotorZeroDirection"]
 
 
-class MotorService:
+class MotorService(BaseMotorService):
     """
     The service for managing a pair of motors (left and right).
 
@@ -132,51 +128,18 @@ class MotorService:
         """
         Initialize the MotorService.
         """
-        self.left_motor = left_motor
-        self.right_motor = right_motor
-        self.direction: MotorServiceDirection = 0
+        super().__init__()
+        self.left_motor: Optional[MotorABC] = left_motor
+        self.right_motor: Optional[MotorABC] = right_motor
 
-    def stop_all(self) -> None:
+    @property
+    def motors(self) -> Sequence[MotorABC]:
         """
-        Stop both motors safely with a double-pulse mechanism.
-
-        The motor speed control is set to 0% pulse width twice for each motor, with a small delay (2 ms) between the
-        two executions. This ensures that even if a brief command or glitch occurs, the motors will come to a complete stop.
-
-        Usage:
-            >>> controller.stop_all()
+        Return the currently managed left and right motors.
         """
-        _log.debug("Stopping motors")
-        self._stop_all()
-        time.sleep(0.002)
-        self._stop_all()
-        time.sleep(0.002)
-        _log.debug("Motors Stopped")
-
-    def move(self, speed: float, direction: MotorServiceDirection) -> None:
-        """
-        Move the robot forward or backward.
-
-        Args:
-        - speed: The base speed (-100 to 100).
-        - direction: 1 for forward, -1 for backward, 0 for stopping.
-        """
-        if direction == 0 and abs(speed) > 0:
-            _log.warning(
-                "Non-zero speed provided with direction 0; motors will be stopped."
-            )
-        assert self.left_motor, "Left motor is None"
-        assert self.right_motor, "Right motor is None"
-
-        if direction == 0:
-            self.stop_all()
-        else:
-            speed1 = speed * direction
-            speed2 = -speed * direction
-
-            self.left_motor.set_speed(speed1)
-            self.right_motor.set_speed(speed2)
-            self.direction = direction
+        return tuple(
+            motor for motor in (self.left_motor, self.right_motor) if motor is not None
+        )
 
     @property
     def speed(self) -> float:
@@ -268,43 +231,20 @@ class MotorService:
         assert self.left_motor, "Left motor is None"
         return self.left_motor.update_calibration_direction(value, persist)
 
-    def reset_calibration(self) -> None:
+    def _set_motion(self, speed: float, direction: MotorServiceDirection) -> None:
         """
-        Resets the calibration for both the left and right motors, including speed and direction calibration.
+        Apply the movement command to the left and right motors.
         """
-        for motor in [self.left_motor, self.right_motor]:
-            if motor:
-                motor.reset_calibration_direction()
-                motor.reset_calibration_speed()
+        assert self.left_motor, "Left motor is None"
+        assert self.right_motor, "Right motor is None"
 
-    def _stop_all(self) -> None:
-        """
-        Internal method to stop all motors.
+        speed1 = speed * direction
+        speed2 = -speed * direction
 
-        Stops both the left and right motors instantly without additional delays.
-        """
-        if self.left_motor:
-            self.left_motor.stop()
-        if self.right_motor:
-            self.right_motor.stop()
-        self.direction = 0
+        self.left_motor.set_speed(speed1)
+        self.right_motor.set_speed(speed2)
 
-    def __del__(self) -> None:
-        """
-        Destructor method.
-        """
-        self.close()
-
-    def close(self) -> None:
-        """
-        Clean up any resources.
-        """
-        for motor in [self.left_motor, self.right_motor]:
-            if motor:
-                try:
-                    motor.close()
-                except Exception as e:
-                    _log.error("Error closing motor: %s", e)
+    def _clear_motors(self) -> None:
         self.right_motor = None
         self.left_motor = None
 

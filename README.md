@@ -29,6 +29,7 @@ Unlike the aforementioned libraries:
 >   - [Usage examples](#usage-examples)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
+>     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
 >     - [I2C-driven DC motors](#i2c-driven-dc-motors)
 >     - [Controlling a servo motor with ServoCalibrationMode](#controlling-a-servo-motor-with-servocalibrationmode)
 >     - [Shared I2C bus instance](#shared-i2c-bus-instance)
@@ -103,6 +104,8 @@ right_motor = MotorFactory.create_motor(
     )
 )
 
+motor_service = MotorService(left_motor=left_motor, right_motor=right_motor)
+
 speed = 40
 motor_service.move(speed, 1)
 # increase speed
@@ -114,6 +117,39 @@ motor_service.move(speed, -1)
 # stop
 motor_service.stop_all()
 
+```
+
+### Single GPIO-driven DC motor
+
+Use `SingleMotorService` when you need the same `move(speed, direction)`, `stop_all()`, calibration, and cleanup API for one motor instead of a left/right pair.
+
+```python
+from robot_hat import GPIODCMotorConfig, MotorFactory, SingleMotorService, setup_env_vars
+
+setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
+
+motor = MotorFactory.create_motor(
+    config=GPIODCMotorConfig(
+        calibration_direction=1,
+        name="lift_motor",
+        max_speed=100,
+        forward_pin=6,
+        backward_pin=13,
+        enable_pin=12,
+        pwm=True,
+    )
+)
+
+motor_service = SingleMotorService(motor=motor)
+
+# move forward
+motor_service.move(40, 1)
+
+# move backward
+motor_service.move(40, -1)
+
+# stop
+motor_service.stop_all()
 ```
 
 ### I2C-driven DC motors
