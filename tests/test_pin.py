@@ -63,10 +63,12 @@ class TestPin(unittest.TestCase):
             Pin("D99", pin_dict=self.pin_mapping)
         mock_logger.error.assert_called_once()
 
-    def test_pin_invalid_number(self):
+    @patch("robot_hat.pin._log")
+    def test_pin_invalid_number(self, mock_logger: MagicMock):
         """Test initializing a Pin object with an invalid number."""
         with self.assertRaises(InvalidPinNumber):
             Pin(99, pin_dict=self.pin_mapping)
+        mock_logger.error.assert_called_once()
 
     @patch("robot_hat.pin._log")
     def test_pin_invalid_type(self, mock_logger: MagicMock):

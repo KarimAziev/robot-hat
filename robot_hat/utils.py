@@ -6,7 +6,7 @@ from typing import Callable, Optional, TypeVar
 
 T = TypeVar("T", int, float)
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 def compose(*functions: Callable) -> Callable:
@@ -53,6 +53,50 @@ def compose(*functions: Callable) -> Callable:
     )
 
 
+@lru_cache()
+def get_device_model() -> str | None:
+    """
+    Read the device model string from the system device tree.
+
+    This function attempts to read `/proc/device-tree/model` and returns
+    the decoded model string in lowercase.
+
+    If the file cannot be read, decoded, or does not exist, `None` is returned.
+    """
+    model_path = "/proc/device-tree/model"
+
+    try:
+        with open(model_path, "rb") as f:
+            return f.read().decode("utf-8").strip("\x00").lower()
+    except FileNotFoundError:
+        _log.debug("%s not found, assuming this is not a Raspberry Pi", model_path)
+        return None
+    except PermissionError:
+        _log.debug(
+            "Permission denied reading %s, assuming this is not a Raspberry Pi",
+            model_path,
+        )
+        return None
+    except UnicodeDecodeError as e:
+        _log.debug(
+            "Could not decode %s (%s); assuming this is not a Raspberry Pi",
+            model_path,
+            e,
+        )
+        return None
+    except OSError as e:
+        _log.debug(
+            "Failed to read %s (%s), assuming this is not a Raspberry Pi", model_path, e
+        )
+        return None
+    except Exception:
+        _log.exception(
+            "Unexpected error while reading %s, assuming this is not a Raspberry Pi",
+            model_path,
+        )
+        return None
+
+
 def is_raspberry_pi() -> bool:
     """
     Check if the current operating system is running on a Raspberry Pi.
@@ -60,30 +104,24 @@ def is_raspberry_pi() -> bool:
     Returns:
         bool: True if the OS is running on a Raspberry Pi, False otherwise.
     """
-    try:
-        with open("/proc/device-tree/model", "r") as file:
-            model_info = file.read().lower()
-        return "raspberry pi" in model_info
-    except FileNotFoundError:
-        return False
+    model_info = get_device_model()
+    return model_info is not None and "raspberry pi" in model_info
 
 
 def mapping(x: T, in_min: T, in_max: T, out_min: T, out_max: T) -> T:
     """
-    Map value from one range to another range
+    Map a value from one range to another.
 
-    :param x: value to map
-    :type x: float/int
-    :param in_min: input minimum
-    :type in_min: float/int
-    :param in_max: input maximum
-    :type in_max: float/int
-    :param out_min: output minimum
-    :type out_min: float/int
-    :param out_max: output maximum
-    :type out_max: float/int
-    :return: mapped value
-    :rtype: float/int
+    Args:
+        x: The value to map.
+        in_min: The lower bound of the input range.
+        in_max: The upper bound of the input range.
+        out_min: The lower bound of the output range.
+        out_max: The upper bound of the output range.
+
+    Returns:
+        The mapped value in the output range. If ``x`` is an integer,
+        the result is returned as an integer; otherwise, a float is returned.
     """
     result = (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
     if isinstance(x, int):
@@ -105,7 +143,6 @@ def parse_int_suffix(s: str) -> Optional[int]:
     return None
 
 
-@lru_cache()
 def get_gpio_factory_name() -> str:
     """
     Determines the appropriate GPIO factory name based on the Raspberry Pi model.
@@ -118,20 +155,17 @@ def get_gpio_factory_name() -> str:
     Returns:
         The GPIO factory name to use.
     """
-    model_path = "/proc/device-tree/model"
-    if os.path.exists(model_path):
-        try:
-            with open(model_path, "rb") as f:
-                model_bytes = f.read()
-                model_str = model_bytes.decode("utf-8").strip("\x00").lower()
-                if "raspberry pi 5" in model_str:
-                    return "lgpio"
-                elif "raspberry pi" in model_str:
-                    return "rpigpio"
-        except Exception as e:
-            logger.error("Error reading model file: %s", e)
-            return "mock"
-    return "mock"
+    model_info = get_device_model()
+    mock_factory_name = "mock"
+
+    if model_info is None:
+        return mock_factory_name
+    if "raspberry pi 5" in model_info:
+        return "lgpio"
+    if "raspberry pi" in model_info:
+        return "rpigpio"
+
+    return mock_factory_name
 
 
 def setup_env_vars() -> bool:

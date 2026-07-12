@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from robot_hat import MotorServiceDirection, MotorZeroDirection, SingleMotorService
 from robot_hat.data_types.motor import (
@@ -29,8 +29,11 @@ class TestSingleMotorService(unittest.TestCase):
         self.motor.set_speed.assert_called_once_with(-60)
         self.assertEqual(self.controller.direction, -1)
 
-    def test_move_with_zero_direction_stops_motor_twice(self):
+    @patch("robot_hat.services.base_motor_service._log")
+    def test_move_with_zero_direction_stops_motor_twice(self, mock_logger: MagicMock):
         self.controller.move(60, 0)
+
+        mock_logger.warning.assert_called_once()
 
         self.motor.set_speed.assert_not_called()
         self.assertEqual(self.motor.stop.call_count, 2)

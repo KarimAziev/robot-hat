@@ -1,5 +1,6 @@
 import unittest
 from typing import cast
+from unittest.mock import MagicMock, patch
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.drivers.pwm import sunfounder_pwm as sf_module
@@ -101,11 +102,14 @@ class TestSunfounderPWM(unittest.TestCase):
         _, _, data = self.bus.calls[-1]
         self.assertEqual(data, pack16(self.pwm._arr))  # type: ignore
 
-    def test_set_servo_pulse_invalid_channel_raises(self):
+    @patch("robot_hat.drivers.pwm.sunfounder_pwm._log")
+    def test_set_servo_pulse_invalid_channel_raises(self, mock_logger: MagicMock):
         with self.assertRaises(InvalidChannelNumber):
             self.pwm.set_servo_pulse(-1, 1000)
+            mock_logger.error.assert_called_once()
         with self.assertRaises(InvalidChannelNumber):
             self.pwm.set_servo_pulse(20, 1000)
+            mock_logger.error.assert_called_once()
 
     def test_set_pwm_duty_cycle_value_error_on_invalid(self):
         with self.assertRaises(ValueError):

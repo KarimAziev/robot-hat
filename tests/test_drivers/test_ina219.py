@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, call
+from unittest.mock import MagicMock, Mock, call, patch
 
 from robot_hat.data_types.config.ina219 import INA219Config
 from robot_hat.drivers.adc.INA219 import (
@@ -45,7 +45,8 @@ class TestINA219(unittest.TestCase):
 
         ina.close()
 
-    def test_read_register_success_and_error(self):
+    @patch("robot_hat.drivers.adc.INA219._log", new_callable=MagicMock)
+    def test_read_register_success_and_error(self, mock_logger: MagicMock):
         self.bus.read_i2c_block_data.return_value = [0x12, 0x34]
         ina = INA219(bus=self.bus, address=0x50, config=INA219Config())
 
@@ -56,12 +57,15 @@ class TestINA219(unittest.TestCase):
         self.bus.read_i2c_block_data.side_effect = OSError("bus read error")
         with self.assertRaises(OSError):
             ina._read_register(0x10)
+            mock_logger.error.assert_called_once()
 
-    def test_write_register_error_propagates(self):
+    @patch("robot_hat.drivers.adc.INA219._log", new_callable=MagicMock)
+    def test_write_register_error_propagates(self, mock_logger: MagicMock):
         ina = INA219(bus=self.bus, address=0x42, config=INA219Config())
         self.bus.write_i2c_block_data.side_effect = OSError("write fail")
         with self.assertRaises(OSError):
             ina._write_register(REG_CONFIG, 0xABCD)
+            mock_logger.error.assert_called_once()
 
     def test_twos_complement(self):
         self.assertEqual(INA219._twos_complement(0x007F, 16), 0x007F)

@@ -14,8 +14,9 @@ class TestUtils(TestCase):
             "ROBOT_HAT_DISCHARGE_RATE",
         ]:
             os.environ.pop(key, None)
+
         try:
-            utils.get_gpio_factory_name.cache_clear()
+            utils.get_device_model.cache_clear()
         except AttributeError:
             pass
 
@@ -54,51 +55,50 @@ class TestUtils(TestCase):
         self.assertEqual(utils.parse_int_suffix("no_digits"), None)
         self.assertEqual(utils.parse_int_suffix("123"), 123)
 
-    @patch("builtins.open")
+    @patch(
+        "builtins.open", new_callable=mock_open, read_data=b"Raspberry Pi 4 Model B\x00"
+    )
     def test_is_raspberry_pi_true(self, mock_open_builtin):
-        mock_file = MagicMock()
-        mock_file.read.return_value = "Raspberry Pi 4 Model B\n"
-        mock_open_builtin.return_value.__enter__.return_value = mock_file
+        utils.get_device_model.cache_clear()
         self.assertTrue(utils.is_raspberry_pi())
-        mock_open_builtin.assert_called_with("/proc/device-tree/model", "r")
+        mock_open_builtin.assert_called_with("/proc/device-tree/model", "rb")
 
     @patch("builtins.open", side_effect=FileNotFoundError)
     def test_is_raspberry_pi_file_missing(self, _):
+        utils.get_device_model.cache_clear()
         self.assertFalse(utils.is_raspberry_pi())
 
-    @patch("os.path.exists", return_value=False)
-    def test_get_gpio_factory_name_no_model(self, mock_exists):
-        utils.get_gpio_factory_name.cache_clear()
+    @patch.object(utils, "get_device_model", return_value=None)
+    def test_get_gpio_factory_name_no_model(self, _):
         self.assertEqual(utils.get_gpio_factory_name(), "mock")
-        mock_exists.assert_called_with("/proc/device-tree/model")
 
-    @patch("os.path.exists", return_value=True)
+    @patch.object(utils, "get_device_model", return_value="raspberry pi 5 model b")
     def test_get_gpio_factory_name_rpi5(self, _):
-        utils.get_gpio_factory_name.cache_clear()
-        m = mock_open()
-        handle = m.return_value
-        handle.read.return_value = b"Raspberry Pi 5 Model B\x00"
-        with patch("builtins.open", m):
-            self.assertEqual(utils.get_gpio_factory_name(), "lgpio")
+        self.assertEqual(utils.get_gpio_factory_name(), "lgpio")
 
-    @patch("os.path.exists", return_value=True)
+    @patch.object(utils, "get_device_model", return_value="raspberry pi 4 model b")
     def test_get_gpio_factory_name_other_rpi(self, _):
-        utils.get_gpio_factory_name.cache_clear()
-        m = mock_open()
-        handle = m.return_value
-        handle.read.return_value = b"Raspberry Pi 4 Model B\x00"
-        with patch("builtins.open", m):
-            self.assertEqual(utils.get_gpio_factory_name(), "rpigpio")
+        self.assertEqual(utils.get_gpio_factory_name(), "rpigpio")
 
-    @patch("os.path.exists", return_value=True)
-    def test_get_gpio_factory_name_read_error(self, _):
-        utils.get_gpio_factory_name.cache_clear()
+    @patch("robot_hat.utils._log.exception")
+    @patch("builtins.open", side_effect=RuntimeError("Test intentional error"))
+    def test_get_device_model_unexpected_error(self, _, mock_log_exception: MagicMock):
+        utils.get_device_model.cache_clear()
+        self.assertIsNone(utils.get_device_model())
+        mock_log_exception.assert_called_once()
 
-        def raise_exc(*args, **kwargs):
-            raise RuntimeError("boom")
+    @patch(
+        "builtins.open", new_callable=mock_open, read_data=b"Raspberry Pi 5 Model B\x00"
+    )
+    def test_get_device_model_success(self, mock_open_builtin):
+        utils.get_device_model.cache_clear()
+        self.assertEqual(utils.get_device_model(), "raspberry pi 5 model b")
+        mock_open_builtin.assert_called_with("/proc/device-tree/model", "rb")
 
-        with patch("builtins.open", raise_exc):
-            self.assertEqual(utils.get_gpio_factory_name(), "mock")
+    @patch("builtins.open", side_effect=PermissionError)
+    def test_get_device_model_permission_error(self, _):
+        utils.get_device_model.cache_clear()
+        self.assertIsNone(utils.get_device_model())
 
     def test_setup_env_vars_when_factory_set_by_get(self):
         with patch.object(utils, "get_gpio_factory_name", return_value="lgpio"):
