@@ -1,5 +1,12 @@
 # Changelog
 
+## v2.4.0 (2026-07-12)
+
+### Added
+
+- `SingleMotorService` for controlling one `MotorABC` implementation with the same `move(speed, direction)`, `stop_all()`, calibration, and cleanup patterns used by `MotorService`.
+- Shared motor direction type aliases in `robot_hat.data_types.motor`, with top-level exports for `MotorServiceDirection` and `MotorZeroDirection`.
+
 ## v2.3.0 (2025-11-30)
 
 ### Added
