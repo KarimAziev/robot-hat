@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Type, TypeVar
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.data_types.config.pwm import PWMDriverConfig
@@ -9,8 +9,10 @@ _log = logging.getLogger(__name__)
 
 PWM_DRIVER_REGISTRY: Dict[str, Type[PWMDriverABC]] = {}
 
+T_PWMDriver = TypeVar("T_PWMDriver", bound=PWMDriverABC)
 
-def register_pwm_driver(cls: Type[PWMDriverABC]) -> Type[PWMDriverABC]:
+
+def register_pwm_driver(cls: Type[T_PWMDriver]) -> Type[T_PWMDriver]:
     """
     Decorator to register a PWM driver in the global registry.
     The class must have a DRIVER_TYPE attribute.
