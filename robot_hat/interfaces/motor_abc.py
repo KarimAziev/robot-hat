@@ -1,9 +1,6 @@
-import logging
 from abc import ABC, abstractmethod
 
 from robot_hat.data_types.config.motor import MotorDirection
-
-logger = logging.getLogger(__name__)
 
 
 class MotorABC(ABC):

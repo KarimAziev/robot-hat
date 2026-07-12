@@ -6,7 +6,7 @@ from robot_hat.exceptions import InvalidCalibrationModeError
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.utils import constrain
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class ServoCalibrationMode(Enum):
@@ -229,7 +229,7 @@ class ServoService:
             else constrained_value
         )
 
-        logger.debug(
+        _log.debug(
             self._log_prefix + "setting servo angle from %s to %s (calibrated: %s)",
             self.current_angle,
             angle,
@@ -250,7 +250,7 @@ class ServoService:
             The updated calibration offset.
         """
         assert self.servo
-        logger.debug(
+        _log.debug(
             (
                 (self._log_prefix + " updating and persisting from %s to %s")
                 if persist
@@ -274,7 +274,7 @@ class ServoService:
             The reset direction calibration.
         """
         assert self.servo
-        logger.debug(
+        _log.debug(
             "Resetting calibration offset from %s to %s",
             self.calibration_offset,
             self._persisted_calibration_offset,

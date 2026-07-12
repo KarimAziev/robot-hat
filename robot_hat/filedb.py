@@ -6,7 +6,7 @@ from typing import Callable, Dict, List, Optional, TypeVar, Union
 
 from robot_hat.exceptions import FileDBValidationError
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
@@ -50,7 +50,7 @@ class FileDB(object):
         as needed. Adds a simple header to newly created files. If something
         already exists with the same name but it's a directory, raises an error.
         """
-        logger.debug("Checking file %s", file)
+        _log.debug("Checking file %s", file)
         file_path = Path(file)
         if file_path.exists():
             if file_path.is_dir():
@@ -65,7 +65,7 @@ class FileDB(object):
                     "# robot-hat config and calibration value of robots\n\n"
                 )
             except Exception as e:
-                logger.error("Error creating file", exc_info=True)
+                _log.error("Error creating file", exc_info=True)
                 raise e
 
     def get(self, name: str, default_value: T) -> Union[T, str]:
@@ -80,7 +80,7 @@ class FileDB(object):
         """
         for line in self.parse_file():
             if "=" not in line:
-                logger.warning("Skipping malformed line: '%s'", line)
+                _log.warning("Skipping malformed line: '%s'", line)
                 continue
             key, _, val = line.partition("=")
             if key.strip() == name:

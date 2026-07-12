@@ -5,7 +5,7 @@ from robot_hat.data_types import BatteryMetrics
 from robot_hat.drivers.adc.sunfounder_adc import ADC, ADC_DEFAULT_ADDRESSES
 from robot_hat.interfaces.battery_abc import BatteryABC
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class Battery(ADC, BatteryABC):
@@ -52,7 +52,7 @@ class Battery(ADC, BatteryABC):
         if current_channel is not None:
             current_index = self._normalize_channel(current_channel)
             if current_index == self._channel_index:
-                logger.warning(
+                _log.warning(
                     "Current channel %s matches voltage channel; current readings "
                     "will mirror the scaled battery voltage",
                     current_channel,
@@ -71,7 +71,7 @@ class Battery(ADC, BatteryABC):
         voltage = self.read_voltage()
 
         scaled_voltage = round(voltage * 3, 2)  # Scale the 0-3.3V reading to 0-10V
-        logger.debug("Battery voltage (scaled to 0-10V): %sV", scaled_voltage)
+        _log.debug("Battery voltage (scaled to 0-10V): %sV", scaled_voltage)
         return scaled_voltage
 
     def get_battery_current(self) -> float:
@@ -85,7 +85,7 @@ class Battery(ADC, BatteryABC):
         shunt_voltage = self.read_voltage_channel(self._current_channel_index)
         current = shunt_voltage / self._sense_resistance_ohms
         rounded = round(current, 2)
-        logger.debug(
+        _log.debug(
             "Battery current (channel %s, %.4f Ω): %.2fA",
             self._current_channel,
             self._sense_resistance_ohms,

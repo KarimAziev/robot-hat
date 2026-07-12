@@ -8,7 +8,7 @@ from typing import List, Union
 from robot_hat.exceptions import InvalidChannel
 from robot_hat.i2c.i2c_manager import I2C
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 ADC_DEFAULT_ADDRESSES = [0x14, 0x15]
@@ -73,9 +73,9 @@ class ADC(I2C):
 
         super().__init__(address, *args, **kwargs)
         if self.address is not None:
-            logger.debug(f"ADC device address: 0x{self.address:02X}")
+            _log.debug(f"ADC device address: 0x{self.address:02X}")
         else:
-            logger.error("ADC device address not found")
+            _log.error("ADC device address not found")
 
         normalized_channel = self._normalize_channel(channel)
         channel_reg = self._channel_to_register(normalized_channel)
@@ -111,12 +111,12 @@ class ADC(I2C):
 
         msb, lsb = self.read(2)  # read two bytes
 
-        logger.debug(
+        _log.debug(
             "ADC Most Significant Byte: '%s', Least Significant Byte: '%s'", msb, lsb
         )
 
         value = (msb << 8) + lsb
-        logger.debug("ADC combined value: '%s'", value)
+        _log.debug("ADC combined value: '%s'", value)
         return value
 
     def read_raw_value(self) -> int:
@@ -143,12 +143,12 @@ class ADC(I2C):
         """
         value = self.read_raw_value()
         voltage = value * 3.3 / 4095
-        logger.debug(f"ADC raw voltage: {voltage}")
+        _log.debug(f"ADC raw voltage: {voltage}")
         return voltage
 
     def read_voltage_channel(self, channel: Union[str, int]) -> float:
         """Read and convert the voltage for a specific channel."""
         value = self.read_raw_value_channel(channel)
         voltage = value * 3.3 / 4095
-        logger.debug("ADC raw voltage on channel %s: %s", channel, voltage)
+        _log.debug("ADC raw voltage on channel %s: %s", channel, voltage)
         return voltage

@@ -9,7 +9,7 @@ from typing import List, Optional
 from robot_hat.drivers.adc.sunfounder_adc import ADC
 from robot_hat.exceptions import GrayscaleTypeError
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class Grayscale:
@@ -78,7 +78,7 @@ class Grayscale:
         for i, pin in enumerate(self.pins):
             if not isinstance(pin, ADC):
                 msg = f"Invalid Pin{i}: must be ADC instance"
-                logger.error(msg)
+                _log.error(msg)
                 raise GrayscaleTypeError(msg)
         self.reference = reference
 

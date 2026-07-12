@@ -1,16 +1,16 @@
 import errno
 import logging
 import os
+import sys
 from types import TracebackType
 from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Type, Union
 
 from robot_hat.interfaces.smbus_abc import SMBusABC
-import sys
 
 if TYPE_CHECKING:
     from smbus2 import i2c_msg
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 I2C_ALLOWED_ADDRESES = [20, 54]
 
@@ -151,7 +151,7 @@ class MockSMBus(SMBusABC):
         return
 
     def read_byte(self, i2c_addr: int, force: Optional[bool] = None) -> int:
-        logger.debug("read_byte: %s", i2c_addr)
+        _log.debug("read_byte: %s", i2c_addr)
         self._set_address(i2c_addr, force)
         byte_responses = self._byte_responses_by_addrs.get(f"{i2c_addr}")
         if byte_responses is None:
@@ -177,7 +177,7 @@ class MockSMBus(SMBusABC):
     def write_byte(
         self, i2c_addr: int, value: int, force: Optional[bool] = None
     ) -> None:
-        logger.debug("write_byte: %s", value)
+        _log.debug("write_byte: %s", value)
         if i2c_addr not in I2C_ALLOWED_ADDRESES:
             raise OSError(
                 errno.EREMOTEIO
@@ -191,42 +191,42 @@ class MockSMBus(SMBusABC):
     def read_byte_data(
         self, i2c_addr: int, register: int, force: Optional[bool] = None
     ) -> int:
-        logger.debug("read_byte_data: %s", register)
+        _log.debug("read_byte_data: %s", register)
         self._set_address(i2c_addr, force)
         return self._command_responses["byte"]
 
     def write_byte_data(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
     ) -> None:
-        logger.debug("write_byte_data '%s' to '%s'", register, value)
+        _log.debug("write_byte_data '%s' to '%s'", register, value)
         self._set_address(i2c_addr, force)
         return
 
     def read_word_data(
         self, i2c_addr: int, register: int, force: Optional[bool] = None
     ) -> int:
-        logger.debug("read_word_data from register '%s'", register)
+        _log.debug("read_word_data from register '%s'", register)
         self._set_address(i2c_addr, force)
         return self._command_responses["word"]
 
     def write_word_data(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
     ) -> None:
-        logger.debug("write_word_data %s to register '%s'", value, register)
+        _log.debug("write_word_data %s to register '%s'", value, register)
         self._set_address(i2c_addr, force)
         return
 
     def process_call(
         self, i2c_addr: int, register: int, value: int, force: Optional[bool] = None
     ) -> int:
-        logger.debug("write_word_data %s to register '%s'", value, register)
+        _log.debug("write_word_data %s to register '%s'", value, register)
         self._set_address(i2c_addr, force)
         return self._command_responses["word"]
 
     def read_block_data(
         self, i2c_addr: int, register: int, force: Optional[bool] = None
     ) -> List[int]:
-        logger.debug("read_block_data register '%s'", register)
+        _log.debug("read_block_data register '%s'", register)
         self._set_address(i2c_addr, force)
         return self._command_responses["block"]
 
@@ -237,7 +237,7 @@ class MockSMBus(SMBusABC):
         data: Sequence[int],
         force: Optional[bool] = None,
     ) -> None:
-        logger.debug("write_block_data %s to register '%s'", data, register)
+        _log.debug("write_block_data %s to register '%s'", data, register)
         self._set_address(i2c_addr, force)
         return
 
@@ -248,7 +248,7 @@ class MockSMBus(SMBusABC):
         data: Sequence[int],
         force: Optional[bool] = None,
     ) -> List[int]:
-        logger.debug("block_process_call %s to register '%s'", data, register)
+        _log.debug("block_process_call %s to register '%s'", data, register)
         self._set_address(i2c_addr, force)
         return self._command_responses["block"]
 
@@ -259,7 +259,7 @@ class MockSMBus(SMBusABC):
         data: Sequence[int],
         force: Optional[bool] = None,
     ) -> None:
-        logger.debug("write_i2c_block_data %s to register %s", data, register)
+        _log.debug("write_i2c_block_data %s to register %s", data, register)
         self._set_address(i2c_addr, force)
         return
 
@@ -358,7 +358,7 @@ class MockSMBus(SMBusABC):
     def read_i2c_block_data(
         self, i2c_addr: int, register: int, length: int, force: Optional[bool] = None
     ) -> List[int]:
-        logger.debug("read_i2c_block_data register: %s", register)
+        _log.debug("read_i2c_block_data register: %s", register)
         self._set_address(i2c_addr, force)
 
         if register in (1, 2, 3, 4):
@@ -369,7 +369,7 @@ class MockSMBus(SMBusABC):
             else:
                 data = sequence[:length]
                 self._discharge_sequences[register] = sequence[length:]
-            logger.debug(
+            _log.debug(
                 "Simulated discharge response for register %s: %s", register, data
             )
             return data
@@ -377,7 +377,7 @@ class MockSMBus(SMBusABC):
             return self._command_responses["block"][:length]
 
     def i2c_rdwr(self, *i2c_msgs: "i2c_msg") -> None:
-        logger.debug("%s", i2c_msgs)
+        _log.debug("%s", i2c_msgs)
         return
 
     def enable_pec(self, enable=True) -> None:
@@ -408,9 +408,9 @@ class MockSMBus(SMBusABC):
         force = force if force is not None else self.force
         if self.address != address or self._force_last != force:
             if force is True:
-                logger.debug("ioctl(self.fd, I2C_SLAVE_FORCE, address)")
+                _log.debug("ioctl(self.fd, I2C_SLAVE_FORCE, address)")
             else:
-                logger.debug("ioctl(self.fd, I2C_SLAVE, address)")
+                _log.debug("ioctl(self.fd, I2C_SLAVE, address)")
             self.address = address
             self._force_last = force
 

@@ -12,7 +12,7 @@ from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.sunfounder.pwm import PWM
 from robot_hat.utils import mapping
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class Servo(PWM, ServoABC):
@@ -98,7 +98,7 @@ class Servo(PWM, ServoABC):
             else "unknown"
         )
 
-        logger.debug(f"Initted {self.channel_description} at address {address}")
+        _log.debug(f"Initted {self.channel_description} at address {address}")
         self.period(self.PERIOD)
         prescaler = self.CLOCK / self.FREQ / self.PERIOD
         self.prescaler(prescaler)
@@ -115,9 +115,9 @@ class Servo(PWM, ServoABC):
         """
         if not isinstance(angle, float):
             msg = "Angle value should be float value, not %s" % type(angle)
-            logger.error(msg)
+            _log.error(msg)
             raise InvalidServoAngle(msg)
-        logger.debug(f"[{self.channel_description}]: Setting angle {angle} ")
+        _log.debug(f"[{self.channel_description}]: Setting angle {angle} ")
         if angle < -90:
             angle = -90
         if angle > 90:
@@ -139,7 +139,7 @@ class Servo(PWM, ServoABC):
         pwr = pulse_width_time / 20000.0
 
         value = int(pwr * self.PERIOD)
-        logger.debug(f"[{self.channel_description}]: setting pulse width: {value}")
+        _log.debug(f"[{self.channel_description}]: setting pulse width: {value}")
         self.pulse_width(value)
 
     def reset(self) -> None:

@@ -8,13 +8,13 @@ from robot_hat.exceptions import IMUInitializationError
 from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.interfaces.imu_abc import AbstractIMU
 
+_log = logging.getLogger(__name__)
+
 # Sensitivity (example scale factors)
 # 2g: 1G = 16384
 # 4g: 1G = 8192
 # 8g: 1G = 4096
 # 16g:  1G = 2048
-
-_logger = logging.getLogger(__name__)
 
 
 class SH3001(I2C, AbstractIMU):
@@ -405,13 +405,13 @@ class SH3001(I2C, AbstractIMU):
             ]
             return accelerometer_data, gyroscope_data
         except TimeoutError as e:
-            _logger.error("Timeout error reading IMU data: %s", e)
+            _log.error("Timeout error reading IMU data: %s", e)
             raise
         except OSError as e:
-            _logger.error("OS error reading IMU data: %s", e)
+            _log.error("OS error reading IMU data: %s", e)
             raise
         except Exception as e:
-            _logger.error("Error reading IMU data: %s", e, exc_info=True)
+            _log.error("Error reading IMU data: %s", e, exc_info=True)
             raise
 
     def initialize(self) -> None:

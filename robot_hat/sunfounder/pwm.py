@@ -10,7 +10,7 @@ from robot_hat.exceptions import InvalidChannelName, InvalidChannelNumber
 from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.utils import parse_int_suffix
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 timer: List[Dict[str, int]] = [{"arr": 1}] * 7
 
@@ -126,12 +126,12 @@ class PWM(I2C):
                 raise InvalidChannelNumber(msg)
 
         if isinstance(self.address, int):
-            logger.debug(
+            _log.debug(
                 "Initted PWM at the address %s",
                 hex(self.address),
             )
         else:
-            logger.warning(
+            _log.warning(
                 "PWM address %s is not found for channel %s",
                 address,
                 channel,
@@ -191,7 +191,7 @@ class PWM(I2C):
         )  # Low byte: Mask with 0xFF to keep only the least significant byte
         # Write the register address followed by the high and low bytes to the I2C device
 
-        logger.debug(
+        _log.debug(
             "[%s]: writing 16 bit %s (%s) high byte: %s (%s) low byte: %s, (%s)",
             self.channel,
             value,
@@ -244,7 +244,7 @@ class PWM(I2C):
 
         psc, arr = result_ap[i]
 
-        logger.debug(
+        _log.debug(
             "[{%s}]: frequency {%s} -> prescaler {%s}, period: {%s}",
             self.channel,
             self._freq,
@@ -281,7 +281,7 @@ class PWM(I2C):
             reg = self.REG_PSC + self.timer
         else:
             reg = self.REG_PSC2 + self.timer - 4
-        logger.debug(
+        _log.debug(
             "[%s]: Set prescaler to PWM %s at timer %s to register: %s, global timer: %s",
             self.channel,
             self._prescaler - 1,
@@ -340,7 +340,7 @@ class PWM(I2C):
         else:
             reg = self.REG_ARR2 + self.timer - 4
 
-        logger.debug(
+        _log.debug(
             "[%s]: Set period to PWM %s at timer %s to register: %s, global timer: %s",
             self.channel,
             arr,
@@ -367,7 +367,7 @@ class PWM(I2C):
 
         self._pulse_width = int(pulse_width)
         reg = self.REG_CHN + self.channel
-        logger.debug(
+        _log.debug(
             "[%s]: writing pulse width %s  to register: %s global timer: %s",
             self.channel,
             self._pulse_width,

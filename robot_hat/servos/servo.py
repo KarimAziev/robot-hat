@@ -14,7 +14,7 @@ from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.utils import parse_int_suffix
 
-logger = logging.getLogger(__name__)
+_log = logging.getLogger(__name__)
 
 
 class Servo(ServoABC):
@@ -104,7 +104,7 @@ class Servo(ServoABC):
         ) * (self.max_pulse - self.min_pulse)
         pulse_width_int = int(round(pulse_width))
 
-        logger.debug(
+        _log.debug(
             "[%s]: Logical Angle=%s, mapped Physical Angle=%s, pulse_width=%s, pulse_width_int=%s, "
             "logical_range=(%s, %s), physical_range=(%s, %s)",
             self.name,
