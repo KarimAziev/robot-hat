@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.5.0 (2026-07-18)
+
+### Changed
+
+- Replaced `pygame` with `pygame-ce` for music playback support.
+- Enabled Python 3.14 support by switching to `pygame-ce`.
+- Made music playback dependencies optional: `pygame-ce` is no longer installed by default.
+- Users who need the `Music` module should install the extra dependency with `pip install robot-hat[music]`.
+
+### Improved
+
+- `robot_hat.music` now raises a clearer runtime error with installation instructions when the optional music dependency is missing.
+
 ## v2.4.0 (2026-07-12)
 
 ### Added
