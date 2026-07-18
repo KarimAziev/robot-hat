@@ -193,7 +193,13 @@ class Music:
         original_stdout = sys.stdout
         try:
             sys.stdout = open(os.devnull, "w")
-            import pygame
+            import pygame  # type: ignore
+        except ImportError as e:
+            _log.error("pygame is not available: %s", e)
+            raise RuntimeError(
+                "Music playback requires the optional dependency 'pygame-ce'. "
+                "Install it with: pip install robot_hat[music]"
+            ) from e
         finally:
             sys.stdout.close()
             sys.stdout = original_stdout

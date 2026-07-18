@@ -20,12 +20,20 @@ authors = [
     { name = "Karim Aziiev", email = "karim.aziiev@gmail.com" }
 ]
 dependencies = [
-    "pygame",
     "smbus2",
     "gpiozero",
     "RPi.GPIO; sys_platform == 'linux' and (platform_machine == 'armv6l' or platform_machine == 'armv7l' or platform_machine == 'aarch64')",
     "tenacity",
 ]
+[project.optional-dependencies]
+music = [
+    "pygame-ce",
+]
+dev = [
+    "ruff",
+    "pre-commit",
+]
+
 keywords = ["i2c", "raspberrypi"]
 dynamic = ["version"]
 
@@ -37,9 +45,3 @@ extend-exclude = ["robot_hat/version.py"]
 [tool.ruff.lint]
 select = ["E", "F"]
 ignore = ["E501", "E731", "E402"]
-
-[project.optional-dependencies]
-dev = [
-    "ruff",
-    "pre-commit",
-]
