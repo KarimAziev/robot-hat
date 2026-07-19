@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Vendor-neutral `Lidar2DABC`, typed polar measurements, complete-revolution
+  scans, device information, and health models intended for SLAM frontends.
+- RPLIDAR C1 support at its 460800-baud default using Slamtec Standard scan mode,
+  including protocol validation and stream resynchronization.
+- Injectable `UARTABC`, a PySerial-backed UART implementation, USB-UART device
+  discovery, and `MockUART` for hardware-free tests.
+
 ## v2.5.0 (2026-07-18)
 
 ### Changed

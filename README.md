@@ -27,6 +27,7 @@ Unlike the aforementioned libraries:
 > - [Robot Hat](#robot-hat)
 >   - [Installation](#installation)
 >   - [Usage examples](#usage-examples)
+>     - [2D lidar scans for SLAM](#2d-lidar-scans-for-slam)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
@@ -67,6 +68,34 @@ pip install robot-hat
 ```
 
 ## Usage examples
+
+### 2D lidar scans for SLAM
+
+`Lidar2DABC` provides a vendor-neutral stream of typed measurements and complete
+360-degree scans. The initial driver supports the RPLIDAR C1 in Standard mode over
+either a native UART or a USB-to-UART adapter:
+
+```python
+from robot_hat import RPLidarC1, RPLidarC1Config
+
+lidar = RPLidarC1(RPLidarC1Config(port="/dev/serial/by-id/your-lidar"))
+
+with lidar:
+    print(lidar.get_device_info())
+    print(lidar.get_health())
+    lidar.start_scan()
+    try:
+        for scan in lidar.iter_scans(min_measurements=100):
+            # Cartesian, valid-only (x, y) points in metres for a SLAM frontend.
+            points = scan.xy_points_m
+            process_scan(points)
+    finally:
+        lidar.stop_scan()
+```
+
+The C1 default is 460800 baud. See [2D lidar and UART support](docs/lidar_2d.md)
+for Raspberry Pi 5 wiring, USB-UART discovery, lifecycle details, test doubles,
+and instructions for implementing another lidar model.
 
 ### Motor control
 

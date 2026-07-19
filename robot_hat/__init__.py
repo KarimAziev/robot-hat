@@ -1,4 +1,11 @@
 from robot_hat.data_types import BatteryMetrics
+from robot_hat.data_types.lidar import (
+    LidarDeviceInfo,
+    LidarHealth,
+    LidarHealthStatus,
+    LidarMeasurement,
+    LidarScan,
+)
 from robot_hat.data_types.bus import BusType
 from robot_hat.data_types.config.battery import (
     BatteryConfigType,
@@ -23,6 +30,7 @@ from robot_hat.data_types.config.motor import (
     MotorDirection,
     PhaseMotorConfig,
 )
+from robot_hat.data_types.config.lidar import RPLidarC1Config
 from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.data_types.config.sh3001 import SH3001Config
 from robot_hat.drivers.adc.INA219 import INA219
@@ -54,9 +62,18 @@ from robot_hat.exceptions import (
     InvalidPinNumber,
     InvalidPinPull,
     InvalidServoAngle,
+    LidarConnectionError,
+    LidarError,
+    LidarProtocolError,
+    LidarStateError,
+    LidarTimeoutError,
     MotorFactoryError,
     MotorValidationError,
     UltrasonicEchoPinError,
+    UARTConnectionError,
+    UARTError,
+    UARTPortAmbiguousError,
+    UARTPortNotFoundError,
     UnsupportedMotorConfigError,
 )
 from robot_hat.factories.battery_factory import BatteryFactory
@@ -68,10 +85,13 @@ from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.i2c.smbus_manager import SMBusManager
 from robot_hat.interfaces.battery_abc import BatteryABC
 from robot_hat.interfaces.imu_abc import AbstractIMU
+from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
 from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.interfaces.smbus_abc import SMBusABC
+from robot_hat.interfaces.uart_abc import UARTABC
+from robot_hat.mock.uart import MockUART
 from robot_hat.mock.ultrasonic import Ultrasonic as UltrasonicMock
 from robot_hat.motor.gpio_dc_motor import GPIODCMotor
 from robot_hat.motor.i2c_dc_motor import I2CDCMotor
@@ -82,6 +102,7 @@ from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
+from robot_hat.sensors.lidar.rplidar_c1 import RPLidarC1
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
 from robot_hat.services.battery.ina226_battery import Battery as INA226Battery
@@ -98,6 +119,9 @@ from robot_hat.servos.gpio_angular_servo import GPIOAngularServo
 from robot_hat.servos.servo import Servo
 from robot_hat.sunfounder.grayscale import Grayscale as SunfounderGrayscale
 from robot_hat.sunfounder.robot import Robot as SunfounderRobot
+from robot_hat.uart.serial_uart import SerialUART
+from robot_hat.uart.usb_uart import find_usb_uart_device, list_usb_uart_devices
+from robot_hat.data_types.uart import UARTConfig, USBUARTDevice, USBUARTSelector
 from robot_hat.utils import (
     compose,
     constrain,
@@ -110,6 +134,22 @@ from robot_hat.version import version
 
 __all__ = [
     "FileDB",
+    "Lidar2DABC",
+    "LidarDeviceInfo",
+    "LidarHealth",
+    "LidarHealthStatus",
+    "LidarMeasurement",
+    "LidarScan",
+    "RPLidarC1",
+    "RPLidarC1Config",
+    "SerialUART",
+    "UARTABC",
+    "UARTConfig",
+    "USBUARTDevice",
+    "USBUARTSelector",
+    "MockUART",
+    "find_usb_uart_device",
+    "list_usb_uart_devices",
     "I2C",
     "I2CBus",
     "Ultrasonic",
@@ -156,9 +196,18 @@ __all__ = [
     "InvalidPinNumber",
     "InvalidPinPull",
     "InvalidServoAngle",
+    "LidarConnectionError",
+    "LidarError",
+    "LidarProtocolError",
+    "LidarStateError",
+    "LidarTimeoutError",
     "MotorFactoryError",
     "MotorValidationError",
     "UltrasonicEchoPinError",
+    "UARTConnectionError",
+    "UARTError",
+    "UARTPortAmbiguousError",
+    "UARTPortNotFoundError",
     "UnsupportedMotorConfigError",
     "InvalidBusType",
     "GPIODCMotorConfig",

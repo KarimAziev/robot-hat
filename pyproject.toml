@@ -12,7 +12,7 @@ write_to = "robot_hat/version.py"
 
 [project]
 name = "robot_hat"
-description = "Extensible and type-hinted library for controlling robot hardware (motors, servos, ultrasonic, ADC, I2C)."
+description = "Extensible, typed robotics hardware library for motors, servos, sensors, 2D lidar, I2C, and UART."
 readme = { file = "README.md", content-type = "text/markdown" }
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
@@ -22,11 +22,12 @@ authors = [
 dependencies = [
     "smbus2",
     "gpiozero",
+    "pyserial>=3.5",
     "RPi.GPIO; sys_platform == 'linux' and (platform_machine == 'armv6l' or platform_machine == 'armv7l' or platform_machine == 'aarch64')",
     "tenacity",
 ]
 
-keywords = ["i2c", "raspberrypi"]
+keywords = ["i2c", "lidar", "raspberrypi", "robotics", "uart"]
 dynamic = ["version"]
 
 [tool.ruff]
