@@ -1,4 +1,9 @@
-from robot_hat.data_types import BatteryMetrics
+from robot_hat.data_types import (
+    BatteryMetrics,
+    EncoderSample,
+    IMUSample,
+    RawIMUSample,
+)
 from robot_hat.data_types.lidar import (
     LidarDeviceInfo,
     LidarHealth,
@@ -50,6 +55,7 @@ from robot_hat.exceptions import (
     GrayscaleTypeError,
     I2CAddressNotFound,
     IMUInitializationError,
+    IMUReadError,
     InvalidBusType,
     InvalidCalibrationModeError,
     InvalidChannel,
@@ -84,7 +90,8 @@ from robot_hat.i2c.i2c_bus import I2CBus
 from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.i2c.smbus_manager import SMBusManager
 from robot_hat.interfaces.battery_abc import BatteryABC
-from robot_hat.interfaces.imu_abc import AbstractIMU
+from robot_hat.interfaces.encoder_abc import EncoderABC
+from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
 from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
@@ -134,6 +141,10 @@ from robot_hat.version import version
 
 __all__ = [
     "FileDB",
+    "EncoderABC",
+    "EncoderSample",
+    "IMUABC",
+    "IMUSample",
     "Lidar2DABC",
     "LidarDeviceInfo",
     "LidarHealth",
@@ -148,6 +159,7 @@ __all__ = [
     "USBUARTDevice",
     "USBUARTSelector",
     "MockUART",
+    "RawIMUSample",
     "find_usb_uart_device",
     "list_usb_uart_devices",
     "I2C",
@@ -184,6 +196,7 @@ __all__ = [
     "FileDBValidationError",
     "GrayscaleTypeError",
     "IMUInitializationError",
+    "IMUReadError",
     "InvalidCalibrationModeError",
     "BatteryFactory",
     "InvalidChannel",

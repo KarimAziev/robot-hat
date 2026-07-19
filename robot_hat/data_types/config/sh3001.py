@@ -1,33 +1,57 @@
 from dataclasses import dataclass
+from typing import Literal
+
+
+AccelerometerRangeG = Literal[2, 4, 8, 16]
+GyroscopeRangeDPS = Literal[125, 250, 500, 1000, 2000]
+
+
+_ACCELEROMETER_RANGE_REGISTERS = {16: 0x02, 8: 0x03, 4: 0x04, 2: 0x05}
+_ACCELEROMETER_LSB_PER_G = {2: 16384.0, 4: 8192.0, 8: 4096.0, 16: 2048.0}
+_GYROSCOPE_RANGE_REGISTERS = {
+    125: 0x02,
+    250: 0x03,
+    500: 0x04,
+    1000: 0x05,
+    2000: 0x06,
+}
+_GYROSCOPE_LSB_PER_DPS = {
+    125: 262.0,
+    250: 131.0,
+    500: 65.5,
+    1000: 32.8,
+    2000: 16.4,
+}
 
 
 @dataclass(frozen=True)
 class SH3001Config:
-    ACC_XL: int = 0x00
-    CHIP_ID: int = 0x0F
+    """Physical ranges used to configure and scale an SH3001."""
 
-    # accelerometer configuration
-    ODR_500HZ: int = 0x01
-    ACC_RANGE_2G: int = 0x05
-    ACC_ODRX025: int = 0x20  # defined cutoff frequency
-    ACC_FILTER_EN: int = 0x00
-    ACC_CONF0: int = 0x22
-    ACC_CONF1: int = 0x23
-    ACC_CONF2: int = 0x25
-    ACC_CONF3: int = 0x26
+    accelerometer_range_g: AccelerometerRangeG = 2
+    gyroscope_range_dps: GyroscopeRangeDPS = 2000
 
-    # gyroscope configuration
-    GYRO_RANGE_2000: int = 0x06
-    GYRO_ODRX00: int = 0x00
-    GYRO_FILTER_EN: int = 0x10
-    GYRO_CONF0: int = 0x28
-    GYRO_CONF1: int = 0x29
-    GYRO_CONF3: int = 0x8F
-    GYRO_CONF4: int = 0x9F
-    GYRO_CONF5: int = 0xAF
-    GYRO_CONF2: int = 0x2B
+    def __post_init__(self) -> None:
+        if self.accelerometer_range_g not in _ACCELEROMETER_RANGE_REGISTERS:
+            raise ValueError("accelerometer_range_g must be 2, 4, 8, or 16")
+        if self.gyroscope_range_dps not in _GYROSCOPE_RANGE_REGISTERS:
+            raise ValueError("gyroscope_range_dps must be 125, 250, 500, 1000, or 2000")
 
-    # temperature configuration
-    TEMP_ODR_63: int = 0x30
-    TEMP_EN: int = 0x80
-    TEMP_CONF0: int = 0x20
+    @property
+    def accelerometer_range_register(self) -> int:
+        return _ACCELEROMETER_RANGE_REGISTERS[self.accelerometer_range_g]
+
+    @property
+    def accelerometer_lsb_per_g(self) -> float:
+        return _ACCELEROMETER_LSB_PER_G[self.accelerometer_range_g]
+
+    @property
+    def gyroscope_range_register(self) -> int:
+        return _GYROSCOPE_RANGE_REGISTERS[self.gyroscope_range_dps]
+
+    @property
+    def gyroscope_lsb_per_dps(self) -> float:
+        return _GYROSCOPE_LSB_PER_DPS[self.gyroscope_range_dps]
+
+
+__all__ = ["AccelerometerRangeG", "GyroscopeRangeDPS", "SH3001Config"]

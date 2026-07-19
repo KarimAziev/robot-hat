@@ -10,6 +10,19 @@
   including protocol validation and stream resynchronization.
 - Injectable `UARTABC`, a PySerial-backed UART implementation, USB-UART device
   discovery, and `MockUART` for hardware-free tests.
+- Vendor-neutral `IMUABC` and `EncoderABC` hardware boundaries with immutable,
+  monotonic sensor samples.
+
+### Changed
+
+- `SH3001.read_sample()` now returns acceleration in m/s² and angular velocity
+  in rad/s. `read_raw_sample()` exposes signed counts explicitly for diagnostics.
+- `SH3001Config` now describes physical sensor ranges instead of exposing a
+  copy of the driver's register table.
+- SH3001 initialization now validates the documented `0x61` device ID and no
+  longer writes an undocumented reset sequence to the wrong register.
+- `AbstractIMU` remains an import alias for `IMUABC`, but the old anonymous
+  `read_sensor_data()` raw-list contract has been removed.
 
 ## v2.5.0 (2026-07-18)
 

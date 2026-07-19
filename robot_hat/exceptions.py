@@ -142,6 +142,10 @@ class IMUInitializationError(Exception):
     pass
 
 
+class IMUReadError(RuntimeError):
+    """Raised when an IMU returns an incomplete or malformed sample."""
+
+
 class DevicePinFactoryError(ValueError):
     """
     Exception raised when the Device.pin_factory is None.

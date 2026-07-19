@@ -28,6 +28,7 @@ Unlike the aforementioned libraries:
 >   - [Installation](#installation)
 >   - [Usage examples](#usage-examples)
 >     - [2D lidar scans for SLAM](#2d-lidar-scans-for-slam)
+>     - [IMU samples for localization](#imu-samples-for-localization)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
@@ -96,6 +97,31 @@ with lidar:
 The C1 default is 460800 baud. See [2D lidar and UART support](docs/lidar_2d.md)
 for Raspberry Pi 5 wiring, USB-UART discovery, lifecycle details, test doubles,
 and instructions for implementing another lidar model.
+
+### IMU samples for localization
+
+The hardware-neutral `IMUABC` returns immutable, monotonic samples in SI units.
+The SH3001 driver supports configurable full-scale ranges and exposes raw counts
+only through a deliberately named diagnostic method:
+
+```python
+from robot_hat import SH3001, SH3001Config
+
+imu = SH3001(config=SH3001Config(
+    accelerometer_range_g=2,
+    gyroscope_range_dps=2000,
+))
+try:
+    imu.initialize()
+    sample = imu.read_sample()
+    print(sample.acceleration_mps2)
+    print(sample.angular_velocity_radps)
+finally:
+    imu.close()
+```
+
+See [localization sensor contracts](docs/localization_sensors.md) for frame,
+timestamp, encoder, and driver-implementation requirements.
 
 ### Motor control
 
