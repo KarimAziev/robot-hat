@@ -270,7 +270,7 @@ class FileDB(object):
         with open(f"{self.db}.tmp", "w") as tmp:
             tmp.writelines(lines)
 
-        os.rename(f"{self.db}.tmp", self.db)
+        os.replace(f"{self.db}.tmp", self.db)
 
     def get_all_as_dict(self) -> Dict[str, str]:
         """

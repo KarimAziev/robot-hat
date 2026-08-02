@@ -12,7 +12,7 @@ write_to = "robot_hat/version.py"
 
 [project]
 name = "robot_hat"
-description = "Extensible and type-hinted library for controlling robot hardware (motors, servos, ultrasonic, ADC, I2C)."
+description = "Extensible, typed robotics hardware library for motors, servos, sensors, 2D lidar, I2C, and UART."
 readme = { file = "README.md", content-type = "text/markdown" }
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE"]
@@ -20,14 +20,38 @@ authors = [
     { name = "Karim Aziiev", email = "karim.aziiev@gmail.com" }
 ]
 dependencies = [
-    "smbus2",
-    "gpiozero",
+    "gpiozero>=2.0",
+    "pyserial>=3.5",
     "RPi.GPIO; sys_platform == 'linux' and (platform_machine == 'armv6l' or platform_machine == 'armv7l' or platform_machine == 'aarch64')",
-    "tenacity",
+    "smbus2>=0.4.3",
+    "tenacity>=8.2",
 ]
 
-keywords = ["i2c", "raspberrypi"]
+keywords = ["i2c", "lidar", "raspberrypi", "robotics", "uart"]
 dynamic = ["version"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Hardware",
+]
+
+requires-python = ">=3.10"
+
+[project.urls]
+Homepage = "https://github.com/KarimAziev/robot-hat"
+Issues = "https://github.com/KarimAziev/robot-hat/issues"
+Repository = "https://github.com/KarimAziev/robot-hat"
+Changelog = "https://github.com/KarimAziev/robot-hat/blob/main/CHANGELOG.md"
 
 [tool.ruff]
 line-length = 88
@@ -43,6 +67,24 @@ music = [
     "pygame-ce",
 ]
 dev = [
-    "ruff",
+    "coverage[toml]>=7.10",
     "pre-commit",
+    "pyright",
+    "ruff==0.16.1",
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["robot_hat"]
+omit = ["robot_hat/version.py"]
+
+[tool.coverage.report]
+fail_under = 60
+show_missing = true
+skip_covered = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.setuptools.package-data]
+robot_hat = ["py.typed"]

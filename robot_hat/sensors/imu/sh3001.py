@@ -1,23 +1,22 @@
 import logging
+import math
 import time
-from typing import ClassVar, List, Optional, Tuple
+from typing import Callable, ClassVar, List, Optional
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.data_types.config.sh3001 import SH3001Config
-from robot_hat.exceptions import IMUInitializationError
+from robot_hat.data_types.imu import IMUSample, RawIMUSample
+from robot_hat.exceptions import IMUInitializationError, IMUReadError
 from robot_hat.i2c.i2c_manager import I2C
-from robot_hat.interfaces.imu_abc import AbstractIMU
+from robot_hat.interfaces.imu_abc import IMUABC
 
 _log = logging.getLogger(__name__)
 
-# Sensitivity (example scale factors)
-# 2g: 1G = 16384
-# 4g: 1G = 8192
-# 8g: 1G = 4096
-# 16g:  1G = 2048
+_STANDARD_GRAVITY_MPS2 = 9.80665
+_DEGREES_TO_RADIANS = math.pi / 180.0
 
 
-class SH3001(I2C, AbstractIMU):
+class SH3001(I2C, IMUABC):
     SH3001_ADDRESS: ClassVar[int] = 0x36  # 7bit: 011 0111
 
     """
@@ -39,7 +38,8 @@ class SH3001(I2C, AbstractIMU):
     SH3001_GYRO_ZH = 0x0B
     SH3001_TEMP_ZL = 0x0C
     SH3001_TEMP_ZH = 0x0D
-    SH3001_CHIP_ID = 0x0F
+    SH3001_CHIP_ID_REGISTER = 0x0F
+    SH3001_CHIP_ID_VALUE = 0x61
     SH3001_INT_STA0 = 0x10
     SH3001_INT_STA1 = 0x11
     SH3001_INT_STA2 = 0x12
@@ -364,12 +364,14 @@ class SH3001(I2C, AbstractIMU):
         address=SH3001_ADDRESS,
         bus: BusType = 1,
         config: Optional[SH3001Config] = None,
+        monotonic_ns: Callable[[], int] = time.monotonic_ns,
     ) -> None:
         """
         Initialize the SH3001 instance with the given I2C address and bus.
         """
         super().__init__(address=address, bus=bus)
         self.config: SH3001Config = config if config is not None else SH3001Config()
+        self._monotonic_ns = monotonic_ns
 
     @staticmethod
     def bytes_to_int(msb: int, lsb: int) -> int:
@@ -377,101 +379,87 @@ class SH3001(I2C, AbstractIMU):
         Convert two bytes (MSB and LSB) to a signed integer using big-endian format.
         If MSB does not indicate a negative value, returns the positive integer.
         """
-        if not msb & 0x80:
-            return (msb << 8) | lsb
-        return -(((msb ^ 255) << 8) | (lsb ^ 255) + 1)
+        value = (msb << 8) | lsb
+        return value - 0x10000 if value & 0x8000 else value
 
-    def read_sensor_data(self) -> Tuple[List[float], List[float]]:
-        """
-        Read sensor data from the device and return a tuple containing the
-        accelerometer and gyroscope data (each as a list of three floats).
+    def read_raw_sample(self) -> RawIMUSample:
+        """Read signed ADC counts for diagnostics and calibration."""
 
-        Raises exceptions in case of timeout, OS error, or other errors.
-        """
-        try:
-            reg_data = self.mem_read(12, self.config.ACC_XL)
-            gyroscope_data: List[float] = [0.0, 0.0, 0.0]
-            accelerometer_data: List[float] = [0.0, 0.0, 0.0]
-
-            accelerometer_data: List[float] = [
+        reg_data = self.mem_read(12, self.SH3001_ACC_XL)
+        if len(reg_data) != 12:
+            raise IMUReadError(f"SH3001 returned {len(reg_data)} of 12 sample bytes")
+        return RawIMUSample(
+            accelerometer_counts=(
                 self.bytes_to_int(reg_data[1], reg_data[0]),
                 self.bytes_to_int(reg_data[3], reg_data[2]),
                 self.bytes_to_int(reg_data[5], reg_data[4]),
-            ]
-            gyroscope_data: List[float] = [
+            ),
+            gyroscope_counts=(
                 self.bytes_to_int(reg_data[7], reg_data[6]),
                 self.bytes_to_int(reg_data[9], reg_data[8]),
                 self.bytes_to_int(reg_data[11], reg_data[10]),
-            ]
-            return accelerometer_data, gyroscope_data
-        except TimeoutError as e:
-            _log.error("Timeout error reading IMU data: %s", e)
-            raise
-        except OSError as e:
-            _log.error("OS error reading IMU data: %s", e)
-            raise
-        except Exception as e:
-            _log.error("Error reading IMU data: %s", e, exc_info=True)
-            raise
+            ),
+            timestamp_monotonic_ns=self._monotonic_ns(),
+        )
+
+    def read_sample(self) -> IMUSample:
+        """Read one immutable, timestamped sample in SI units."""
+
+        raw = self.read_raw_sample()
+        acceleration_scale = (
+            _STANDARD_GRAVITY_MPS2 / self.config.accelerometer_lsb_per_g
+        )
+        angular_velocity_scale = _DEGREES_TO_RADIANS / self.config.gyroscope_lsb_per_dps
+        acceleration = raw.accelerometer_counts
+        angular_velocity = raw.gyroscope_counts
+        return IMUSample(
+            acceleration_mps2=(
+                acceleration[0] * acceleration_scale,
+                acceleration[1] * acceleration_scale,
+                acceleration[2] * acceleration_scale,
+            ),
+            angular_velocity_radps=(
+                angular_velocity[0] * angular_velocity_scale,
+                angular_velocity[1] * angular_velocity_scale,
+                angular_velocity[2] * angular_velocity_scale,
+            ),
+            timestamp_monotonic_ns=raw.timestamp_monotonic_ns,
+        )
 
     def initialize(self) -> None:
         """
         Initialize and configure the sensor. Checks if the sensor's CHIP_ID is valid.
-        Performs a reset and configures the accelerometer, gyroscope, and temperature sensor.
-
-        Note: This method contains time.sleep() calls. In an async application,
-        consider using asyncio.to_thread(<your_imu_instance>.initialize) to avoid blocking the event loop.
+        Configures the accelerometer, gyroscope, and temperature sensor.
 
         Raises IMUInitializationError if the CHIP_ID is not as expected.
         """
-        reg_data: List[int] = [0]
-        i: int = 0
-        while reg_data and (reg_data[0] != self.config.CHIP_ID) and (i < 3):
-            reg_data = self.mem_read(1, self.config.CHIP_ID)
-            i += 1
-            if not reg_data or (reg_data[0] != self.config.CHIP_ID and i == 3):
-                raise IMUInitializationError(
-                    "Failed to get correct CHIP_ID from SH3001 sensor."
-                )
+        for _ in range(3):
+            reg_data = self.mem_read(1, self.SH3001_CHIP_ID_REGISTER)
+            if reg_data and reg_data[0] == self.SH3001_CHIP_ID_VALUE:
+                break
+        else:
+            raise IMUInitializationError(
+                "SH3001 chip ID mismatch: expected 0x61 at register 0x0F"
+            )
 
-        self._reset()
         self._configure_accelerometer(
-            output_data_rate=self.config.ODR_500HZ,
-            range_data=self.config.ACC_RANGE_2G,
-            cut_off_freq=self.config.ACC_ODRX025,
-            filter_enable=self.config.ACC_FILTER_EN,
+            output_data_rate=self.SH3001_ODR_500HZ,
+            range_data=self.config.accelerometer_range_register,
+            cut_off_freq=self.SH3001_ACC_ODRX025,
+            filter_enable=self.SH3001_ACC_FILTER_EN,
         )
         self._configure_gyroscope(
-            output_data_rate=self.config.ODR_500HZ,
-            range_x=self.config.GYRO_RANGE_2000,
-            range_y=self.config.GYRO_RANGE_2000,
-            range_z=self.config.GYRO_RANGE_2000,
-            cut_off_freq=self.config.GYRO_ODRX00,
-            filter_enable=self.config.GYRO_FILTER_EN,
+            output_data_rate=self.SH3001_ODR_500HZ,
+            range_x=self.config.gyroscope_range_register,
+            range_y=self.config.gyroscope_range_register,
+            range_z=self.config.gyroscope_range_register,
+            cut_off_freq=self.SH3001_GYRO_ODRX00,
+            filter_enable=self.SH3001_GYRO_FILTER_EN,
         )
         self._configure_temperature(
-            output_data_rate=self.config.TEMP_ODR_63,
-            enable=self.config.TEMP_EN,
+            output_data_rate=self.SH3001_TEMP_ODR_63,
+            enable=self.SH3001_TEMP_EN,
         )
-
-    def _reset(self) -> None:
-        """
-        Reset the sensor including soft reset, ADC reset, and CVA (signal conditioning)
-        reset. A short delay is added where necessary.
-        """
-        # Soft reset
-        reg_data: int = 0x73
-        self.mem_write(reg_data, self.address)
-        time.sleep(0.05)
-
-        # ADC reset sequence
-        for val in (0x02, 0xC1, 0xC2, 0x00):
-            self.mem_write(val, self.address)
-
-        # CVA reset sequence
-        for val in (0x18, 0x00):
-            self.mem_write(val, self.address)
-        time.sleep(0.01)
 
     def _configure_accelerometer(
         self,
@@ -487,18 +475,18 @@ class SH3001(I2C, AbstractIMU):
         Reads current register settings, enables the digital filter,
         and applies configuration.
         """
-        reg_data: Optional[List[int]] = self.mem_read(1, self.config.ACC_CONF0)
+        reg_data: Optional[List[int]] = self.mem_read(1, self.SH3001_ACC_CONF0)
         if reg_data:
             reg_data[0] |= 0x01
-            self.mem_write(reg_data, self.config.ACC_CONF0)
+            self.mem_write(reg_data, self.SH3001_ACC_CONF0)
 
-        self.mem_write(output_data_rate, self.config.ACC_CONF1)
-        self.mem_write(range_data, self.config.ACC_CONF2)
-        reg_data = self.mem_read(1, self.config.ACC_CONF3)
+        self.mem_write(output_data_rate, self.SH3001_ACC_CONF1)
+        self.mem_write(range_data, self.SH3001_ACC_CONF2)
+        reg_data = self.mem_read(1, self.SH3001_ACC_CONF3)
         if reg_data:
             reg_data[0] &= 0x17
             reg_data[0] |= cut_off_freq | filter_enable
-            self.mem_write(reg_data, self.config.ACC_CONF3)
+            self.mem_write(reg_data, self.SH3001_ACC_CONF3)
 
     def _configure_gyroscope(
         self,
@@ -513,29 +501,29 @@ class SH3001(I2C, AbstractIMU):
         Configure the gyroscope with the specified output data rate and range settings
         for the X, Y, and Z axes, along with cutoff frequency and filter options.
         """
-        reg_data: Optional[List[int]] = self.mem_read(1, self.config.GYRO_CONF0)
+        reg_data: Optional[List[int]] = self.mem_read(1, self.SH3001_GYRO_CONF0)
         if reg_data:
             reg_data[0] |= 0x01
-            self.mem_write(reg_data, self.config.GYRO_CONF0)
+            self.mem_write(reg_data, self.SH3001_GYRO_CONF0)
 
-        self.mem_write(output_data_rate, self.config.GYRO_CONF1)
-        self.mem_write(range_x, self.config.GYRO_CONF3)
-        self.mem_write(range_y, self.config.GYRO_CONF4)
-        self.mem_write(range_z, self.config.GYRO_CONF5)
-        reg_data = self.mem_read(1, self.config.GYRO_CONF2)
+        self.mem_write(output_data_rate, self.SH3001_GYRO_CONF1)
+        self.mem_write(range_x, self.SH3001_GYRO_CONF3)
+        self.mem_write(range_y, self.SH3001_GYRO_CONF4)
+        self.mem_write(range_z, self.SH3001_GYRO_CONF5)
+        reg_data = self.mem_read(1, self.SH3001_GYRO_CONF2)
         if reg_data:
             reg_data[0] &= 0xE3
             reg_data[0] |= cut_off_freq | filter_enable
-            self.mem_write(reg_data, self.config.GYRO_CONF2)
+            self.mem_write(reg_data, self.SH3001_GYRO_CONF2)
 
     def _configure_temperature(self, output_data_rate: int, enable: int) -> None:
         """
         Configure the temperature sensor by setting the output data rate and enabling
         or disabling the temperature measurement.
         """
-        reg_data: Optional[List[int]] = self.mem_read(1, self.config.TEMP_CONF0)
+        reg_data: Optional[List[int]] = self.mem_read(1, self.SH3001_TEMP_CONF0)
         if reg_data:
             reg_data[0] &= 0x4F
             reg_data[0] |= output_data_rate | enable
-            self.mem_write(reg_data, self.config.TEMP_CONF0)
-            _ = self.mem_read(1, self.config.TEMP_CONF0)
+            self.mem_write(reg_data, self.SH3001_TEMP_CONF0)
+            _ = self.mem_read(1, self.SH3001_TEMP_CONF0)

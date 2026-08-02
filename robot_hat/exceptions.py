@@ -142,6 +142,10 @@ class IMUInitializationError(Exception):
     pass
 
 
+class IMUReadError(RuntimeError):
+    """Raised when an IMU returns an incomplete or malformed sample."""
+
+
 class DevicePinFactoryError(ValueError):
     """
     Exception raised when the Device.pin_factory is None.
@@ -160,3 +164,39 @@ class UnsupportedMotorConfigError(MotorFactoryError, TypeError):
 
 class InvalidBusType(TypeError):
     """Raised when an unsupported bus type is passed to SMBusManager."""
+
+
+class UARTError(Exception):
+    """Base error for UART transport failures."""
+
+
+class UARTConnectionError(UARTError):
+    """Raised when a UART port cannot be opened or used."""
+
+
+class UARTPortNotFoundError(UARTError):
+    """Raised when no USB-UART port matches a selector."""
+
+
+class UARTPortAmbiguousError(UARTError):
+    """Raised when a USB-UART selector matches more than one port."""
+
+
+class LidarError(Exception):
+    """Base error for 2D lidar failures."""
+
+
+class LidarConnectionError(LidarError):
+    """Raised when an operation requires a connected lidar."""
+
+
+class LidarStateError(LidarError):
+    """Raised when an operation is invalid in the lidar's current state."""
+
+
+class LidarProtocolError(LidarError):
+    """Raised when a lidar returns malformed or unexpected protocol data."""
+
+
+class LidarTimeoutError(LidarError, TimeoutError):
+    """Raised when a complete lidar response is not received in time."""

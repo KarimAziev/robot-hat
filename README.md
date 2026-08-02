@@ -20,13 +20,15 @@ Unlike the aforementioned libraries:
 - It avoids requiring **sudo calls** or introducing unnecessary system dependencies, focusing instead on clean, self-contained operations.
 - Plugin-style extensibility.
 
-<!-- markdown-toc start - Don't edit this section. Run M-x markdown-toc-refresh-toc -->
+
 
 **Table of Contents**
 
 > - [Robot Hat](#robot-hat)
 >   - [Installation](#installation)
 >   - [Usage examples](#usage-examples)
+>     - [2D lidar scans for SLAM](#2d-lidar-scans-for-slam)
+>     - [IMU samples for localization](#imu-samples-for-localization)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
@@ -52,11 +54,11 @@ Unlike the aforementioned libraries:
 >   - [Development Environment Setup](#development-environment-setup)
 >     - [Prerequisites](#prerequisites)
 >     - [Steps to Set Up](#steps-to-set-up)
->   - [Distribution](#distribution)
->   - [Common Commands](#common-commands)
->   - [Notes & Recommendations](#notes--recommendations)
+>     - [Distribution](#distribution)
+>     - [Common Commands](#common-commands)
+>     - [Notes](#notes)
 
-<!-- markdown-toc end -->
+
 
 ## Installation
 
@@ -67,6 +69,61 @@ pip install robot-hat
 ```
 
 ## Usage examples
+
+### 2D lidar scans for SLAM
+
+`Lidar2DABC` provides a vendor-neutral stream of typed measurements and complete
+360-degree scans. The initial driver supports the RPLIDAR C1 in Standard mode over
+either a native UART or a USB-to-UART adapter:
+
+```python
+from robot_hat import RPLidarC1, RPLidarC1Config
+
+lidar = RPLidarC1(RPLidarC1Config(port="/dev/serial/by-id/your-lidar"))
+
+with lidar:
+    print(lidar.get_device_info())
+    print(lidar.get_health())
+    lidar.start_scan()
+    try:
+        for scan in lidar.iter_scans(min_measurements=100):
+            # Cartesian, valid-only (x, y) points in metres for a SLAM frontend.
+            points = scan.xy_points_m
+            process_scan(points)
+    finally:
+        lidar.stop_scan()
+```
+
+The C1 default is 460800 baud. See [2D lidar and UART support](docs/lidar_2d.md)
+for Raspberry Pi 5 wiring, USB-UART discovery, lifecycle details, test doubles,
+and instructions for implementing another lidar model.
+
+### IMU samples for localization
+
+The hardware-neutral `IMUABC` returns immutable, monotonic samples in SI units.
+The SH3001 driver supports configurable full-scale ranges and exposes raw counts
+only through a deliberately named diagnostic method:
+
+```python
+from robot_hat import SH3001, SH3001Config
+
+imu = SH3001(
+    config=SH3001Config(
+        accelerometer_range_g=2,
+        gyroscope_range_dps=2000,
+    )
+)
+try:
+    imu.initialize()
+    sample = imu.read_sample()
+    print(sample.acceleration_mps2)
+    print(sample.angular_velocity_radps)
+finally:
+    imu.close()
+```
+
+See [localization sensor contracts](docs/localization_sensors.md) for frame,
+timestamp, encoder, and driver-implementation requirements.
 
 ### Motor control
 
@@ -79,7 +136,7 @@ GPIO motors are motors that are controlled entirely via direct GPIO calls; no I�
 ```python
 from robot_hat import GPIODCMotorConfig, MotorFactory, MotorService, setup_env_vars
 
-setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
+setup_env_vars()  # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
 
 left_motor = MotorFactory.create_motor(
     config=GPIODCMotorConfig(
@@ -116,7 +173,6 @@ motor_service.move(speed, -1)
 
 # stop
 motor_service.stop_all()
-
 ```
 
 ### Single GPIO-driven DC motor
@@ -124,9 +180,14 @@ motor_service.stop_all()
 Use `SingleMotorService` when you need the same `move(speed, direction)`, `stop_all()`, calibration, and cleanup API for one motor instead of a left/right pair.
 
 ```python
-from robot_hat import GPIODCMotorConfig, MotorFactory, SingleMotorService, setup_env_vars
+from robot_hat import (
+    GPIODCMotorConfig,
+    MotorFactory,
+    SingleMotorService,
+    setup_env_vars,
+)
 
-setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
+setup_env_vars()  # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
 
 motor = MotorFactory.create_motor(
     config=GPIODCMotorConfig(
@@ -165,7 +226,7 @@ from robot_hat import (
     PWMFactory,
 )
 
-setup_env_vars() # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
+setup_env_vars()  # autosetup environment, e.g.: GPIOZERO_PIN_FACTORY, ROBOT_HAT_MOCK_SMBUS etc
 
 driver_cfg = PWMDriverConfig(
     name="Sunfounder",  # 'PCA9685', 'Sunfounder', or a custom driver.
@@ -301,7 +362,6 @@ steering_servo.reset_calibration()  # resets to persisted value
 print(steering_servo.calibration_offset)  # -1.5
 
 steering_servo.close()  # Close and clean up the servo.
-
 ```
 
 **Example 2**: Head servos using `ServoCalibrationMode.NEGATIVE`
@@ -370,8 +430,8 @@ print(bus0 is bus0_again)  # True
 You can explicitly close a bus or all buses when your program is shutting down:
 
 ```python
-SMBusManager.close_bus(0)   # close bus 0
-SMBusManager.close_all()    # close all managed buses
+SMBusManager.close_bus(0)  # close bus 0
+SMBusManager.close_all()  # close all managed buses
 ```
 
 Most classes that accept a bus parameter will accept either a bus number or a bus instance. Prefer passing the shared bus instance to ensure all devices use the same underlying SMBus:
@@ -658,7 +718,6 @@ if __name__ == "__main__":
     robot_car.move(50, 1)
     robot_car.stop()
     robot_car.cleanup()
-
 ```
 
 </p>
@@ -684,7 +743,6 @@ print("I2C Data Read:", data)
 # Scan for connected devices
 devices = i2c_device.scan()
 print("I2C Devices Detected:", devices)
-
 ```
 
 ### GPIO Pin
@@ -720,8 +778,8 @@ led.high()
 led.low()
 
 # Set value using call/operator syntax
-led(1)   # set high (returns 1)
-led(0)   # set low  (returns 0)
+led(1)  # set high (returns 1)
+led(0)  # set low  (returns 0)
 
 # Read back (this will switch the pin to input mode internally)
 value = led.value()
@@ -745,8 +803,8 @@ pin_d0 = Pin("D0", mode=Pin.OUT)
 pin_d0.on()
 
 # Using gpiozero-style names (resolved by the pin factory)
-pin_by_name = Pin("GPIO27")     # or "BCM27", "BOARD13", "J8:13"
-print(pin_by_name.name())       # -> e.g., "GPIO27"
+pin_by_name = Pin("GPIO27")  # or "BCM27", "BOARD13", "J8:13"
+print(pin_by_name.name())  # -> e.g., "GPIO27"
 ```
 
 **Input with internal pull-up/pull-down, and read value**
@@ -759,7 +817,7 @@ button = Pin("GPIO27", mode=Pin.IN, pull=Pin.PULL_UP)
 
 # Read current state (returns 0 or 1)
 state = button.value()
-print("Button pressed?" , bool(state))
+print("Button pressed?", bool(state))
 
 # The library will create an InputDevice under the hood
 button.close()
@@ -771,15 +829,20 @@ button.close()
 from robot_hat import Pin
 import time
 
+
 def on_pressed():
     print("Pressed!")
+
 
 def on_released():
     print("Released!")
 
+
 sw = Pin("D1")  # mapping or gpiozero name
 # Attach interrupt on both rising and falling edges, 200 ms debounce, enable pull-up
-sw.irq(handler=on_pressed, trigger=Pin.IRQ_RISING_FALLING, bouncetime=200, pull=Pin.PULL_UP)
+sw.irq(
+    handler=on_pressed, trigger=Pin.IRQ_RISING_FALLING, bouncetime=200, pull=Pin.PULL_UP
+)
 
 # Keep running to allow callbacks to run
 try:
@@ -818,7 +881,6 @@ ultrasonic = Ultrasonic(trig_pin, echo_pin)
 # Measure distance
 distance_cm = ultrasonic.read(times=5)
 print(f"Distance: {distance_cm} cm")
-
 ```
 
 ### Reading battery voltage
@@ -867,8 +929,8 @@ from robot_hat.data_types.config.ina219 import (
     INA219Config,
     Mode,
 )
- # Build a configuration from your shunt resistor and expected max current.
- # Here: R_shunt = 0.01 Ω, I_max = 5 A => V_shunt_max = 0.05 V (50 mV), fits within INA219 ranges.
+# Build a configuration from your shunt resistor and expected max current.
+# Here: R_shunt = 0.01 Ω, I_max = 5 A => V_shunt_max = 0.05 V (50 mV), fits within INA219 ranges.
 
 custom_cfg = INA219Config.from_shunt(
     shunt_res_ohms=0.01,  # 10 milliohm shunt
@@ -912,7 +974,6 @@ battery.update_config(new_cfg)  # writes new CAL and CONFIG registers
 
 # Close when finished (closes bus if driver opened it)
 battery.close()
-
 ```
 
 </p>
@@ -932,20 +993,20 @@ from robot_hat.data_types.config.ina226 import INA226Config
 # shunt_ohms must be > 0. max_expected_amps is optional (if omitted the code uses a
 # device-limited derivation).
 cfg = INA226Config.from_shunt(
-    shunt_ohms=0.002,           # 2 milliohm shunt
-    max_expected_amps=50.0      # expected up to 50 A (example)
+    shunt_ohms=0.002,  # 2 milliohm shunt
+    max_expected_amps=50.0,  # expected up to 50 A (example)
 )
 
 # Create Battery helper (driver opens SMBus if you pass bus number)
 battery = INA226Battery(bus=1, address=0x40, config=cfg)
 
 
-bus_v = battery.get_bus_voltage_v()      # bus voltage in volts (V)
-shunt_mv = battery.get_shunt_voltage_mv()# shunt voltage in millivolts (mV)
-battery_v = battery.get_battery_voltage()# bus + shunt in volts (V)
+bus_v = battery.get_bus_voltage_v()  # bus voltage in volts (V)
+shunt_mv = battery.get_shunt_voltage_mv()  # shunt voltage in millivolts (mV)
+battery_v = battery.get_battery_voltage()  # bus + shunt in volts (V)
 pack_current_a = battery.get_battery_current()  # convenience helper in amps (A)
-current_ma = battery.get_current_ma()    # current in milliamps (mA)
-power_mw = battery.get_power_mw()        # power in milliwatts (mW)
+current_ma = battery.get_current_ma()  # current in milliamps (mA)
+power_mw = battery.get_power_mw()  # power in milliwatts (mW)
 
 print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
 print(f"Battery (bus + shunt): {battery_v:.3f} V")
@@ -953,9 +1014,7 @@ print(f"Pack current: {pack_current_a:.2f} A")
 print(f"Current: {current_ma:.3f} mA, Power: {power_mw:.3f} mW")
 
 metrics = battery.get_battery_metrics()
-print(
-    f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A"
-)
+print(f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A")
 
 battery.close()
 ```
@@ -992,14 +1051,12 @@ current_ma = battery.get_current_ma()
 power_mw = battery.get_power_mw()
 
 print(f"Bus: {bus_v:.3f} V, Shunt: {shunt_mv:.3f} mV")
-print(f"Battery: {battery_v:.2f} V, Current: {current_ma/1000:.3f} A")
+print(f"Battery: {battery_v:.2f} V, Current: {current_ma / 1000:.3f} A")
 print(f"Pack current via helper: {pack_current_a:.2f} A")
-print(f"Power: {power_mw/1000:.3f} W")
+print(f"Power: {power_mw / 1000:.3f} W")
 
 metrics = battery.get_battery_metrics()
-print(
-    f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A"
-)
+print(f"Combined metrics helper: {metrics.voltage:.2f} V / {metrics.current:.2f} A")
 
 battery.close()
 ```
@@ -1041,9 +1098,7 @@ config dataclasses. Each helper has a matching config in
 ```python
 from robot_hat import BatteryFactory, INA260BatteryConfig
 
-battery = BatteryFactory.create_battery(
-    INA260BatteryConfig(bus=1, address=0x40)
-)
+battery = BatteryFactory.create_battery(INA260BatteryConfig(bus=1, address=0x40))
 
 print(battery.get_battery_voltage())
 ```
@@ -1077,7 +1132,7 @@ class MyDriver(PWMDriverABC):
         address: int,
         bus: BusType = 1,
         frame_width: Optional[int] = 20000,
-        **kwargs
+        **kwargs,
     ) -> None:
         # Let the base class resolve or wrap the bus parameter
         super().__init__(bus=bus, address=address)
@@ -1110,7 +1165,6 @@ if __name__ == "__main__":
 
     my_driver = PWMFactory.create_pwm_driver(config=pwm_config)
     print(my_driver.DRIVER_TYPE)
-
 ```
 
 Use it from config
@@ -1142,16 +1196,16 @@ Also, contributions are welcome but you don't have to upstream your driver - you
 For reasons that remain a mystery (and a source of endless frustration), the providers of many popular DRY robotics libraries insist on requiring `sudo` for the most basic operations. For example:
 
 ```python
-User = os.popen('echo ${SUDO_USER:-$LOGNAME}').readline().strip()
-UserHome = os.popen('getent passwd %s | cut -d: -f 6' % User).readline().strip()
-config_file = '%s/.config/robot-hat/robot-hat.conf' % UserHome
+User = os.popen("echo ${SUDO_USER:-$LOGNAME}").readline().strip()
+UserHome = os.popen("getent passwd %s | cut -d: -f 6" % User).readline().strip()
+config_file = "%s/.config/robot-hat/robot-hat.conf" % UserHome
 ```
 
 And later, they modify file permissions with commands like:
 
 ```python
-os.popen('sudo chmod %s %s' % (mode, file_path))  # 🤦
-os.popen('sudo chown -R %s:%s %s' % (owner, owner, some_path))
+os.popen("sudo chmod %s %s" % (mode, file_path))  # 🤦
+os.popen("sudo chown -R %s:%s %s" % (owner, owner, some_path))
 ```
 
 This library removes all such archaic and potentially unsafe patterns by leveraging user-friendly Python APIs like `pathlib`. File-related operations are scoped to user-accessible directories (e.g., `~/.config`) rather than requiring administrative access
@@ -1172,6 +1226,7 @@ This library can be configured either by environment values, either by function 
 
 ```python
 from robot_hat.utils import setup_env_vars
+
 setup_env_vars()
 ```
 
@@ -1179,7 +1234,10 @@ Or:
 
 ```python
 import os
-os.environ["GPIOZERO_PIN_FACTORY"] = "mock" # mock for non-raspberry pi, lgpio for Raspberry Pi 5 and rpigpio for other Raspberry versions
+
+os.environ["GPIOZERO_PIN_FACTORY"] = (
+    "mock"  # mock for non-raspberry pi, lgpio for Raspberry Pi 5 and rpigpio for other Raspberry versions
+)
 os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 ```
 
@@ -1226,7 +1284,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 ---
 
-## Distribution
+### Distribution
 
 To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
@@ -1247,9 +1305,7 @@ To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
 These can be installed locally for testing or uploaded to PyPI for distribution.
 
----
-
-## Common Commands
+### Common Commands
 
 - **Clean Build Artifacts**:
   ```bash
@@ -1262,7 +1318,7 @@ These can be installed locally for testing or uploaded to PyPI for distribution.
 
 ---
 
-## Notes & Recommendations
+### Notes
 
 - The library uses `setuptools_scm` for versioning, which dynamically determines the version based on Git tags. Use proper semantic versioning (e.g., `v1.0.0`) in your repository for best results.
 - Development tools like `ruff` (formatter, import organizer, and linter) are automatically installed with `[dev]` dependencies.

@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Vendor-neutral `Lidar2DABC`, typed polar measurements, complete-revolution
+  scans, device information, and health models intended for SLAM frontends.
+- RPLIDAR C1 support at its 460800-baud default using Slamtec Standard scan mode,
+  including protocol validation and stream resynchronization.
+- Injectable `UARTABC`, a PySerial-backed UART implementation, USB-UART device
+  discovery, and `MockUART` for hardware-free tests.
+- Vendor-neutral `IMUABC` and `EncoderABC` hardware boundaries with immutable,
+  monotonic sensor samples.
+
+### Changed
+
+- Declared Python 3.10 as the minimum supported version and added tested minimum
+  versions for runtime dependencies.
+- `SH3001.read_sample()` now returns acceleration in m/s² and angular velocity
+  in rad/s. `read_raw_sample()` exposes signed counts explicitly for diagnostics.
+- `SH3001Config` now describes physical sensor ranges instead of exposing a
+  copy of the driver's register table.
+- SH3001 initialization now validates the documented `0x61` device ID and no
+  longer writes an undocumented reset sequence to the wrong register.
+- `AbstractIMU` remains an import alias for `IMUABC`, but the old anonymous
+  `read_sensor_data()` raw-list contract has been removed.
+
 ## v2.5.0 (2026-07-18)
 
 ### Changed
@@ -107,10 +133,10 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
   pin = Pin(17)
   pin = Pin("GPIO17")
   pin = Pin("BCM17")  # Broadcom numbering
-  pin = Pin("D0")     # Sunfounder numbering
+  pin = Pin("D0")  # Sunfounder numbering
   pin = Pin("BOARD11")  # physical numbering
-  pin = Pin("J8:11")    # physical numbering
-  pin = Pin("WPI0")     # wiringPi numbering
+  pin = Pin("J8:11")  # physical numbering
+  pin = Pin("WPI0")  # wiringPi numbering
   ```
 
 ### Added
