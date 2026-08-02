@@ -1,5 +1,8 @@
 from robot_hat.data_types import (
+    AngularPositionHealth,
+    AngularPositionSample,
     BatteryMetrics,
+    EncoderHealth,
     EncoderSample,
     IMUSample,
     RawIMUSample,
@@ -46,11 +49,22 @@ from robot_hat.drivers.adc.INA219 import Mode as INA219Mode
 from robot_hat.drivers.adc.INA226 import INA226
 from robot_hat.drivers.adc.INA260 import INA260
 from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
+from robot_hat.drivers.angle.as5600l import (
+    AS5600L,
+    AS5600LAddressProgrammer,
+    AS5600LAddressProgrammingResult,
+    AS5600LFastFilterThreshold,
+    AS5600LSlowFilter,
+    AS5600LStatus,
+)
 from robot_hat.drivers.pwm.pca9685 import PCA9685
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
 from robot_hat.exceptions import (
     ADCAddressNotFound,
     DevicePinFactoryError,
+    EncoderError,
+    EncoderMagnetError,
+    EncoderNotInitializedError,
     FileDBValidationError,
     GrayscaleTypeError,
     I2CAddressNotFound,
@@ -90,6 +104,7 @@ from robot_hat.i2c.i2c_bus import I2CBus
 from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.i2c.smbus_manager import SMBusManager
 from robot_hat.interfaces.battery_abc import BatteryABC
+from robot_hat.interfaces.angular_position_abc import AngularPositionABC
 from robot_hat.interfaces.encoder_abc import EncoderABC
 from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
@@ -98,6 +113,8 @@ from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.interfaces.smbus_abc import SMBusABC
 from robot_hat.interfaces.uart_abc import UARTABC
+from robot_hat.mock.angular_position import MockAngularPosition
+from robot_hat.mock.encoder import MockEncoder
 from robot_hat.mock.uart import MockUART
 from robot_hat.mock.ultrasonic import Ultrasonic as UltrasonicMock
 from robot_hat.motor.gpio_dc_motor import GPIODCMotor
@@ -109,6 +126,10 @@ from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
+from robot_hat.sensors.angular_position.as5600l_angular_position import (
+    AS5600LAngularPosition,
+)
+from robot_hat.sensors.encoder.as5600l_encoder import AS5600LEncoder
 from robot_hat.sensors.lidar.rplidar_c1 import RPLidarC1
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
@@ -140,8 +161,23 @@ from robot_hat.utils import (
 from robot_hat.version import version
 
 __all__ = [
+    "AngularPositionABC",
+    "AngularPositionHealth",
+    "AngularPositionSample",
+    "AS5600L",
+    "AS5600LAddressProgrammer",
+    "AS5600LAddressProgrammingResult",
+    "AS5600LAngularPosition",
+    "AS5600LEncoder",
+    "AS5600LFastFilterThreshold",
+    "AS5600LSlowFilter",
+    "AS5600LStatus",
     "FileDB",
     "EncoderABC",
+    "EncoderError",
+    "EncoderHealth",
+    "EncoderMagnetError",
+    "EncoderNotInitializedError",
     "EncoderSample",
     "IMUABC",
     "IMUSample",
@@ -159,6 +195,8 @@ __all__ = [
     "USBUARTDevice",
     "USBUARTSelector",
     "MockUART",
+    "MockAngularPosition",
+    "MockEncoder",
     "RawIMUSample",
     "find_usb_uart_device",
     "list_usb_uart_devices",

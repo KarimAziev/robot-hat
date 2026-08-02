@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from robot_hat.data_types.encoder import EncoderSample
+from robot_hat.data_types.encoder import EncoderHealth, EncoderSample
 
 
 class EncoderABC(ABC):
@@ -14,6 +14,11 @@ class EncoderABC(ABC):
     @abstractmethod
     def read_sample(self) -> EncoderSample:
         """Return the current cumulative counter and its observation time."""
+        pass
+
+    @abstractmethod
+    def read_health(self) -> EncoderHealth:
+        """Return availability, sensor diagnostics, and error counters."""
         pass
 
     @abstractmethod

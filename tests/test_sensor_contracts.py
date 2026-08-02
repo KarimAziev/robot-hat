@@ -1,7 +1,8 @@
 import math
 import unittest
 
-from robot_hat.data_types.encoder import EncoderSample
+from robot_hat.data_types.angular_position import AngularPositionSample
+from robot_hat.data_types.encoder import EncoderHealth, EncoderSample
 from robot_hat.data_types.config.sh3001 import SH3001Config
 from robot_hat.data_types.imu import IMUSample
 
@@ -32,6 +33,27 @@ class TestEncoderSample(unittest.TestCase):
     def test_rejects_negative_timestamp(self) -> None:
         with self.assertRaises(ValueError):
             EncoderSample(ticks=0, timestamp_monotonic_ns=-1)
+
+
+class TestEncoderHealth(unittest.TestCase):
+    def test_optional_hardware_fields_and_counters(self) -> None:
+        health = EncoderHealth(available=True, invalid_transitions=2)
+
+        self.assertIsNone(health.magnet_detected)
+        self.assertEqual(health.invalid_transitions, 2)
+        with self.assertRaises(ValueError):
+            EncoderHealth(available=False, communication_errors=-1)
+
+
+class TestAngularPositionSample(unittest.TestCase):
+    def test_validates_angle_and_timestamp(self) -> None:
+        sample = AngularPositionSample(12.5, 42)
+
+        self.assertEqual(sample.angle_degrees, 12.5)
+        with self.assertRaises(ValueError):
+            AngularPositionSample(math.inf, 0)
+        with self.assertRaises(ValueError):
+            AngularPositionSample(0.0, -1)
 
 
 class TestSH3001Config(unittest.TestCase):

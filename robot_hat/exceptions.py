@@ -146,6 +146,18 @@ class IMUReadError(RuntimeError):
     """Raised when an IMU returns an incomplete or malformed sample."""
 
 
+class EncoderError(RuntimeError):
+    """Base error for encoder and angular-position sensor failures."""
+
+
+class EncoderNotInitializedError(EncoderError):
+    """Raised when an encoder is sampled before successful initialization."""
+
+
+class EncoderMagnetError(EncoderError):
+    """Raised when a magnetic encoder cannot safely measure its magnet."""
+
+
 class DevicePinFactoryError(ValueError):
     """
     Exception raised when the Device.pin_factory is None.

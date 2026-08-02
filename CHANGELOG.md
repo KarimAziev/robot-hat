@@ -12,6 +12,15 @@
   discovery, and `MockUART` for hardware-free tests.
 - Vendor-neutral `IMUABC` and `EncoderABC` hardware boundaries with immutable,
   monotonic sensor samples.
+- Low-level AS5600L raw-angle, status, magnitude, gain, filter, and volatile
+  address support, with permanent address burning isolated behind an explicitly
+  confirmed and verified programming utility.
+- `AS5600LEncoder` cumulative 12-bit unwrapping with direction inversion,
+  sampling-gap detection, magnet validation, health counters, and safe I²C bus
+  ownership.
+- `AngularPositionABC`, `AS5600LAngularPosition`, `EncoderHealth`,
+  `MockEncoder`, and `MockAngularPosition` for measured steering angle and
+  hardware-free localization tests.
 
 ### Changed
 

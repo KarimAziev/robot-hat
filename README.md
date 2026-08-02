@@ -29,6 +29,7 @@ Unlike the aforementioned libraries:
 >   - [Usage examples](#usage-examples)
 >     - [2D lidar scans for SLAM](#2d-lidar-scans-for-slam)
 >     - [IMU samples for localization](#imu-samples-for-localization)
+>     - [Wheel and steering angle encoders](#wheel-and-steering-angle-encoders)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
@@ -124,6 +125,35 @@ finally:
 
 See [localization sensor contracts](docs/localization_sensors.md) for frame,
 timestamp, encoder, and driver-implementation requirements.
+
+### Wheel and steering angle encoders
+
+The AS5600L driver supports both cumulative wheel rotation and absolute steering
+angle. Both default to Raspberry Pi I²C bus 1 and the sensor's factory address
+`0x40`:
+
+```python
+from robot_hat import AS5600LAngularPosition, AS5600LEncoder
+
+rear_wheel = AS5600LEncoder(invert_direction=False)
+steering = AS5600LAngularPosition(zero_offset_degrees=180.0)
+
+try:
+    rear_wheel.initialize()
+    steering.initialize()
+    print(rear_wheel.read_sample())
+    print(rear_wheel.read_health())
+    print(steering.read_angle())
+finally:
+    rear_wheel.close()
+    steering.close()
+```
+
+For steering, mount the sensor after the servo gear train when possible so it
+measures backlash and linkage motion. See
+[localization sensor contracts](docs/localization_sensors.md) for unwrapping,
+sampling gaps, I²C ownership, mocks, and the separately guarded permanent-address
+programming procedure.
 
 ### Motor control
 

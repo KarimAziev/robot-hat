@@ -18,4 +18,26 @@ class EncoderSample:
             raise ValueError("timestamp_monotonic_ns must be non-negative")
 
 
-__all__ = ["EncoderSample"]
+@dataclass(frozen=True)
+class EncoderHealth:
+    """Vendor-neutral encoder availability and diagnostic counters.
+
+    Hardware-specific fields remain ``None`` when a sensor cannot report them.
+    Counters are cumulative since construction of the concrete encoder.
+    """
+
+    available: bool
+    magnet_detected: bool | None = None
+    magnet_too_weak: bool | None = None
+    magnet_too_strong: bool | None = None
+    communication_errors: int = 0
+    invalid_transitions: int = 0
+
+    def __post_init__(self) -> None:
+        if self.communication_errors < 0:
+            raise ValueError("communication_errors must be non-negative")
+        if self.invalid_transitions < 0:
+            raise ValueError("invalid_transitions must be non-negative")
+
+
+__all__ = ["EncoderHealth", "EncoderSample"]
