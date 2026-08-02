@@ -5,7 +5,10 @@ from robot_hat.data_types import (
     EncoderHealth,
     EncoderSample,
     IMUSample,
+    QuadratureCounterSnapshot,
+    QuadratureDecodeMode,
     RawIMUSample,
+    as530x_counts_per_revolution,
 )
 from robot_hat.data_types.lidar import (
     LidarDeviceInfo,
@@ -62,6 +65,8 @@ from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
 from robot_hat.exceptions import (
     ADCAddressNotFound,
     DevicePinFactoryError,
+    EncoderBackendError,
+    EncoderClosedError,
     EncoderError,
     EncoderMagnetError,
     EncoderNotInitializedError,
@@ -110,11 +115,15 @@ from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
 from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
+from robot_hat.interfaces.quadrature_counter_backend_abc import (
+    QuadratureCounterBackendABC,
+)
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.interfaces.smbus_abc import SMBusABC
 from robot_hat.interfaces.uart_abc import UARTABC
 from robot_hat.mock.angular_position import MockAngularPosition
 from robot_hat.mock.encoder import MockEncoder
+from robot_hat.mock.quadrature_counter import MockQuadratureCounterBackend
 from robot_hat.mock.uart import MockUART
 from robot_hat.mock.ultrasonic import Ultrasonic as UltrasonicMock
 from robot_hat.motor.gpio_dc_motor import GPIODCMotor
@@ -130,6 +139,8 @@ from robot_hat.sensors.angular_position.as5600l_angular_position import (
     AS5600LAngularPosition,
 )
 from robot_hat.sensors.encoder.as5600l_encoder import AS5600LEncoder
+from robot_hat.sensors.encoder.quadrature_decoder import QuadratureDecoder
+from robot_hat.sensors.encoder.quadrature_encoder import QuadratureEncoder
 from robot_hat.sensors.lidar.rplidar_c1 import RPLidarC1
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
@@ -174,6 +185,8 @@ __all__ = [
     "AS5600LStatus",
     "FileDB",
     "EncoderABC",
+    "EncoderBackendError",
+    "EncoderClosedError",
     "EncoderError",
     "EncoderHealth",
     "EncoderMagnetError",
@@ -197,8 +210,15 @@ __all__ = [
     "MockUART",
     "MockAngularPosition",
     "MockEncoder",
+    "MockQuadratureCounterBackend",
+    "QuadratureCounterBackendABC",
+    "QuadratureCounterSnapshot",
+    "QuadratureDecodeMode",
+    "QuadratureDecoder",
+    "QuadratureEncoder",
     "RawIMUSample",
     "find_usb_uart_device",
+    "as530x_counts_per_revolution",
     "list_usb_uart_devices",
     "I2C",
     "I2CBus",

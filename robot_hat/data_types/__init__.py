@@ -10,6 +10,11 @@ from .lidar import (
     LidarScan,
 )
 from .motor import MotorServiceDirection, MotorZeroDirection
+from .quadrature import (
+    QuadratureCounterSnapshot,
+    QuadratureDecodeMode,
+    as530x_counts_per_revolution,
+)
 from .uart import UARTConfig, USBUARTDevice, USBUARTSelector
 
 __all__ = [
@@ -26,10 +31,13 @@ __all__ = [
     "LidarScan",
     "MotorServiceDirection",
     "MotorZeroDirection",
+    "QuadratureCounterSnapshot",
+    "QuadratureDecodeMode",
     "RawIMUSample",
     "RawVector3",
     "UARTConfig",
     "USBUARTDevice",
     "USBUARTSelector",
     "Vector3",
+    "as530x_counts_per_revolution",
 ]

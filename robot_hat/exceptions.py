@@ -154,6 +154,14 @@ class EncoderNotInitializedError(EncoderError):
     """Raised when an encoder is sampled before successful initialization."""
 
 
+class EncoderClosedError(EncoderError):
+    """Raised when an encoder or counter operation is attempted after close."""
+
+
+class EncoderBackendError(EncoderError):
+    """Raised when an encoder's counter backend cannot complete an operation."""
+
+
 class EncoderMagnetError(EncoderError):
     """Raised when a magnetic encoder cannot safely measure its magnet."""
 
