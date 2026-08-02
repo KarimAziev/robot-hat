@@ -1,5 +1,6 @@
 import os
 import unittest
+from unittest.mock import patch
 
 from robot_hat import FileDB, FileDBValidationError
 
@@ -58,6 +59,17 @@ class TestFileDB(unittest.TestCase):
         self.db.set("key", "value")
         retrieved_value = self.db.get("key", default_value="default")
         self.assertEqual(retrieved_value, "value")
+
+    def test_set_replaces_existing_database_file(self):
+        """
+        Test that setting a value replaces the existing database atomically.
+        """
+        with patch("robot_hat.filedb.os.replace", wraps=os.replace) as replace:
+            self.db.set("key", "value")
+
+        replace.assert_called_once_with(f"{self.test_db_path}.tmp", self.test_db_path)
+        self.assertFalse(os.path.exists(f"{self.test_db_path}.tmp"))
+        self.assertEqual(self.db.get("key", default_value="default"), "value")
 
     def test_get_default_value(self):
         """
