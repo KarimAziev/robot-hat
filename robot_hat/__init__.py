@@ -55,10 +55,14 @@ from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
 from robot_hat.drivers.angle.as5600l import (
     AS5600L,
     AS5600LAddressProgrammer,
+    AS5600LAddressProgrammingPlan,
     AS5600LAddressProgrammingResult,
     AS5600LFastFilterThreshold,
     AS5600LSlowFilter,
     AS5600LStatus,
+)
+from robot_hat.drivers.gpio.gpiozero_digital_edge_input import (
+    GPIOZeroDigitalEdgeInput,
 )
 from robot_hat.drivers.pwm.pca9685 import PCA9685
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
@@ -110,6 +114,10 @@ from robot_hat.i2c.i2c_manager import I2C
 from robot_hat.i2c.smbus_manager import SMBusManager
 from robot_hat.interfaces.battery_abc import BatteryABC
 from robot_hat.interfaces.angular_position_abc import AngularPositionABC
+from robot_hat.interfaces.digital_edge_input_abc import (
+    DigitalEdgeCallback,
+    DigitalEdgeInputABC,
+)
 from robot_hat.interfaces.encoder_abc import EncoderABC
 from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
@@ -139,6 +147,9 @@ from robot_hat.sensors.angular_position.as5600l_angular_position import (
     AS5600LAngularPosition,
 )
 from robot_hat.sensors.encoder.as5600l_encoder import AS5600LEncoder
+from robot_hat.sensors.encoder.gpio_quadrature_counter import (
+    GPIOQuadratureCounterBackend,
+)
 from robot_hat.sensors.encoder.quadrature_decoder import QuadratureDecoder
 from robot_hat.sensors.encoder.quadrature_encoder import QuadratureEncoder
 from robot_hat.sensors.lidar.rplidar_c1 import RPLidarC1
@@ -177,6 +188,7 @@ __all__ = [
     "AngularPositionSample",
     "AS5600L",
     "AS5600LAddressProgrammer",
+    "AS5600LAddressProgrammingPlan",
     "AS5600LAddressProgrammingResult",
     "AS5600LAngularPosition",
     "AS5600LEncoder",
@@ -192,6 +204,10 @@ __all__ = [
     "EncoderMagnetError",
     "EncoderNotInitializedError",
     "EncoderSample",
+    "DigitalEdgeCallback",
+    "DigitalEdgeInputABC",
+    "GPIOQuadratureCounterBackend",
+    "GPIOZeroDigitalEdgeInput",
     "IMUABC",
     "IMUSample",
     "Lidar2DABC",

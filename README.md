@@ -131,8 +131,11 @@ timestamp, encoder, and driver-implementation requirements.
 `EncoderABC` represents one signed cumulative encoder. `AS5600LEncoder`
 software-unwraps an absolute I²C angle sensor, while incremental A/B devices such
 as AS5304B, AS5306B, TMAG5110, optical ABI encoders, and integrated motor
-encoders use `QuadratureEncoder` with an injected counter backend. Each left or
-right outdrive gets its own encoder; applications own their fusion and odometry.
+encoders use `QuadratureEncoder` with an injected counter backend. A low-rate
+GPIO implementation is available through `GPIOZeroDigitalEdgeInput` and
+`GPIOQuadratureCounterBackend`; production high-rate rings should use a hardware
+counter backend. Each left or right outdrive gets its own encoder; applications
+own their fusion and odometry.
 
 The AS5600L encoder and absolute steering-angle sensor default to Raspberry Pi
 I²C bus 1 and the sensor's factory address `0x40`:

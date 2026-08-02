@@ -117,15 +117,38 @@ open unless ownership was explicitly transferred. Generic quadrature health
 reports backend availability and invalid transitions; magnet-specific fields
 remain `None` unless a future concrete backend can genuinely determine them.
 
-The package currently supplies the backend contract, pure decoder, encoder
-adapter, and mock backend, but intentionally does not supply a GPIO callback
-backend. The existing `Pin.irq()` debounce behavior is unsuitable for encoder
-capture, and Python callbacks on a busy Linux system cannot guarantee that they
-will observe every high-rate edge from an AS5304/AS5306 ring. Production
-odometry should use a hardware counter, RP2040 PIO, microcontroller timer,
-kernel facility, dedicated counter IC, or controller that returns atomic
-cumulative snapshots. The API does not promise real-time capture or freedom
-from lost edges.
+For low-rate experiments, `GPIOZeroDigitalEdgeInput` and
+`GPIOQuadratureCounterBackend` observe both signal edges without software
+debounce:
+
+```python
+from robot_hat import (
+    GPIOQuadratureCounterBackend,
+    GPIOZeroDigitalEdgeInput,
+    QuadratureEncoder,
+)
+
+counter = GPIOQuadratureCounterBackend(
+    a_input=GPIOZeroDigitalEdgeInput("GPIO17", pull_up=True),
+    b_input=GPIOZeroDigitalEdgeInput("GPIO27", pull_up=True),
+)
+encoder = QuadratureEncoder(backend=counter, invert_direction=False)
+encoder.initialize()
+```
+
+Use suitable external 3.3 V pull-ups for open-drain sensor outputs; internal GPIO
+pull-ups are primarily convenient for initial testing. Never connect a 5 V
+push-pull encoder output directly to a 3.3 V Raspberry Pi GPIO. The existing
+`Pin.irq()` debounce behavior remains unsuitable for encoder capture, so this
+backend uses a separate raw-edge input adapter with `bounce_time=None`.
+
+This remains a reference and low-rate backend. Python callbacks on a busy Linux
+system cannot guarantee that they will observe every high-rate edge from an
+AS5304/AS5306 ring. Production odometry should use a hardware counter, RP2040
+PIO, microcontroller timer, kernel facility, dedicated counter IC, or controller
+that returns atomic cumulative snapshots. `QuadratureEncoder` can use such a
+backend without changing the application. The GPIO API does not promise
+real-time capture or freedom from lost edges.
 
 AS5304/AS5306 index capture is not implemented. An index is a separate reference
 event and must never silently reset `EncoderSample.ticks`; a future backend can
@@ -158,12 +181,19 @@ finally:
 ```
 
 Initialization rejects a missing magnet and the sensor's severe too-weak and
-too-strong conditions. Sampling unwraps transitions across 0/4095. A gap longer
-than 100 ms is ambiguous because the wheel could have completed an unobserved
-rotation; by default the driver preserves the current cumulative count,
-re-baselines at the new raw angle, and increments `invalid_transitions`. Configure
-`max_sample_gap_ns=None` only when the caller can guarantee that the wheel cannot
-move more than half a revolution between samples.
+too-strong conditions. Sampling unwraps transitions across 0/4095, which is safe
+only when the shaft moves less than half a revolution between reads. The default
+`max_abs_speed_rps=5.0` derives a 100 ms maximum unambiguous interval; configure
+this value from the real maximum shaft speed. `max_sample_gap_ns` may impose a
+stricter scheduling limit. Reaching either limit preserves the current count,
+re-baselines, and increments `invalid_transitions`.
+
+Passing `max_abs_speed_rps=None` disables the physical-speed-derived limit.
+Passing both that and `max_sample_gap_ns=None` disables all gap protection and is
+safe only when the caller independently guarantees less than half a turn per
+sample. A single-turn absolute sensor cannot distinguish a large forward turn
+from the shorter reverse turn. Prefer a continuously counted quadrature backend
+for high-speed wheel or outdrive odometry.
 
 The driver timestamps a sample after its I²C observation using
 `time.monotonic_ns()`. Pass an existing `SMBusABC` as `bus` to share an I²C bus;
@@ -190,7 +220,11 @@ finally:
     steering.close()
 ```
 
-The returned angle is normalized to `[0, 360)`. Mounting the magnet and sensor
+The returned angle is normalized to `[0, 360)`. It is an absolute linkage or
+pivot bearing, not yet an estimator-ready signed road-wheel angle. The
+application must subtract its calibrated center, wrap into a signed range, apply
+direction and mechanical ratio, and optionally interpolate a linkage calibration
+curve before converting to radians. Mounting the magnet and sensor
 after the servo gear train, on the linkage or steering pivot, lets the
 measurement include servo deadband, backlash, linkage nonlinearity, wheel load,
 and calibration error. A sensor on the servo motor shaft cannot observe all of
@@ -211,19 +245,21 @@ initialization never issue an OTP command.
 
 Permanent address programming is isolated in `AS5600LAddressProgrammer`. The
 AS5600L `BURN_SETTING` command also permanently captures the current `MANG` and
-`CONF` registers, and OTP bit changes have one-way constraints. The programmer
-therefore requires an exact, address-specific phrase and verifies the OTP
-readback:
+`CONF` registers, and OTP bit changes have one-way constraints. The sensor must
+be power-cycled and isolated on the bus first. The programmer returns an
+immutable plan containing every affected value, then re-reads and compares the
+live state before accepting an exact plan-specific phrase:
 
 ```python
 from robot_hat import AS5600LAddressProgrammer
 
 new_address = 0x42
 with AS5600LAddressProgrammer(bus=1, address=0x40) as programmer:
-    phrase = programmer.confirmation_phrase(new_address)
+    plan = programmer.prepare_address_programming(new_address)
+    print(plan)  # Physically verify address, CONF, MANG, and ZMCO before burn.
     result = programmer.program_address(
-        new_address,
-        confirmation=phrase,
+        plan,
+        confirmation=plan.confirmation_phrase,
     )
 
 # Power-cycle only the sensor, then verify using its newly programmed address.
@@ -231,10 +267,12 @@ with AS5600LAddressProgrammer(bus=1, address=new_address) as programmer:
     assert programmer.verify_programmed_address(new_address)
 ```
 
-Do not put this procedure in robot startup. Before using it, provide the power
-supply and programming capacitor required by the datasheet, confirm the live
-`MANG` and `CONF` values are the settings intended to be permanent, perform the
-burn once, then power-cycle and verify. See the
+Do not put this procedure in robot startup. The plan rejects same-address burns,
+incompatible one-way OTP address changes, nonzero `ZMCO`, and live settings that
+changed after review. Before using it, provide the power supply and programming
+capacitor required by the datasheet, confirm that the plan's `MANG` and `CONF`
+values are intended to be permanent, perform the burn once, then power-cycle and
+verify. See the
 [ams OSRAM AS5600L datasheet](https://look.ams-osram.com/m/657fca3b775890b7/original/AS5600L-DS000545.pdf),
 especially the non-volatile memory and I²C address programming sections.
 

@@ -13,6 +13,7 @@ from robot_hat.interfaces.smbus_abc import SMBusABC
 DEFAULT_ADDRESS: Final = 0x40
 FULL_SCALE_COUNTS: Final = 4096
 
+_REG_ZMCO: Final = 0x00
 _REG_MANG: Final = 0x05
 _REG_CONF: Final = 0x07
 _REG_STATUS: Final = 0x0B
@@ -76,6 +77,26 @@ class AS5600LAddressProgrammingResult:
     maximum_angle: int
     otp_readback_verified: bool
     power_cycle_verification_required: bool = True
+
+
+@dataclass(frozen=True)
+class AS5600LAddressProgrammingPlan:
+    """Reviewed state that must remain unchanged before an OTP address burn."""
+
+    current_address: int
+    new_address: int
+    configuration: int
+    maximum_angle: int
+    zero_position_burn_count: int
+
+    @property
+    def confirmation_phrase(self) -> str:
+        """Return an exact phrase containing every setting burned by the command."""
+
+        return (
+            f"BURN AS5600L ADDRESS 0x{self.new_address:02X} "
+            f"CONF 0x{self.configuration:04X} MANG 0x{self.maximum_angle:03X}"
+        )
 
 
 class AS5600L:
@@ -160,10 +181,9 @@ class AS5600L:
     def set_temporary_address(self, address: int) -> None:
         """Change the active I²C address until the next power-on reset."""
         _validate_address(address)
-        encoded_address = address << 1
         with self._lock:
-            self._write_byte(_REG_I2C_ADDRESS, encoded_address)
-            self._write_byte(_REG_I2C_UPDATE, encoded_address)
+            self._write_byte(_REG_I2C_ADDRESS, address)
+            self._write_byte(_REG_I2C_UPDATE, address)
             self._address = address
 
     def close(self) -> None:
@@ -238,53 +258,92 @@ class AS5600LAddressProgrammer:
         self._driver = AS5600L(bus=bus, address=address)
         self._sleep = sleep
 
-    @staticmethod
-    def confirmation_phrase(address: int) -> str:
+    def prepare_address_programming(
+        self, address: int
+    ) -> AS5600LAddressProgrammingPlan:
+        """Inspect and validate all live settings affected by ``BURN_SETTING``.
+
+        The sensor must be power-cycled before preparing a plan so the readable
+        configuration reflects OTP rather than an earlier volatile change. Only
+        one AS5600L may be connected while programming, because immediate
+        verification may need to probe both the old and new addresses.
+        """
+
         _validate_address(address)
-        return f"BURN AS5600L ADDRESS 0x{address:02X}"
+        current_address = self._driver._read_byte(_REG_I2C_ADDRESS) & 0x7F
+        if current_address != self._driver.address:
+            raise ValueError(
+                "AS5600L I2CADDR does not match the active address; power-cycle "
+                "the isolated sensor before preparing an OTP programming plan"
+            )
+        if address == current_address:
+            raise ValueError("new address must differ from the current address")
+        if not _otp_address_transition_is_possible(current_address, address):
+            raise ValueError(
+                f"OTP cannot change AS5600L address 0x{current_address:02X} "
+                f"to 0x{address:02X}"
+            )
+
+        zero_position_burn_count = self._driver._read_byte(_REG_ZMCO) & 0x03
+        if zero_position_burn_count != 0:
+            raise ValueError(
+                "BURN_SETTING is unsafe after ZPOS or MPOS was programmed; "
+                f"ZMCO is {zero_position_burn_count}"
+            )
+        return AS5600LAddressProgrammingPlan(
+            current_address=current_address,
+            new_address=address,
+            configuration=self._driver.read_configuration(),
+            maximum_angle=self._driver._read_u12(_REG_MANG),
+            zero_position_burn_count=zero_position_burn_count,
+        )
 
     def program_address(
         self,
-        address: int,
+        plan: AS5600LAddressProgrammingPlan,
         *,
         confirmation: str,
     ) -> AS5600LAddressProgrammingResult:
-        """Burn and immediately verify a new address in OTP.
+        """Burn a previously reviewed plan and immediately verify OTP readback.
 
         A subsequent power cycle and :meth:`verify_programmed_address` call are
         still required to establish that the device starts at the new address.
         """
-        _validate_address(address)
-        required = self.confirmation_phrase(address)
-        if confirmation != required:
+        if not isinstance(plan, AS5600LAddressProgrammingPlan):
+            raise TypeError("plan must be an AS5600LAddressProgrammingPlan")
+        if confirmation != plan.confirmation_phrase:
             raise ValueError(
-                f"permanent programming requires confirmation {required!r}"
+                "permanent programming requires confirmation "
+                f"{plan.confirmation_phrase!r}"
             )
 
-        old_address = self._driver.address
-        configuration = self._driver.read_configuration()
-        maximum_angle = self._driver._read_u12(_REG_MANG)
-        encoded_address = address << 1
+        live_plan = self.prepare_address_programming(plan.new_address)
+        if live_plan != plan:
+            raise ValueError(
+                "AS5600L settings changed after the programming plan was reviewed"
+            )
 
-        self._driver._write_byte(_REG_I2C_ADDRESS, encoded_address)
+        self._driver._write_byte(_REG_I2C_ADDRESS, plan.new_address)
         self._sleep(0.001)
         self._driver._write_byte(_REG_BURN, _BURN_SETTING)
         self._sleep(0.005)
         self._reload_otp()
 
+        verified_address: int | None = None
         try:
-            programmed_address = self._driver._read_byte(_REG_I2C_ADDRESS) >> 1
+            self._driver._address = plan.new_address
+            verified_address = self._driver._read_byte(_REG_I2C_ADDRESS) & 0x7F
         except OSError:
-            # Some parts apply the new active address when OTP is reloaded,
-            # while others retain the old active address until a real POR.
-            self._driver._address = address
-            programmed_address = self._driver._read_byte(_REG_I2C_ADDRESS) >> 1
+            # Some parts retain the old active address until a real power-on
+            # reset even after the OTP reload sequence.
+            self._driver._address = plan.current_address
+            verified_address = self._driver._read_byte(_REG_I2C_ADDRESS) & 0x7F
         verified_configuration = self._driver.read_configuration()
         verified_maximum_angle = self._driver._read_u12(_REG_MANG)
         verified = (
-            programmed_address == address
-            and verified_configuration == configuration
-            and verified_maximum_angle == maximum_angle
+            verified_address == plan.new_address
+            and verified_configuration == plan.configuration
+            and verified_maximum_angle == plan.maximum_angle
         )
         if not verified:
             raise OSError(
@@ -293,17 +352,17 @@ class AS5600LAddressProgrammer:
             )
 
         return AS5600LAddressProgrammingResult(
-            old_address=old_address,
-            new_address=address,
-            configuration=configuration,
-            maximum_angle=maximum_angle,
+            old_address=plan.current_address,
+            new_address=plan.new_address,
+            configuration=plan.configuration,
+            maximum_angle=plan.maximum_angle,
             otp_readback_verified=True,
         )
 
     def verify_programmed_address(self, expected_address: int) -> bool:
         """Verify OTP address readback, normally after a device power cycle."""
         _validate_address(expected_address)
-        programmed_address = self._driver._read_byte(_REG_I2C_ADDRESS) >> 1
+        programmed_address = self._driver._read_byte(_REG_I2C_ADDRESS) & 0x7F
         self._driver.read_status()
         return programmed_address == expected_address
 
@@ -329,9 +388,19 @@ def _validate_address(address: int) -> None:
         raise ValueError("address must be an unreserved 7-bit I2C address (0x08-0x77)")
 
 
+def _otp_address_transition_is_possible(current: int, requested: int) -> bool:
+    """Return whether the AS5600L one-way OTP bits can represent ``requested``."""
+
+    lower_address_bits = 0x3F
+    lower_bit_would_clear = bool((current & lower_address_bits) & ~requested)
+    msb_would_return_to_one = not bool(current & 0x40) and bool(requested & 0x40)
+    return not lower_bit_would_clear and not msb_would_return_to_one
+
+
 __all__ = [
     "AS5600L",
     "AS5600LAddressProgrammer",
+    "AS5600LAddressProgrammingPlan",
     "AS5600LAddressProgrammingResult",
     "AS5600LFastFilterThreshold",
     "AS5600LSlowFilter",

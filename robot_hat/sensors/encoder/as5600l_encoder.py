@@ -1,6 +1,7 @@
 """Cumulative encoder backed by the AS5600L absolute angle sensor."""
 
 import logging
+import math
 import time
 from threading import RLock
 from typing import Callable, Final
@@ -19,15 +20,17 @@ from robot_hat.interfaces.encoder_abc import EncoderABC
 
 _log = logging.getLogger(__name__)
 DEFAULT_MAX_SAMPLE_GAP_NS: Final = 100_000_000
+DEFAULT_MAX_ABS_SPEED_RPS: Final = 5.0
 _HALF_SCALE: Final = FULL_SCALE_COUNTS // 2
 
 
 class AS5600LEncoder(EncoderABC):
     """Thread-safe signed cumulative encoder with 4096 ticks per revolution.
 
-    A sampling gap beyond ``max_sample_gap_ns`` is treated as ambiguous: the
-    current raw angle becomes the new unwrap baseline, the cumulative count is
-    preserved, and ``invalid_transitions`` is incremented.
+    Safe single-turn unwrapping requires less than half a revolution between
+    samples. ``max_abs_speed_rps`` derives that physical interval, while
+    ``max_sample_gap_ns`` may impose a stricter scheduling limit. Reaching either
+    limit re-baselines without inventing motion and increments diagnostics.
     """
 
     def __init__(
@@ -37,6 +40,7 @@ class AS5600LEncoder(EncoderABC):
         address: int = DEFAULT_ADDRESS,
         invert_direction: bool = False,
         max_sample_gap_ns: int | None = DEFAULT_MAX_SAMPLE_GAP_NS,
+        max_abs_speed_rps: float | None = DEFAULT_MAX_ABS_SPEED_RPS,
         monotonic_ns: Callable[[], int] = time.monotonic_ns,
     ) -> None:
         if max_sample_gap_ns is not None:
@@ -46,9 +50,24 @@ class AS5600LEncoder(EncoderABC):
                 raise TypeError("max_sample_gap_ns must be an integer or None")
             if max_sample_gap_ns <= 0:
                 raise ValueError("max_sample_gap_ns must be positive or None")
+        if max_abs_speed_rps is not None:
+            if isinstance(max_abs_speed_rps, bool) or not isinstance(
+                max_abs_speed_rps, (int, float)
+            ):
+                raise TypeError("max_abs_speed_rps must be a number or None")
+            if not math.isfinite(max_abs_speed_rps) or max_abs_speed_rps <= 0:
+                raise ValueError("max_abs_speed_rps must be finite and positive")
         self._sensor = AS5600L(bus=bus, address=address)
         self._invert_direction = invert_direction
         self._max_sample_gap_ns = max_sample_gap_ns
+        self._max_abs_speed_rps = (
+            float(max_abs_speed_rps) if max_abs_speed_rps is not None else None
+        )
+        self._maximum_unambiguous_gap_ns = (
+            int(0.5 / self._max_abs_speed_rps * 1_000_000_000)
+            if self._max_abs_speed_rps is not None
+            else None
+        )
         self._monotonic_ns = monotonic_ns
         self._lock = RLock()
         self._ticks = 0
@@ -116,14 +135,12 @@ class AS5600LEncoder(EncoderABC):
             if gap_ns < 0:
                 self._invalid_transitions += 1
                 _log.warning("AS5600L monotonic clock moved backwards")
-            elif (
-                self._max_sample_gap_ns is not None and gap_ns > self._max_sample_gap_ns
-            ):
+            elif self._gap_is_ambiguous(gap_ns):
                 self._invalid_transitions += 1
                 _log.warning(
-                    "AS5600L sample gap %d ns exceeded %d ns; re-baselining",
+                    "AS5600L sample gap %d ns reached an unwrap safety limit; "
+                    "re-baselining",
                     gap_ns,
-                    self._max_sample_gap_ns,
                 )
             else:
                 delta = raw_angle - last_raw_angle
@@ -213,5 +230,20 @@ class AS5600LEncoder(EncoderABC):
             invalid_transitions=self._invalid_transitions,
         )
 
+    def _gap_is_ambiguous(self, gap_ns: int) -> bool:
+        limits = (
+            limit
+            for limit in (
+                self._max_sample_gap_ns,
+                self._maximum_unambiguous_gap_ns,
+            )
+            if limit is not None
+        )
+        return any(gap_ns >= limit for limit in limits)
 
-__all__ = ["AS5600LEncoder", "DEFAULT_MAX_SAMPLE_GAP_NS"]
+
+__all__ = [
+    "AS5600LEncoder",
+    "DEFAULT_MAX_ABS_SPEED_RPS",
+    "DEFAULT_MAX_SAMPLE_GAP_NS",
+]

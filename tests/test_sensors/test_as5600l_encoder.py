@@ -5,6 +5,7 @@ from robot_hat.drivers.angle.as5600l import AS5600LStatus
 from robot_hat.exceptions import EncoderMagnetError, EncoderNotInitializedError
 from robot_hat.sensors.encoder.as5600l_encoder import (
     AS5600LEncoder,
+    DEFAULT_MAX_ABS_SPEED_RPS,
     DEFAULT_MAX_SAMPLE_GAP_NS,
 )
 
@@ -41,6 +42,7 @@ class TestAS5600LEncoder(unittest.TestCase):
         *,
         invert_direction: bool = False,
         max_sample_gap_ns: int | None = DEFAULT_MAX_SAMPLE_GAP_NS,
+        max_abs_speed_rps: float | None = DEFAULT_MAX_ABS_SPEED_RPS,
     ) -> AS5600LEncoder:
         with patch(
             "robot_hat.sensors.encoder.as5600l_encoder.AS5600L",
@@ -50,6 +52,7 @@ class TestAS5600LEncoder(unittest.TestCase):
                 monotonic_ns=iter(timestamps).__next__,
                 invert_direction=invert_direction,
                 max_sample_gap_ns=max_sample_gap_ns,
+                max_abs_speed_rps=max_abs_speed_rps,
             )
 
     def test_requires_initialize_and_unwraps_both_boundary_directions(self) -> None:
@@ -100,6 +103,37 @@ class TestAS5600LEncoder(unittest.TestCase):
         ):
             self.assertEqual(encoder.read_sample().ticks, 0)
         self.assertEqual(encoder.read_health().invalid_transitions, 1)
+
+    def test_speed_limit_derives_maximum_unambiguous_sampling_gap(self) -> None:
+        encoder = self._encoder(
+            FakeAS5600L([0, 3072, 3080]),
+            [0, 50_000_000, 51_000_000],
+            max_sample_gap_ns=None,
+            max_abs_speed_rps=10.0,
+        )
+        encoder.initialize()
+
+        with self.assertLogs(
+            "robot_hat.sensors.encoder.as5600l_encoder", level="WARNING"
+        ):
+            self.assertEqual(encoder.read_sample().ticks, 0)
+        self.assertEqual(encoder.read_sample().ticks, 8)
+        self.assertEqual(encoder.read_health().invalid_transitions, 1)
+
+    def test_validates_speed_limit_and_allows_explicitly_disabling_limits(self) -> None:
+        with self.assertRaises(ValueError):
+            AS5600LEncoder(max_abs_speed_rps=0)
+        with self.assertRaises(ValueError):
+            AS5600LEncoder(max_abs_speed_rps=float("inf"))
+
+        encoder = self._encoder(
+            FakeAS5600L([0, 1]),
+            [0, 10_000_000_000],
+            max_sample_gap_ns=None,
+            max_abs_speed_rps=None,
+        )
+        encoder.initialize()
+        self.assertEqual(encoder.read_sample().ticks, 1)
 
     def test_rejects_missing_weak_and_strong_magnets(self) -> None:
         bad_statuses = [

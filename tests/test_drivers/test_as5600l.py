@@ -5,6 +5,7 @@ from unittest.mock import Mock, call, patch
 from robot_hat.drivers.angle.as5600l import (
     AS5600L,
     AS5600LAddressProgrammer,
+    AS5600LAddressProgrammingPlan,
     AS5600LFastFilterThreshold,
     AS5600LSlowFilter,
 )
@@ -43,12 +44,12 @@ class TestAS5600L(unittest.TestCase):
 
         self.bus.write_i2c_block_data.assert_called_once_with(0x40, 0x07, [0x32, 0xA5])
 
-    def test_temporary_address_is_encoded_and_applied_without_burn(self) -> None:
+    def test_temporary_address_writes_seven_bit_value_without_burn(self) -> None:
         self.driver.set_temporary_address(0x42)
 
         self.assertEqual(
             self.bus.write_byte_data.call_args_list,
-            [call(0x40, 0x20, 0x84), call(0x40, 0x21, 0x84)],
+            [call(0x40, 0x20, 0x42), call(0x40, 0x21, 0x42)],
         )
         self.assertEqual(self.driver.address, 0x42)
         self.assertNotIn(
@@ -91,7 +92,11 @@ class TestAS5600LAddressProgrammer(unittest.TestCase):
             0x05: [0x00, 0x00],
             0x07: [0x01, 0x23],
         }
-        self.byte_registers: Dict[int, int] = {0x0B: 0x20, 0x20: 0x80}
+        self.byte_registers: Dict[int, int] = {
+            0x00: 0,
+            0x0B: 0x20,
+            0x20: 0x40,
+        }
         self.bus = Mock(spec=SMBusABC)
         self.bus.read_i2c_block_data.side_effect = self._read_block
         self.bus.read_byte_data.side_effect = self._read_byte
@@ -111,16 +116,40 @@ class TestAS5600LAddressProgrammer(unittest.TestCase):
         if register == 0x20:
             self.byte_registers[register] = value
 
-    def test_requires_exact_address_specific_confirmation(self) -> None:
+    def test_prepares_plan_with_every_setting_affected_by_burn(self) -> None:
+        plan = self.programmer.prepare_address_programming(0x42)
+
+        self.assertEqual(
+            plan,
+            AS5600LAddressProgrammingPlan(
+                current_address=0x40,
+                new_address=0x42,
+                configuration=0x123,
+                maximum_angle=0,
+                zero_position_burn_count=0,
+            ),
+        )
+        self.assertEqual(
+            plan.confirmation_phrase,
+            "BURN AS5600L ADDRESS 0x42 CONF 0x0123 MANG 0x000",
+        )
+
+    def test_requires_exact_plan_specific_confirmation(self) -> None:
+        plan = self.programmer.prepare_address_programming(0x42)
+        self.bus.reset_mock()
+
         with self.assertRaises(ValueError):
-            self.programmer.program_address(0x42, confirmation="yes")
+            self.programmer.program_address(plan, confirmation="yes")
 
         self.bus.write_byte_data.assert_not_called()
 
     def test_burns_and_verifies_readback_only_through_programmer(self) -> None:
-        phrase = self.programmer.confirmation_phrase(0x42)
+        plan = self.programmer.prepare_address_programming(0x42)
 
-        result = self.programmer.program_address(0x42, confirmation=phrase)
+        result = self.programmer.program_address(
+            plan,
+            confirmation=plan.confirmation_phrase,
+        )
 
         self.assertEqual(result.old_address, 0x40)
         self.assertEqual(result.new_address, 0x42)
@@ -133,6 +162,44 @@ class TestAS5600LAddressProgrammer(unittest.TestCase):
             if one_call.args[1] == 0xFF
         ]
         self.assertEqual(burn_values, [0x40, 0x01, 0x11, 0x10])
+
+    def test_rejects_same_address_impossible_otp_change_and_nonzero_zmco(self) -> None:
+        with self.assertRaisesRegex(ValueError, "must differ"):
+            self.programmer.prepare_address_programming(0x40)
+
+        self.byte_registers[0x20] = 0x42
+        self.programmer._driver._address = 0x42
+        with self.assertRaisesRegex(ValueError, "OTP cannot change"):
+            self.programmer.prepare_address_programming(0x41)
+
+        self.byte_registers[0x20] = 0x40
+        self.programmer._driver._address = 0x40
+        self.byte_registers[0x00] = 1
+        with self.assertRaisesRegex(ValueError, "ZMCO is 1"):
+            self.programmer.prepare_address_programming(0x42)
+
+    def test_rejects_plan_when_live_settings_changed_before_burn(self) -> None:
+        plan = self.programmer.prepare_address_programming(0x42)
+        self.registers[0x07] = [0x01, 0x24]
+
+        with self.assertRaisesRegex(ValueError, "settings changed"):
+            self.programmer.program_address(
+                plan,
+                confirmation=plan.confirmation_phrase,
+            )
+
+        burn_values = [
+            one_call.args[2]
+            for one_call in self.bus.write_byte_data.call_args_list
+            if one_call.args[1] == 0xFF
+        ]
+        self.assertEqual(burn_values, [])
+
+    def test_verify_programmed_address_reads_unshifted_seven_bit_value(self) -> None:
+        self.byte_registers[0x20] = 0x42
+        self.programmer._driver._address = 0x42
+
+        self.assertTrue(self.programmer.verify_programmed_address(0x42))
 
 
 if __name__ == "__main__":

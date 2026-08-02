@@ -1,5 +1,31 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Low-level AS5600L access, guarded two-phase permanent-address programming,
+  cumulative absolute-angle unwrapping, absolute angular position, health data,
+  and hardware-free encoder and angular-position mocks.
+- Vendor-neutral quadrature counter snapshots and backend contract, a pure
+  x1/x2/x4 Gray-code decoder, `QuadratureEncoder`, AS5304/AS5306 resolution
+  helper, and deterministic `MockQuadratureCounterBackend`.
+- Raw `DigitalEdgeInputABC`, `GPIOZeroDigitalEdgeInput`, and the reference-grade
+  `GPIOQuadratureCounterBackend` for low-rate incremental A/B capture without
+  encoder debounce.
+
+### Changed
+
+- `EncoderABC` now requires `read_health()`; downstream concrete encoders and
+  test doubles must implement the health contract before upgrading.
+- `AS5600LEncoder` derives an unambiguous sampling limit from configured maximum
+  shaft speed in addition to its scheduling-gap limit.
+
+### Fixed
+
+- Write and verify AS5600L programmable I²C addresses as seven-bit register
+  values rather than incorrectly shifting them into an address-plus-R/W byte.
+
 ## v2.6.0 (2026-08-02)
 
 ### Added
@@ -12,19 +38,6 @@
   discovery, and `MockUART` for hardware-free tests.
 - Vendor-neutral `IMUABC` and `EncoderABC` hardware boundaries with immutable,
   monotonic sensor samples.
-- Low-level AS5600L raw-angle, status, magnitude, gain, filter, and volatile
-  address support, with permanent address burning isolated behind an explicitly
-  confirmed and verified programming utility.
-- `AS5600LEncoder` cumulative 12-bit unwrapping with direction inversion,
-  sampling-gap detection, magnet validation, health counters, and safe I²C bus
-  ownership.
-- `AngularPositionABC`, `AS5600LAngularPosition`, `EncoderHealth`,
-  `MockEncoder`, and `MockAngularPosition` for measured steering angle and
-  hardware-free localization tests.
-- Vendor-neutral quadrature counter snapshots and backend contract, a pure
-  x1/x2/x4 Gray-code decoder, `QuadratureEncoder`, AS5304/AS5306 resolution
-  helper, and deterministic `MockQuadratureCounterBackend`.
-
 ### Changed
 
 - Declared Python 3.10 as the minimum supported version and added tested minimum

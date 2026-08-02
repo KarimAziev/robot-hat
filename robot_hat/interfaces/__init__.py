@@ -1,4 +1,8 @@
 from robot_hat.interfaces.angular_position_abc import AngularPositionABC
+from robot_hat.interfaces.digital_edge_input_abc import (
+    DigitalEdgeCallback,
+    DigitalEdgeInputABC,
+)
 from robot_hat.interfaces.encoder_abc import EncoderABC
 from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
@@ -10,6 +14,8 @@ from robot_hat.interfaces.uart_abc import UARTABC
 __all__ = [
     "AbstractIMU",
     "AngularPositionABC",
+    "DigitalEdgeCallback",
+    "DigitalEdgeInputABC",
     "EncoderABC",
     "IMUABC",
     "Lidar2DABC",
