@@ -115,8 +115,11 @@ jobs:
           - name: Linux ARM64
             runner: ubuntu-24.04-arm
             python-version: "3.12"
-          - name: macOS ARM64
+          - name: macOS 15 ARM64
             runner: macos-15
+            python-version: "3.12"
+          - name: macOS 26 ARM64
+            runner: macos-26
             python-version: "3.12"
           - name: Windows x64
             runner: windows-2025
