@@ -21,6 +21,9 @@
 - `AngularPositionABC`, `AS5600LAngularPosition`, `EncoderHealth`,
   `MockEncoder`, and `MockAngularPosition` for measured steering angle and
   hardware-free localization tests.
+- Vendor-neutral quadrature counter snapshots and backend contract, a pure
+  x1/x2/x4 Gray-code decoder, `QuadratureEncoder`, AS5304/AS5306 resolution
+  helper, and deterministic `MockQuadratureCounterBackend`.
 
 ### Changed
 

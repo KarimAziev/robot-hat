@@ -45,11 +45,105 @@ ticks. Those values depend on calibration and consumer history:
 to edge callbacks and reads. `close()` must stop callbacks and release only the
 resources owned by that driver.
 
+### Incremental A/B quadrature encoders
+
+`QuadratureEncoder` adapts one vendor-neutral
+`QuadratureCounterBackendABC` to `EncoderABC`. It can represent an AS5304B,
+AS5306B, TMAG5110, optical ABI encoder, integrated motor encoder, or another
+incremental A/B source without putting GPIO pins, callbacks, or vendor details
+in the application-facing encoder API. AS5304B and AS5306B are digital
+incremental sensors, not I²C devices; they have no software-register driver in
+this package.
+
+The three decode modes describe counts per complete electrical A/B cycle:
+
+- `QuadratureDecodeMode.X1`: one count per complete A/B cycle;
+- `QuadratureDecodeMode.X2`: one count per half-cycle;
+- `QuadratureDecodeMode.X4`: one count for every legal Gray-code transition.
+
+The positive electrical sequence is `00 -> 01 -> 11 -> 10 -> 00`; reverse
+movement subtracts counts. `QuadratureEncoder(invert_direction=True)` reverses
+the public tick sign without changing backend behavior. This is the only layer
+that applies configured direction inversion.
+
+The AS5304/AS5306 datasheet specifies 40 A/B periods and 160 interpolated
+positions per magnetic pole pair. Therefore:
+
+```python
+counts_per_revolution = 40 * decode_mode.value * pole_pairs
+```
+
+At x4 this is `160 * pole_pairs`: a ring with 12, 16, or 22 pole pairs produces
+1,920, 2,560, or 3,520 counts per mechanical revolution, respectively. The
+typed `as530x_counts_per_revolution()` helper performs this calculation. These
+counts describe sensor-ring rotation only; wheel diameter, drivetrain ratio,
+distance per tick, and vehicle geometry remain application configuration.
+The sensor mechanics still differ: AS5304 uses a 4.0 mm pole-pair length and a
+recommended magnet-to-package gap up to 0.8 mm, while AS5306 uses 2.4 mm and up
+to 0.4 mm. Those mounting constraints do not change the counter API.
+
+Each rear outdrive needs an independent backend and encoder instance. The
+application combines left and right measurements for distance, slip detection,
+or odometry:
+
+```python
+from robot_hat import (
+    MockQuadratureCounterBackend,
+    QuadratureEncoder,
+)
+
+left_counter = MockQuadratureCounterBackend()
+right_counter = MockQuadratureCounterBackend()
+left_encoder = QuadratureEncoder(
+    backend=left_counter,
+    invert_direction=False,
+)
+right_encoder = QuadratureEncoder(
+    backend=right_counter,
+    invert_direction=True,
+)
+
+left_encoder.initialize()
+right_encoder.initialize()
+
+left = left_encoder.read_sample()
+right = right_encoder.read_sample()
+```
+
+`QuadratureEncoder` owns and closes its backend by default. Set
+`owns_backend=False` only when lifecycle is managed elsewhere. A backend in turn
+closes hardware resources it created, while injected or shared resources remain
+open unless ownership was explicitly transferred. Generic quadrature health
+reports backend availability and invalid transitions; magnet-specific fields
+remain `None` unless a future concrete backend can genuinely determine them.
+
+The package currently supplies the backend contract, pure decoder, encoder
+adapter, and mock backend, but intentionally does not supply a GPIO callback
+backend. The existing `Pin.irq()` debounce behavior is unsuitable for encoder
+capture, and Python callbacks on a busy Linux system cannot guarantee that they
+will observe every high-rate edge from an AS5304/AS5306 ring. Production
+odometry should use a hardware counter, RP2040 PIO, microcontroller timer,
+kernel facility, dedicated counter IC, or controller that returns atomic
+cumulative snapshots. The API does not promise real-time capture or freedom
+from lost edges.
+
+AS5304/AS5306 index capture is not implemented. An index is a separate reference
+event and must never silently reset `EncoderSample.ticks`; a future backend can
+report index diagnostics separately without changing cumulative tick meaning.
+TMAG5110's two independent latch outputs fit the quadrature architecture.
+TMAG5111 provides pulse and direction outputs and should use a separate future
+pulse/direction backend rather than this decoder.
+
+Hardware details and resolution are based on the official
+[AS5304/AS5306 datasheet](https://look.ams-osram.com/m/6f3f7da07e6fa00/original/AS5304-06-DS000187.pdf),
+[AS5306 product page](https://ams-osram.com/products/sensor-solutions/position-sensors/ams-as5306-linear-sensor),
+and [TI TMAG5110 documentation](https://www.ti.com/product/TMAG5110).
+
 ### AS5600L cumulative encoder
 
-`AS5600LEncoder` uses the AS5600L's unscaled 12-bit raw-angle register as a
-4096-tick/revolution wheel encoder. Its default I²C bus and address are `1` and
-`0x40`:
+`AS5600LEncoder` software-unwraps the AS5600L absolute I²C angle sensor's
+unscaled 12-bit raw-angle register as a 4096-tick/revolution cumulative encoder.
+Its default I²C bus and address are `1` and `0x40`:
 
 ```python
 from robot_hat import AS5600LEncoder
@@ -146,19 +240,27 @@ especially the non-volatile memory and I²C address programming sections.
 
 ## Hardware-free mocks
 
-`MockEncoder()` and `MockAngularPosition()` require no GPIO or I²C configuration.
-Both have stationary, healthy defaults and can be configured with a fixed amount
-of motion per sample:
+`MockEncoder()`, `MockQuadratureCounterBackend()`, and `MockAngularPosition()`
+require no GPIO or I²C configuration. They have stationary, healthy defaults and
+can be controlled deterministically:
 
 ```python
-from robot_hat import MockAngularPosition, MockEncoder
+from robot_hat import (
+    MockAngularPosition,
+    MockEncoder,
+    MockQuadratureCounterBackend,
+)
 
 left = MockEncoder(ticks_per_sample=4)
+counter = MockQuadratureCounterBackend(monotonic_ns=lambda: 42)
 steering = MockAngularPosition(
     initial_angle_degrees=180.0,
     degrees_per_sample=0.5,
 )
 left.initialize()
+counter.initialize()
+counter.advance(120)
+assert counter.read_snapshot().count == 120
 steering.initialize()
 ```
 

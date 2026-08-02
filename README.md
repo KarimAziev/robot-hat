@@ -128,9 +128,14 @@ timestamp, encoder, and driver-implementation requirements.
 
 ### Wheel and steering angle encoders
 
-The AS5600L driver supports both cumulative wheel rotation and absolute steering
-angle. Both default to Raspberry Pi I²C bus 1 and the sensor's factory address
-`0x40`:
+`EncoderABC` represents one signed cumulative encoder. `AS5600LEncoder`
+software-unwraps an absolute I²C angle sensor, while incremental A/B devices such
+as AS5304B, AS5306B, TMAG5110, optical ABI encoders, and integrated motor
+encoders use `QuadratureEncoder` with an injected counter backend. Each left or
+right outdrive gets its own encoder; applications own their fusion and odometry.
+
+The AS5600L encoder and absolute steering-angle sensor default to Raspberry Pi
+I²C bus 1 and the sensor's factory address `0x40`:
 
 ```python
 from robot_hat import AS5600LAngularPosition, AS5600LEncoder
@@ -152,7 +157,8 @@ finally:
 For steering, mount the sensor after the servo gear train when possible so it
 measures backlash and linkage motion. See
 [localization sensor contracts](docs/localization_sensors.md) for unwrapping,
-sampling gaps, I²C ownership, mocks, and the separately guarded permanent-address
+quadrature x1/x2/x4 semantics, multipole-ring resolution, backend ownership,
+high-rate GPIO limitations, mocks, and the separately guarded permanent-address
 programming procedure.
 
 ### Motor control
