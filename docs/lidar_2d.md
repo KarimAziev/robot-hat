@@ -90,9 +90,9 @@ for device in list_usb_uart_devices():
 
 device = find_usb_uart_device(
     USBUARTSelector(
-        vendor_id=0x10C4,       # Example only: inspect your adapter.
+        vendor_id=0x10C4,  # Example only: inspect your adapter.
         product_id=0xEA60,
-        serial_number="...",   # Best discriminator when several are attached.
+        serial_number="...",  # Best discriminator when several are attached.
     )
 )
 lidar = RPLidarC1(RPLidarC1Config(port=device.port))

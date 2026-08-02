@@ -56,14 +56,14 @@ from robot_hat import (
 ```python
 from robot_hat import (
     MotorService,
-    SunfounderBattery,    # ADC-based battery helper
-    INA219Battery,       # INA219-based battery helper
-    SunfounderPWM,       # PWM driver (I2C)
-    PCA9685,             # PWM driver (I2C)
-    PWMFactory,          # factory for PWM drivers
-    MotorFactory,        # factory for motors
-    SMBusManager,        # share an I2C bus instance
-    Ultrasonic,          # top-level re-export of HC-SR04 class
+    SunfounderBattery,  # ADC-based battery helper
+    INA219Battery,  # INA219-based battery helper
+    SunfounderPWM,  # PWM driver (I2C)
+    PCA9685,  # PWM driver (I2C)
+    PWMFactory,  # factory for PWM drivers
+    MotorFactory,  # factory for motors
+    SMBusManager,  # share an I2C bus instance
+    Ultrasonic,  # top-level re-export of HC-SR04 class
 )
 from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
 from robot_hat.sunfounder import (
@@ -98,6 +98,7 @@ from robot_hat.adc import ADC
 
 ```python
 from robot_hat.drivers.adc.sunfounder_adc import ADC
+
 # Or convenience alias:
 from robot_hat import SunfounderADC
 ```
@@ -129,7 +130,13 @@ from robot_hat.sunfounder.robot import Robot
 **Old:**
 
 ```python
-from robot_hat.utils import compose, constrain, get_firmware_version, is_raspberry_pi, mapping
+from robot_hat.utils import (
+    compose,
+    constrain,
+    get_firmware_version,
+    is_raspberry_pi,
+    mapping,
+)
 ```
 
 **New:**
@@ -179,6 +186,7 @@ Recommended: use new driver-based SunfounderPWM via `PWMFactory`:
 
 ```python
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
+
 # Or:
 from robot_hat import SunfounderPWM
 ```
@@ -217,6 +225,7 @@ from robot_hat.ultrasonic import Ultrasonic
 
 ```python
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
+
 # Recommended: keep using the top-level re-export:
 from robot_hat import Ultrasonic
 ```
@@ -251,7 +260,7 @@ You have two approaches: recommended driver-based servos, or legacy Sunfounder-s
 from robot_hat import (
     PWMDriverConfig,
     PWMFactory,
-    Servo,                 # driver-based servo
+    Servo,  # driver-based servo
     ServoCalibrationMode,
     ServoService,
     SMBusManager,
@@ -260,17 +269,15 @@ from robot_hat import (
 
 pwm_config = PWMDriverConfig(
     name=SunfounderPWM.DRIVER_TYPE,  # or "Sunfounder"
-    address=0x14,                    # I2C address of the device
-    bus=1,                           # I2C bus number
+    address=0x14,  # I2C address of the device
+    bus=1,  # I2C bus number
     # Optional parameters (defaults provided):
     frame_width=20000,
     freq=50,
 )
 
 bus = SMBusManager.get_bus(pwm_config.bus)  # shared bus (returns I2CBus wrapper)
-driver = PWMFactory.create_pwm_driver(
-    config=pwm_config, bus=bus
-)
+driver = PWMFactory.create_pwm_driver(config=pwm_config, bus=bus)
 
 driver.set_pwm_freq(pwm_config.freq)
 
@@ -298,7 +305,7 @@ steering_servo = ServoService(
 ```python
 pwm_cfg = PWMDriverConfig(
     name=SunfounderPWM.DRIVER_TYPE,  # or "Sunfounder"
-    address=0x14,                    # 0x14, 0x15 or 0x16
+    address=0x14,  # 0x14, 0x15 or 0x16
     bus=1,
     frame_width=20000,
     freq=50,

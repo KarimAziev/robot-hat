@@ -133,10 +133,10 @@ A backward-compatible SunFounder path is preserved under `robot_hat.sunfounder.*
   pin = Pin(17)
   pin = Pin("GPIO17")
   pin = Pin("BCM17")  # Broadcom numbering
-  pin = Pin("D0")     # Sunfounder numbering
+  pin = Pin("D0")  # Sunfounder numbering
   pin = Pin("BOARD11")  # physical numbering
-  pin = Pin("J8:11")    # physical numbering
-  pin = Pin("WPI0")     # wiringPi numbering
+  pin = Pin("J8:11")  # physical numbering
+  pin = Pin("WPI0")  # wiringPi numbering
   ```
 
 ### Added
