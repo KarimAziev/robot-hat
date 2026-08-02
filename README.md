@@ -54,9 +54,9 @@ Unlike the aforementioned libraries:
 >   - [Development Environment Setup](#development-environment-setup)
 >     - [Prerequisites](#prerequisites)
 >     - [Steps to Set Up](#steps-to-set-up)
->   - [Distribution](#distribution)
->   - [Common Commands](#common-commands)
->   - [Notes & Recommendations](#notes--recommendations)
+>     - [Distribution](#distribution)
+>     - [Common Commands](#common-commands)
+>     - [Notes](#notes)
 
 <!-- markdown-toc end -->
 
@@ -1281,7 +1281,7 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 
 ---
 
-## Distribution
+### Distribution
 
 To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
@@ -1302,9 +1302,7 @@ To create distributable artifacts (e.g., `.tar.gz` and `.whl` files):
 
 These can be installed locally for testing or uploaded to PyPI for distribution.
 
----
-
-## Common Commands
+### Common Commands
 
 - **Clean Build Artifacts**:
   ```bash
@@ -1317,7 +1315,7 @@ These can be installed locally for testing or uploaded to PyPI for distribution.
 
 ---
 
-## Notes & Recommendations
+### Notes
 
 - The library uses `setuptools_scm` for versioning, which dynamically determines the version based on Git tags. Use proper semantic versioning (e.g., `v1.0.0`) in your repository for best results.
 - Development tools like `ruff` (formatter, import organizer, and linter) are automatically installed with `[dev]` dependencies.

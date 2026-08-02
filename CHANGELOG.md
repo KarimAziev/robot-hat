@@ -15,6 +15,8 @@
 
 ### Changed
 
+- Declared Python 3.10 as the minimum supported version and added tested minimum
+  versions for runtime dependencies.
 - `SH3001.read_sample()` now returns acceleration in m/s² and angular velocity
   in rad/s. `read_raw_sample()` exposes signed counts explicitly for diagnostics.
 - `SH3001Config` now describes physical sensor ranges instead of exposing a

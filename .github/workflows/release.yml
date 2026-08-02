@@ -1,0 +1,165 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GPIOZERO_PIN_FACTORY: mock
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PYGAME_HIDE_SUPPORT_PROMPT: "1"
+  PYTHONUNBUFFERED: "1"
+  ROBOT_HAT_MOCK_SMBUS: "1"
+
+jobs:
+  build:
+    name: Build and validate distributions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+
+      - name: Verify tag belongs to main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Release tags must point to a commit on the main branch."
+            exit 1
+          fi
+
+      - name: Install release dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --editable ".[dev]"
+          python -m pip install build packaging twine
+
+      - name: Run release checks in mock mode
+        run: make all
+
+      - name: Build wheel and source distribution
+        run: python -m build
+
+      - name: Verify release version and artifacts
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+
+          from packaging.utils import parse_wheel_filename
+          from packaging.version import InvalidVersion, Version
+
+          tag = os.environ["RELEASE_TAG"]
+          if not tag.startswith("v"):
+              raise SystemExit(f"Release tag must start with 'v': {tag!r}")
+
+          raw_version = tag.removeprefix("v")
+          try:
+              expected_version = Version(raw_version)
+          except InvalidVersion as error:
+              raise SystemExit(f"Release tag is not a valid version: {tag!r}") from error
+
+          if str(expected_version) != raw_version:
+              raise SystemExit(
+                  f"Release tag must use canonical PEP 440 syntax: "
+                  f"expected 'v{expected_version}', got {tag!r}"
+              )
+          if len(expected_version.release) != 3:
+              raise SystemExit(
+                  f"Release tag must contain major, minor, and patch: {tag!r}"
+              )
+          if expected_version.dev is not None or expected_version.local is not None:
+              raise SystemExit(
+                  f"Development and local versions cannot be released: {tag!r}"
+              )
+
+          wheels = list(Path("dist").glob("*.whl"))
+          source_distributions = list(Path("dist").glob("*.tar.gz"))
+          if len(wheels) != 1 or len(source_distributions) != 1:
+              raise SystemExit(
+                  "Expected exactly one wheel and one source distribution; "
+                  f"found {len(wheels)} wheel(s) and "
+                  f"{len(source_distributions)} source distribution(s)"
+              )
+
+          distribution, built_version, _, _ = parse_wheel_filename(wheels[0].name)
+          if distribution != "robot-hat":
+              raise SystemExit(
+                  f"Expected a robot-hat wheel, found distribution {distribution!r}"
+              )
+          if built_version != expected_version:
+              raise SystemExit(
+                  f"Tag version {expected_version} does not match "
+                  f"built version {built_version}"
+              )
+
+          expected_sdist = f"robot_hat-{built_version}.tar.gz"
+          if source_distributions[0].name != expected_sdist:
+              raise SystemExit(
+                  f"Expected source distribution {expected_sdist!r}, "
+                  f"found {source_distributions[0].name!r}"
+              )
+
+          print(f"Validated robot-hat {built_version}")
+          PY
+
+      - name: Validate distribution metadata
+        run: python -m twine check --strict dist/*
+
+      - name: Smoke-test the wheel
+        run: |
+          python -m venv .release-test
+          .release-test/bin/python -m pip install --upgrade pip
+          .release-test/bin/python -m pip install dist/*.whl
+          .release-test/bin/python -m pip check
+          .release-test/bin/python -c "import robot_hat; print(robot_hat.version)"
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-package-distributions
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
+
+  publish:
+    name: Publish distributions to PyPI
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: pypi
+      url: https://pypi.org/project/robot-hat/
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
+        with:
+          attestations: true
