@@ -1,8 +1,14 @@
 from robot_hat.data_types import (
+    AngularPositionHealth,
+    AngularPositionSample,
     BatteryMetrics,
+    EncoderHealth,
     EncoderSample,
     IMUSample,
+    QuadratureCounterSnapshot,
+    QuadratureDecodeMode,
     RawIMUSample,
+    as530x_counts_per_revolution,
 )
 from robot_hat.data_types.lidar import (
     LidarDeviceInfo,
@@ -46,11 +52,37 @@ from robot_hat.drivers.adc.INA219 import Mode as INA219Mode
 from robot_hat.drivers.adc.INA226 import INA226
 from robot_hat.drivers.adc.INA260 import INA260
 from robot_hat.drivers.adc.sunfounder_adc import ADC as SunfounderADC
+from robot_hat.drivers.angle.as5600l import (
+    AS5600L,
+    AS5600LAddressProgrammer,
+    AS5600LAddressProgrammingPlan,
+    AS5600LAddressProgrammingResult,
+    AS5600LFastFilterThreshold,
+    AS5600LSlowFilter,
+    AS5600LStatus,
+)
+from robot_hat.drivers.angle.as5048a import (
+    AS5048A,
+    AS5048ADiagnostics,
+    AS5048AError,
+    AS5048AErrorFlags,
+    AS5048AParityError,
+    AS5048AProtocolError,
+    AS5048ASensor,
+)
+from robot_hat.drivers.gpio.gpiozero_digital_edge_input import (
+    GPIOZeroDigitalEdgeInput,
+)
 from robot_hat.drivers.pwm.pca9685 import PCA9685
 from robot_hat.drivers.pwm.sunfounder_pwm import SunfounderPWM
 from robot_hat.exceptions import (
     ADCAddressNotFound,
     DevicePinFactoryError,
+    EncoderBackendError,
+    EncoderClosedError,
+    EncoderError,
+    EncoderMagnetError,
+    EncoderNotInitializedError,
     FileDBValidationError,
     GrayscaleTypeError,
     I2CAddressNotFound,
@@ -87,17 +119,30 @@ from robot_hat.factories.motor_factory import MotorFactory
 from robot_hat.factories.pwm_factory import PWMFactory, register_pwm_driver
 from robot_hat.filedb import FileDB
 from robot_hat.i2c.i2c_bus import I2CBus
-from robot_hat.i2c.i2c_manager import I2C
+from robot_hat.i2c.i2c_manager import I2C, I2CProbe, I2CProbeBus, read_byte_probe
 from robot_hat.i2c.smbus_manager import SMBusManager
 from robot_hat.interfaces.battery_abc import BatteryABC
+from robot_hat.interfaces.angular_position_abc import AngularPositionABC
+from robot_hat.interfaces.digital_edge_input_abc import (
+    DigitalEdgeCallback,
+    DigitalEdgeInputABC,
+)
 from robot_hat.interfaces.encoder_abc import EncoderABC
 from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
 from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
+from robot_hat.interfaces.quadrature_counter_backend_abc import (
+    QuadratureCounterBackendABC,
+)
 from robot_hat.interfaces.servo_abc import ServoABC
 from robot_hat.interfaces.smbus_abc import SMBusABC
+from robot_hat.interfaces.spi_abc import SPIABC
 from robot_hat.interfaces.uart_abc import UARTABC
+from robot_hat.mock.angular_position import MockAngularPosition
+from robot_hat.mock.encoder import MockEncoder
+from robot_hat.mock.quadrature_counter import MockQuadratureCounterBackend
+from robot_hat.mock.spi import MockAS5048ASPI, MockSPI
 from robot_hat.mock.uart import MockUART
 from robot_hat.mock.ultrasonic import Ultrasonic as UltrasonicMock
 from robot_hat.motor.gpio_dc_motor import GPIODCMotor
@@ -109,6 +154,19 @@ from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
+from robot_hat.sensors.angular_position.as5600l_angular_position import (
+    AS5600LAngularPosition,
+)
+from robot_hat.sensors.angular_position.as5048a_angular_position import (
+    AS5048AAngularPosition,
+)
+from robot_hat.sensors.encoder.as5048a_encoder import AS5048AEncoder
+from robot_hat.sensors.encoder.as5600l_encoder import AS5600LEncoder
+from robot_hat.sensors.encoder.gpio_quadrature_counter import (
+    GPIOQuadratureCounterBackend,
+)
+from robot_hat.sensors.encoder.quadrature_decoder import QuadratureDecoder
+from robot_hat.sensors.encoder.quadrature_encoder import QuadratureEncoder
 from robot_hat.sensors.lidar.rplidar_c1 import RPLidarC1
 from robot_hat.sensors.ultrasonic.HC_SR04 import Ultrasonic
 from robot_hat.services.battery.ina219_battery import Battery as INA219Battery
@@ -128,6 +186,7 @@ from robot_hat.sunfounder.grayscale import Grayscale as SunfounderGrayscale
 from robot_hat.sunfounder.robot import Robot as SunfounderRobot
 from robot_hat.uart.serial_uart import SerialUART
 from robot_hat.uart.usb_uart import find_usb_uart_device, list_usb_uart_devices
+from robot_hat.spi.spidev_device import SpidevDevice
 from robot_hat.data_types.uart import UARTConfig, USBUARTDevice, USBUARTSelector
 from robot_hat.utils import (
     compose,
@@ -140,9 +199,42 @@ from robot_hat.utils import (
 from robot_hat.version import version
 
 __all__ = [
+    "AngularPositionABC",
+    "AngularPositionHealth",
+    "AngularPositionSample",
+    "AS5048A",
+    "AS5048AAngularPosition",
+    "AS5048ADiagnostics",
+    "AS5048AEncoder",
+    "AS5048AError",
+    "AS5048AErrorFlags",
+    "AS5048AParityError",
+    "AS5048AProtocolError",
+    "AS5048ASensor",
+    "AS5600L",
+    "AS5600LAddressProgrammer",
+    "AS5600LAddressProgrammingPlan",
+    "AS5600LAddressProgrammingResult",
+    "AS5600LAngularPosition",
+    "AS5600LEncoder",
+    "AS5600LFastFilterThreshold",
+    "AS5600LSlowFilter",
+    "AS5600LStatus",
+    "SPIABC",
+    "SpidevDevice",
     "FileDB",
     "EncoderABC",
+    "EncoderBackendError",
+    "EncoderClosedError",
+    "EncoderError",
+    "EncoderHealth",
+    "EncoderMagnetError",
+    "EncoderNotInitializedError",
     "EncoderSample",
+    "DigitalEdgeCallback",
+    "DigitalEdgeInputABC",
+    "GPIOQuadratureCounterBackend",
+    "GPIOZeroDigitalEdgeInput",
     "IMUABC",
     "IMUSample",
     "Lidar2DABC",
@@ -159,11 +251,25 @@ __all__ = [
     "USBUARTDevice",
     "USBUARTSelector",
     "MockUART",
+    "MockAngularPosition",
+    "MockEncoder",
+    "MockQuadratureCounterBackend",
+    "MockAS5048ASPI",
+    "MockSPI",
+    "QuadratureCounterBackendABC",
+    "QuadratureCounterSnapshot",
+    "QuadratureDecodeMode",
+    "QuadratureDecoder",
+    "QuadratureEncoder",
     "RawIMUSample",
     "find_usb_uart_device",
+    "as530x_counts_per_revolution",
     "list_usb_uart_devices",
     "I2C",
     "I2CBus",
+    "I2CProbe",
+    "I2CProbeBus",
+    "read_byte_probe",
     "Ultrasonic",
     "Music",
     "Pin",

@@ -103,6 +103,30 @@ class TestMotorCalibrationMixin(unittest.TestCase):
         self.assertEqual(ret, self.mc.speed_offset)
         self.assertEqual(ret, 9.99)
 
+    def test_apply_calibration_has_uniform_direction_and_offset_semantics(self):
+        self.mc.update_calibration_direction(-1)
+        self.mc.update_calibration_speed(10)
+
+        self.assertEqual(self.mc.apply_calibration(40, 100), (40, -50))
+        self.assertEqual(self.mc.apply_calibration(-40, 100), (-40, 50))
+
+    def test_apply_calibration_zero_always_stays_stopped(self):
+        self.mc.update_calibration_direction(-1)
+        self.mc.update_calibration_speed(25)
+
+        self.assertEqual(self.mc.apply_calibration(0, 100), (0.0, 0.0))
+
+    def test_apply_calibration_offset_cannot_reverse_or_exceed_limit(self):
+        self.mc.update_calibration_speed(-50)
+        self.assertEqual(self.mc.apply_calibration(20, 100), (20, 0.0))
+
+        self.mc.update_calibration_speed(50)
+        self.assertEqual(self.mc.apply_calibration(80, 100), (80, 100))
+
+    def test_apply_calibration_rejects_non_positive_max_speed(self):
+        with self.assertRaises(MotorValidationError):
+            self.mc.apply_calibration(20, 0)
+
 
 if __name__ == "__main__":
     unittest.main()

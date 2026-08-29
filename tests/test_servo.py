@@ -69,9 +69,18 @@ class TestServo(unittest.TestCase):
         self.driver.set_servo_pulse.assert_called_once_with(6, 1500)
 
     def test_close_calls_driver_close(self):
-        s = Servo(driver=self.driver, channel=7)
+        s = Servo(driver=self.driver, channel=7, owns_driver=True)
+        s.close()
         s.close()
         self.driver.close.assert_called_once()
+
+    def test_close_leaves_injected_driver_open_by_default(self):
+        s = Servo(driver=self.driver, channel=7)
+
+        s.close()
+        s.close()
+
+        self.driver.close.assert_not_called()
 
     def test_repr_contains_expected_information(self):
         s = Servo(

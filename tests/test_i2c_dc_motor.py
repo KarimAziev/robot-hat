@@ -81,7 +81,8 @@ class TestI2CDCMotor(unittest.TestCase):
         motor.set_speed(20)
         self.dir_pin.high.assert_called_once()
         self.driver.set_pwm_duty_cycle.assert_called_once_with(2, 20)
-        self.assertEqual(motor.speed, -20)
+        self.assertEqual(motor.speed, 20)
+        self.assertEqual(motor.applied_speed, -20)
 
     def test_set_speed_respects_speed_offset_update_non_persisted(self):
         motor = I2CDCMotor(
@@ -95,7 +96,8 @@ class TestI2CDCMotor(unittest.TestCase):
         motor.update_calibration_speed(-10, persist=False)
         motor.set_speed(50)
         self.driver.set_pwm_duty_cycle.assert_called_once_with(3, 40)
-        self.assertEqual(motor.speed, 40)
+        self.assertEqual(motor.speed, 50)
+        self.assertEqual(motor.applied_speed, 40)
 
     def test_apply_speed_correction_clamps_and_scales_duty(self):
         motor = I2CDCMotor(
@@ -130,8 +132,42 @@ class TestI2CDCMotor(unittest.TestCase):
         motor.stop()
         self.driver.set_pwm_duty_cycle.assert_called_once_with(7, 0)
         self.assertEqual(motor.speed, 0)
+        self.assertEqual(motor.applied_speed, 0)
 
     def test_close_closes_driver_and_pin(self):
+        motor = I2CDCMotor(
+            dir_pin=self.dir_pin,
+            driver=self.driver,
+            channel=8,
+            frequency=50,
+            owns_driver=True,
+            owns_direction_pin=True,
+        )
+
+        motor.close()
+        motor.close()
+        self.driver.set_pwm_duty_cycle.assert_called_once_with(8, 0)
+        self.driver.close.assert_called_once()
+        self.dir_pin.close.assert_called_once()
+
+    def test_close_releases_owned_resources_even_if_stop_fails(self):
+        motor = I2CDCMotor(
+            dir_pin=self.dir_pin,
+            driver=self.driver,
+            channel=8,
+            frequency=50,
+            owns_driver=True,
+            owns_direction_pin=True,
+        )
+        self.driver.set_pwm_duty_cycle.side_effect = OSError("stop failed")
+
+        with self.assertRaisesRegex(OSError, "stop failed"):
+            motor.close()
+
+        self.driver.close.assert_called_once()
+        self.dir_pin.close.assert_called_once()
+
+    def test_close_stops_but_does_not_close_injected_resources_by_default(self):
         motor = I2CDCMotor(
             dir_pin=self.dir_pin,
             driver=self.driver,
@@ -140,8 +176,26 @@ class TestI2CDCMotor(unittest.TestCase):
         )
 
         motor.close()
-        self.driver.close.assert_called_once()
-        self.dir_pin.close.assert_called_once()
+        motor.close()
+
+        self.driver.set_pwm_duty_cycle.assert_called_once_with(8, 0)
+        self.driver.close.assert_not_called()
+        self.dir_pin.close.assert_not_called()
+
+    def test_zero_with_offset_always_stops(self):
+        motor = I2CDCMotor(
+            dir_pin=self.dir_pin,
+            driver=self.driver,
+            channel=8,
+            frequency=50,
+            calibration_speed_offset=20,
+        )
+
+        motor.set_speed(0)
+
+        self.driver.set_pwm_duty_cycle.assert_called_once_with(8, 0)
+        self.dir_pin.low.assert_not_called()
+        self.dir_pin.high.assert_not_called()
 
     def test_repr_includes_name_max_speed_and_current_speed(self):
         motor = I2CDCMotor(

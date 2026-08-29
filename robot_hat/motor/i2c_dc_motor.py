@@ -49,6 +49,8 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         max_speed: int = 100,
         frequency: int = 50,
         name: Optional[str] = None,
+        owns_driver: bool = False,
+        owns_direction_pin: bool = False,
     ) -> None:
         """
         Initialize the Motor with a direction pin and a unified PWM driver.
@@ -64,6 +66,10 @@ class I2CDCMotor(MotorCalibration, MotorABC):
             max_speed: Maximum speed value (interpreted as 100% duty cycle).
             frequency: PWM frequency in Hz (common value for motors is around 50 Hz, but use what fits your system).
             name: Optional name for the motor (used for logging).
+            owns_driver: Whether closing this motor also closes ``driver``.
+              Injected drivers remain caller-owned by default.
+            owns_direction_pin: Whether closing this motor also closes
+              ``dir_pin``. Injected pins remain caller-owned by default.
         """
         super().__init__(
             calibration_direction=calibration_direction,
@@ -83,17 +89,26 @@ class I2CDCMotor(MotorCalibration, MotorABC):
 
         self.direction_pin = dir_pin
         self.driver = driver
+        self.owns_driver = owns_driver
+        self.owns_direction_pin = owns_direction_pin
         self.max_speed = max_speed
         self.name = name or f"Motor_{channel}"
         self._speed: float = 0
+        self._applied_speed: float = 0
+        self._closed = False
 
         self.driver.set_pwm_freq(frequency)
         _log.debug(f"{self.name}: PWM frequency set to {frequency} Hz.")
 
     @property
     def speed(self) -> float:
-        """Return the current motor speed in percentage."""
+        """Return the constrained logical motor command."""
         return self._speed
+
+    @property
+    def applied_speed(self) -> float:
+        """Return the calibrated command represented by the electrical output."""
+        return self._applied_speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -119,13 +134,14 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         Args:
             speed: Desired speed percentage (range: -max_speed to +max_speed) before calibration.
         """
-        calibrated_speed = (speed * self.direction) + self.speed_offset
-
-        calibrated_speed = self._apply_speed_correction(calibrated_speed)
+        logical_speed, calibrated_speed = self.apply_calibration(speed, self.max_speed)
 
         duty = int((abs(calibrated_speed) / self.max_speed) * 100)
 
-        if calibrated_speed >= 0:
+        if calibrated_speed == 0:
+            self.stop()
+            return
+        if calibrated_speed > 0:
             self.direction_pin.low()
             _log.debug(f"{self.name}: set direction to forward.")
         else:
@@ -136,7 +152,8 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         _log.debug(
             f"{self.name}: speed set to {calibrated_speed}% (duty cycle {duty}%)."
         )
-        self._speed = calibrated_speed
+        self._speed = logical_speed
+        self._applied_speed = calibrated_speed
 
     def stop(self) -> None:
         """
@@ -144,15 +161,34 @@ class I2CDCMotor(MotorCalibration, MotorABC):
         """
         self.driver.set_pwm_duty_cycle(self.channel, 0)
         self._speed = 0
+        self._applied_speed = 0
         _log.debug(f"{self.name}: motor stopped.")
 
     def close(self) -> None:
         """
-        Clean up resources by closing both the PWM driver and the direction pin.
+        Stop this channel and close only resources owned by this motor.
         """
-        self.driver.close()
-        self.direction_pin.close()
+        if self._closed:
+            return
+        self._closed = True
+
+        first_error: Exception | None = None
+        cleanup_actions = [("stop motor", self.stop)]
+        if self.owns_driver:
+            cleanup_actions.append(("close PWM driver", self.driver.close))
+        if self.owns_direction_pin:
+            cleanup_actions.append(("close direction pin", self.direction_pin.close))
+
+        for description, action in cleanup_actions:
+            try:
+                action()
+            except Exception as error:
+                _log.error("%s: failed to %s: %s", self.name, description, error)
+                if first_error is None:
+                    first_error = error
         _log.debug(f"{self.name}: resources closed.")
+        if first_error is not None:
+            raise first_error
 
     def __repr__(self) -> str:
         return f"<Motor(name={self.name}, max_speed={self.max_speed}, current_speed={self._speed})>"

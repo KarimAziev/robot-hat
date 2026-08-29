@@ -14,11 +14,9 @@ communicate with one another using just two lines:
 - Each I2C device has a unique address that allows the master to communicate with specific devices.
 """
 
-import sys
-import errno
 import logging
 import os
-from typing import Any, List, Optional, Type, Union, cast
+from typing import Any, Callable, List, Optional, Protocol, Type, Union, cast
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import I2CAddressNotFound
@@ -28,6 +26,28 @@ from robot_hat.i2c.smbus_protocol import SMBusProtocol
 _log = logging.getLogger(__name__)
 
 SMBus: Optional[Type[SMBusProtocol]] = None
+
+
+class I2CProbeBus(Protocol):
+    """Minimum bus operations available to an address probe callback."""
+
+    def read_byte(self, i2c_addr: int) -> int: ...
+
+    def read_byte_data(self, i2c_addr: int, register: int) -> int: ...
+
+
+I2CProbe = Callable[[I2CProbeBus, int], bool]
+
+
+def read_byte_probe(bus: I2CProbeBus, address: int) -> bool:
+    """Probe by reading one byte, without transmitting a data byte.
+
+    This is less invasive than the legacy dummy write, but it is not
+    universally side-effect-free. Prefer a device identity-register callback
+    when the target protocol provides one.
+    """
+    bus.read_byte(address)
+    return True
 
 
 class I2C:
@@ -75,6 +95,7 @@ class I2C:
         self,
         address: Union[int, List[int]],
         bus: BusType = 1,
+        probe: Optional[I2CProbe] = None,
         *args: Any,
         **kwargs: Any,
     ) -> None:
@@ -84,9 +105,14 @@ class I2C:
         Args:
             address: The address or list of addresses of I2C devices.
             bus: I2C bus number. Default is 1.
+            probe: Optional device-specific presence check. A single address is
+                trusted without bus traffic when omitted. Address lists use a
+                generic read probe when omitted because selecting one candidate
+                necessarily requires a transaction.
         """
         global SMBus
         super().__init__(*args, **kwargs)
+        self._closed = False
 
         if isinstance(bus, int):
             if SMBus is None:
@@ -103,10 +129,15 @@ class I2C:
             self._own_bus = False
             _log.debug("Using injected SMBus instance")
 
-        addr = self.find_address(address)
+        try:
+            addr = self.find_address(address, probe=probe)
+        except Exception:
+            self.close()
+            raise
 
         if addr is None:
             _log.error("I2C address %s not found", address)
+            self.close()
             raise I2CAddressNotFound("I2C address not found")
 
         self._address: int = addr
@@ -122,46 +153,61 @@ class I2C:
     def find_address(
         self,
         address: Union[int, List[int]],
+        probe: Optional[I2CProbe] = None,
     ) -> Optional[int]:
         """
         Determine the appropriate I2C address for communication by either
         scanning for connected devices or verifying a given address.
 
-        If a list of addresses is provided, scan them sequentially to find the first valid one.
-
-        If a single address is provided, validate its availability.
+        If a list of addresses is provided, probe them sequentially. A single
+        configured address is trusted without generating bus traffic unless a
+        probe callback is supplied.
 
         Returns the first available address or `None` if no valid address is found.
         """
         if isinstance(address, list):
+            if not address:
+                return None
             for addr in address:
-                if self.check_address(addr) is not None:
+                self._validate_address(addr)
+                if self.check_address(addr, probe=probe) is not None:
                     return addr
-        elif address is not None and self.check_address(address):
-            return address
+        else:
+            self._validate_address(address)
+            if probe is None or self.check_address(address, probe=probe):
+                return address
+        return None
 
-    def check_address(self, addr: int) -> Union[int, None]:
+    @staticmethod
+    def _validate_address(address: int) -> None:
+        if isinstance(address, bool) or not isinstance(address, int):
+            raise TypeError("I2C address must be an integer")
+        if not 0x08 <= address <= 0x77:
+            raise ValueError(
+                "I2C address must be an unreserved 7-bit address (0x08-0x77)"
+            )
+
+    def check_address(
+        self, addr: int, probe: Optional[I2CProbe] = None
+    ) -> Union[int, None]:
+        """Check whether an address acknowledges an explicit probe.
+
+        The generic fallback performs a one-byte read. It avoids writing a
+        dummy command but still cannot be guaranteed side-effect-free for every
+        I²C device. Supply a device-specific probe whenever possible.
         """
-        Check if an I2C address is valid and acknowledged by the device.
-        """
-        _log.debug("Scanning I2C bus for address %s", addr)
+        self._validate_address(addr)
+        probe_fn = probe or read_byte_probe
+        _log.debug("Probing I2C bus address 0x%02x", addr)
         try:
-            self._smbus.write_byte(
-                addr, 0
-            )  # Attempt to write a dummy byte to the address
-            _log.debug("Found I2C device at 0x%02x", addr)
-            return addr
-        except OSError as e:
-            # Ignore devices that don't acknowledge (errno corresponds to "No such device or address")
-            if (
-                sys.platform != "win32"
-                and sys.platform != "darwin"
-                and e.errno != errno.EREMOTEIO
-            ):
-                _log.debug(f"OSError at I2C address 0x{addr:02x}: {e}")
-        except Exception as e:
-            _log.error("Unexpected error at I2C address 0x%02x: %s", addr, e)
-            return None
+            if probe_fn(cast(I2CProbeBus, self._smbus), addr):
+                _log.debug("Found I2C device at 0x%02x", addr)
+                return addr
+        except OSError as error:
+            _log.debug("No I2C acknowledgement at 0x%02x: %s", addr, error)
+        except Exception as error:
+            _log.error("Unexpected error probing I2C address 0x%02x: %s", addr, error)
+        return None
 
     @RETRY_DECORATOR
     def _write_byte(self, data: int) -> None:
@@ -333,14 +379,15 @@ class I2C:
             True if the I2C device is ready, False otherwise.
         """
 
-        addresses = self.scan()
-        if self.address in addresses:
-            return True
-        return False
+        return self.check_address(self.address) is not None
 
-    def scan(self) -> List[int]:
+    def scan(self, probe: Optional[I2CProbe] = None) -> List[int]:
         """
-        Scan the I2C bus for devices using smbus2.
+        Explicitly scan unreserved 7-bit addresses.
+
+        Generic I²C discovery cannot be universally side-effect-free. The
+        default read probe avoids transmitting the legacy dummy byte, but a
+        device-specific identity probe is preferred.
 
         Returns:
             List of I2C addresses of devices found.
@@ -352,27 +399,9 @@ class I2C:
             _log.warning("SMBus not initialized. Unable to scan for I2C devices.")
             return addresses
 
-        for address in range(
-            0x03, 0x78
-        ):  # Most valid addresses fall between 0x03 and 0x77
-            try:
-                self._smbus.write_byte(
-                    address, 0
-                )  # Attempt to write a dummy byte to the address
+        for address in range(0x08, 0x78):
+            if self.check_address(address, probe=probe) is not None:
                 addresses.append(address)
-                _log.debug("Found I2C device at 0x%02x", address)
-            except OSError as e:
-                # Ignore devices that don't acknowledge (errno corresponds to "No such device or address")
-                if (
-                    sys.platform != "win32"
-                    and sys.platform != "darwin"
-                    and e.errno != errno.EREMOTEIO
-                ):
-                    _log.debug(f"OSError at I2C address 0x{address:02x}: {e}")
-                continue
-            except Exception as e:
-                _log.error("Unexpected error at I2C address 0x%02x: %s", address, e)
-                continue
 
         _log.debug("Connected I2C devices: %s", ["0x%02x" % addr for addr in addresses])
         return addresses
@@ -429,7 +458,7 @@ class I2C:
             if data == 0:
                 data_all = [0]
             else:
-                data_all = []
+                data_all: List[int] = []
                 while data > 0:
                     data_all.append(data & 0xFF)  # Append the least significant byte
                     data >>= 8  # Shift right to prepare for the next byte
@@ -558,7 +587,7 @@ class I2C:
         elif isinstance(data, list):
             data_all = data
         elif isinstance(data, int):
-            data_all = []
+            data_all: List[int] = []
             if data == 0:
                 data_all = [0]
             else:
@@ -631,15 +660,9 @@ class I2C:
 
         return result
 
-    def is_avaliable(self) -> bool:
-        """
-        Check if the I2C device is available.
-
-        Returns:
-            True if the I2C device is available, False otherwise.
-        """
-
-        return True if self.check_address(self.address) else False
+    def is_available(self, probe: Optional[I2CProbe] = None) -> bool:
+        """Return whether the configured address acknowledges an explicit probe."""
+        return self.check_address(self.address, probe=probe) is not None
 
     def close(self) -> None:
         """
@@ -647,8 +670,12 @@ class I2C:
 
         For external SMBus instances, no closure is performed.
         """
-        if self._own_bus and self._smbus is not None:
-            self._smbus.close()
+        if getattr(self, "_closed", True):
+            return
+        smbus = getattr(self, "_smbus", None)
+        if getattr(self, "_own_bus", False) and smbus is not None:
+            smbus.close()
+        self._closed = True
 
     def __del__(self) -> None:
         """

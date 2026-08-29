@@ -6,7 +6,7 @@ This driver controls all channels on a Sunfounder PWM device via I2C.
 
 import logging
 import math
-from typing import Union
+from typing import Tuple, Union
 
 from robot_hat.data_types.bus import BusType
 from robot_hat.exceptions import InvalidChannelNumber
@@ -96,8 +96,8 @@ class SunfounderPWM(PWMDriverABC):
             freq: Desired PWM frequency in Hertz.
         """
         self._freq = int(freq)
-        result_ap = []
-        accuracy_list = []
+        result_ap: list[Tuple[int, int]] = []
+        accuracy_list: list[float] = []
 
         st = max(
             1, int(math.sqrt(self.CLOCK / self._freq)) - self.PRESCALER_SQRT_OFFSET

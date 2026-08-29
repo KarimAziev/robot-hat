@@ -1,7 +1,7 @@
 [![PyPI](https://img.shields.io/pypi/v/robot-hat)](https://pypi.org/project/robot-hat/)
 [![codecov](https://codecov.io/gh/KarimAziev/robot-hat/graph/badge.svg?token=2C863KHRLU)](https://codecov.io/gh/KarimAziev/robot-hat)
 
-> ⚠️ Breaking changes in v2.0.0 - This release contains incompatible API changes. Read the [CHANGELOG](https://github.com/KarimAziev/robot-hat/blob/main/CHANGELOG.md) and the [Migration Guide](https://github.com/KarimAziev/robot-hat/blob/v2.0.0/docs/migration_guide_v2.md) before upgrading.
+> ⚠️ Breaking changes in v3.0.0 — motor state reporting and injected-resource ownership are now explicit. Read the [CHANGELOG](https://github.com/KarimAziev/robot-hat/blob/main/CHANGELOG.md) and the [v3 Migration Guide](https://github.com/KarimAziev/robot-hat/blob/main/docs/migration_guide_v3.md) before upgrading.
 
 # Robot Hat
 
@@ -20,8 +20,6 @@ Unlike the aforementioned libraries:
 - It avoids requiring **sudo calls** or introducing unnecessary system dependencies, focusing instead on clean, self-contained operations.
 - Plugin-style extensibility.
 
-
-
 **Table of Contents**
 
 > - [Robot Hat](#robot-hat)
@@ -29,6 +27,7 @@ Unlike the aforementioned libraries:
 >   - [Usage examples](#usage-examples)
 >     - [2D lidar scans for SLAM](#2d-lidar-scans-for-slam)
 >     - [IMU samples for localization](#imu-samples-for-localization)
+>     - [Wheel and steering angle encoders](#wheel-and-steering-angle-encoders)
 >     - [Motor control](#motor-control)
 >     - [GPIO-driven DC motors](#gpio-driven-dc-motors)
 >     - [Single GPIO-driven DC motor](#single-gpio-driven-dc-motor)
@@ -51,14 +50,13 @@ Unlike the aforementioned libraries:
 >     - [No sudo](#no-sudo)
 >     - [Type Hints](#type-hints)
 >     - [Mock Support for Testing](#mock-support-for-testing)
+>   - [Hardware-in-the-loop validation](#hardware-in-the-loop-validation)
 >   - [Development Environment Setup](#development-environment-setup)
 >     - [Prerequisites](#prerequisites)
 >     - [Steps to Set Up](#steps-to-set-up)
 >     - [Distribution](#distribution)
 >     - [Common Commands](#common-commands)
 >     - [Notes](#notes)
-
-
 
 ## Installation
 
@@ -125,9 +123,87 @@ finally:
 See [localization sensor contracts](docs/localization_sensors.md) for frame,
 timestamp, encoder, and driver-implementation requirements.
 
+### Wheel and steering angle encoders
+
+`EncoderABC` represents one signed cumulative encoder. The complete set of
+public implementations is:
+
+| Implementation      | Module                                         | Intended source                                                                    |
+| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `AS5600LEncoder`    | `robot_hat.sensors.encoder.as5600l_encoder`    | AS5600L absolute I²C angle sensor, software-unwrapped into cumulative ticks        |
+| `AS5048AEncoder`    | `robot_hat.sensors.encoder.as5048a_encoder`    | AS5048A 14-bit absolute SPI angle sensor, software-unwrapped into cumulative ticks |
+| `QuadratureEncoder` | `robot_hat.sensors.encoder.quadrature_encoder` | Incremental A/B sources through an injected counter backend                        |
+| `MockEncoder`       | `robot_hat.mock.encoder`                       | Deterministic hardware-free application development and tests                      |
+
+`AS5600LAngularPosition` and `AS5048AAngularPosition` are the corresponding
+single-turn absolute-position APIs; they implement `AngularPositionABC`, not
+`EncoderABC`. Incremental A/B devices such as AS5304B, AS5306B, TMAG5110,
+optical ABI encoders, and integrated motor encoders use `QuadratureEncoder`.
+A low-rate GPIO implementation is available through
+`GPIOZeroDigitalEdgeInput` and `GPIOQuadratureCounterBackend`; production
+high-rate rings should use a hardware counter backend. Each left or right
+outdrive gets its own encoder; applications own their fusion and odometry.
+
+The AS5600L encoder and absolute steering-angle sensor default to Raspberry Pi
+I²C bus 1 and the sensor's factory address `0x40`:
+
+```python
+from robot_hat import AS5600LAngularPosition, AS5600LEncoder
+
+rear_wheel = AS5600LEncoder(invert_direction=False)
+steering = AS5600LAngularPosition(zero_offset_degrees=180.0)
+
+try:
+    rear_wheel.initialize()
+    steering.initialize()
+    print(rear_wheel.read_sample())
+    print(rear_wheel.read_health())
+    print(steering.read_angle())
+finally:
+    rear_wheel.close()
+    steering.close()
+```
+
+For application development without hardware, `MockEncoder` exercises the
+generic encoder contract. `MockAS5048ASPI` additionally runs the real AS5048A
+driver and wrappers against a parity- and pipeline-aware SPI emulator:
+
+```python
+from robot_hat import AS5048AEncoder, MockAS5048ASPI
+
+mock_spi = MockAS5048ASPI(angle_counts=1000)
+encoder = AS5048AEncoder(spi=mock_spi)
+encoder.initialize()
+mock_spi.advance(120)
+print(encoder.read_sample())
+encoder.close()  # injected mock_spi remains caller-owned
+```
+
+Calling `setup_env_vars()` on a non-Raspberry-Pi host also sets
+`ROBOT_HAT_MOCK_SPI=1`, so a default `AS5048A`/`AS5048AEncoder` uses the
+AS5048A emulator instead of importing `spidev` or opening `/dev/spidev*`.
+
+For an AS5048A SPI/PWM module, read the dedicated
+[AS5048A wiring and safety guide](docs/as5048a.md) before connecting its `+5V`
+breakout to 3.3 V Raspberry Pi GPIO. The guide covers electrical verification,
+SPI wiring, diagnostics, cumulative unwrapping, software zeroing, and ownership.
+
+For steering, mount the sensor after the servo gear train when possible so it
+measures backlash and linkage motion. See
+[localization sensor contracts](docs/localization_sensors.md) for unwrapping,
+quadrature x1/x2/x4 semantics, multipole-ring resolution, backend ownership,
+high-rate GPIO limitations, mocks, and the separately guarded permanent-address
+programming procedure.
+
 ### Motor control
 
 Three types of motors are currently supported: GPIO-driven motors, phase motors, and I2C DC motors. All are controlled the same way using `MotorService` modules.
+
+Each motor exposes `speed` as the constrained logical caller command and
+`applied_speed` as the direction- and magnitude-calibrated command represented
+by its electrical output. Both use the public speed scale; `applied_speed` is
+not a raw PWM register value. See the [v3 migration guide](docs/migration_guide_v3.md)
+for examples and custom `MotorABC` requirements.
 
 ### GPIO-driven DC motors
 
@@ -454,6 +530,25 @@ Note: only one underlying bus instance is created per bus number (in the example
 > [!IMPORTANT]
 > Don't call `SMBusManager.close_bus(...)` while other components still expect the bus to be open. Before calling `SMBusManager.close_bus(...)` or `SMBusManager.close_all()`, make sure all device objects are stopped/closed or otherwise no longer accessing the bus.
 
+PWM drivers can also be shared by several motors or servos. Resources passed
+into `I2CDCMotor` or `Servo` are caller-owned by default. Factory-created motor
+drivers are owned by the motor, while a driver explicitly passed to
+`MotorFactory.create_motor(...)` is treated as shared and is not closed by that
+motor. The owner must close a shared driver after every consumer has stopped:
+
+```python
+shared_driver = PWMFactory.create_pwm_driver(driver_config, bus=shared_bus)
+left = MotorFactory.create_motor(left_config, driver=shared_driver)
+right = MotorFactory.create_motor(right_config, driver=shared_driver)
+
+try:
+    MotorService(left, right).move(40, 1)
+finally:
+    left.close()  # stops only the left channel
+    right.close()  # stops only the right channel
+    shared_driver.close()
+```
+
 ### Combined example with vehicle robot (shared bus instance, servos and motors)
 
 This example shows how to share a single I²C/SMBus instance across multiple drivers and devices (servos, PWM controllers, sensors, etc.) in a robot application.
@@ -744,6 +839,25 @@ print("I2C Data Read:", data)
 devices = i2c_device.scan()
 print("I2C Devices Detected:", devices)
 ```
+
+Constructing `I2C` with one known address does not probe it, so initialization
+does not send an unexpected command. Passing an address list or calling
+`scan()` necessarily performs bus transactions. The generic fallback reads one
+byte and never performs the old dummy `0x00` write, but no generic I²C probe is
+safe for every device: reads can consume status/FIFO data or advance device
+state. Prefer a documented identity register when the device has one:
+
+```python
+def sh3001_probe(bus, address: int) -> bool:
+    return bus.read_byte_data(address, 0x0F) == 0x61
+
+
+imu_i2c = I2C(address=[0x36, 0x37], bus=1, probe=sh3001_probe)
+```
+
+Only unreserved seven-bit addresses (`0x08` through `0x77`) are accepted or
+scanned. Avoid generic scans on a live bus when you do not know every attached
+device's protocol.
 
 ### GPIO Pin
 
@@ -1242,6 +1356,14 @@ os.environ["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
 ```
 
 ---
+
+## Hardware-in-the-loop validation
+
+Mock-backed tests cannot prove real wiring polarity, shaft direction, stop
+behavior, or bus electrical compatibility. The operator-assisted validation
+runner and the current evidence status are documented in
+[`docs/hardware_validation.md`](docs/hardware_validation.md). No passing physical
+HIL report is currently committed; the repository does not claim otherwise.
 
 ## Development Environment Setup
 

@@ -74,6 +74,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         self.max_speed = max_speed
         self.name = name or f"F{forward_pin}-B{backward_pin}-P{pwm_pin}"
         self._speed: float = 0
+        self._applied_speed: float = 0
         self._motor = Motor(
             forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=pwm
         )
@@ -84,6 +85,10 @@ class GPIODCMotor(MotorCalibration, MotorABC):
     @property
     def speed(self) -> float:
         return self._speed
+
+    @property
+    def applied_speed(self) -> float:
+        return self._applied_speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -110,34 +115,37 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         Args:
             speed: Target speed percentage within [-max_speed, max_speed].
         """
-        speed = self._apply_speed_correction(speed)
-        if speed == 0:
+        logical_speed, applied_speed = self.apply_calibration(speed, self.max_speed)
+        if applied_speed == 0:
             self.stop()
             return
 
-        sign = 1 if speed > 0 else -1
+        applied_sign = 1 if applied_speed > 0 else -1
 
-        if sign > 0:
-            command = (
-                self._motor.forward if self.direction == 1 else self._motor.backward
-            )
+        if applied_sign > 0:
+            command = self._motor.forward
             log_direction = "forward"
         else:
-            command = (
-                self._motor.backward if self.direction == 1 else self._motor.forward
-            )
+            command = self._motor.backward
             log_direction = "backward"
 
         if self._pwm:
-            scale = abs(speed) / self.max_speed
-            _log.debug(f"Motor set {log_direction}: {speed} (scaled {scale:.2f}).")
+            scale = abs(applied_speed) / self.max_speed
+            _log.debug(
+                "Motor set %s: logical=%s, applied=%s (scaled %.2f).",
+                log_direction,
+                logical_speed,
+                applied_speed,
+                scale,
+            )
             command(cast(int, scale))
         else:
             _log.debug(f"Motor set full {log_direction} (digital).")
             command(1)
-            speed = sign * self.max_speed
+            applied_speed = applied_sign * self.max_speed
 
-        self._speed = speed
+        self._speed = logical_speed
+        self._applied_speed = applied_speed
 
     def stop(self) -> None:
         """
@@ -146,6 +154,7 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         _log.debug("Motor stopped.")
         self._motor.stop()
         self._speed = 0
+        self._applied_speed = 0
 
     def close(self) -> None:
         """

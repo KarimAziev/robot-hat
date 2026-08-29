@@ -246,7 +246,7 @@ class FileDB(object):
         if "\n" in value:
             raise FileDBValidationError("Value cannot contain newline characters")
 
-        lines = []
+        lines: List[str] = []
 
         with open(self.db, "r") as conf:
             lines = conf.readlines()

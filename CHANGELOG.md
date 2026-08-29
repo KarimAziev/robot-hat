@@ -1,5 +1,59 @@
 # Changelog
 
+## v3.0.0 (2026-08-29)
+
+Breaking release. Read the [v3 migration guide](./docs/migration_guide_v3.md)
+before upgrading.
+
+### Added
+
+- SPI/PWM AS5048A support with an injectable `SPIABC`, Linux `SpidevDevice`,
+  parity-checked pipelined register reads, typed protocol errors, magnetic
+  diagnostics, 14-bit cumulative encoding, absolute angular position, and an
+  optional `spi` installation extra.
+- Reusable `MockSPI` and protocol-aware `MockAS5048ASPI` test doubles, plus
+  automatic AS5048A mock selection on non-Raspberry-Pi development hosts.
+- A documented AS5048A electrical-verification, wiring, use, ownership, and HIL
+  checklist. The regular driver deliberately excludes permanent OTP writes.
+- `MotorABC.applied_speed`, exposing the calibrated command separately from the
+  constrained logical `speed` command.
+- An operator-assisted, motion-guarded motor HIL runner and a documented,
+  reviewable JSON evidence format. No physical passing report is claimed until
+  a real-rig result is committed.
+- Low-level AS5600L access, guarded two-phase permanent-address programming,
+  cumulative absolute-angle unwrapping, absolute angular position, health data,
+  and hardware-free encoder and angular-position mocks.
+- Vendor-neutral quadrature counter snapshots and backend contract, a pure
+  x1/x2/x4 Gray-code decoder, `QuadratureEncoder`, AS5304/AS5306 resolution
+  helper, and deterministic `MockQuadratureCounterBackend`.
+- Raw `DigitalEdgeInputABC`, `GPIOZeroDigitalEdgeInput`, and the reference-grade
+  `GPIOQuadratureCounterBackend` for low-rate incremental A/B capture without
+  encoder debounce.
+
+### Changed
+
+- `EncoderABC` now requires `read_health()`; downstream concrete encoders and
+  test doubles must implement the health contract before upgrading.
+- `AS5600LEncoder` derives an unambiguous sampling limit from configured maximum
+  shaft speed in addition to its scheduling-gap limit.
+- Motor backends now share one calibration contract: direction changes only
+  electrical polarity, speed offsets adjust non-zero magnitude, zero always
+  stops, `speed` reports the constrained logical command, and `applied_speed`
+  reports the calibrated electrical command in the same public scale.
+- `I2CDCMotor` and `Servo` can explicitly leave shared PWM drivers open.
+  `MotorFactory` owns drivers and pins it creates, but not injected resources.
+- Injected drivers and direction pins are caller-owned by default in
+  `I2CDCMotor` and `Servo`; ownership transfer must be explicit.
+- A single configured `I2C` address is no longer probed during construction.
+  Explicit scans and address-list resolution use a read instead of the unsafe
+  dummy-byte write, reject reserved addresses, and accept device-specific probe
+  callbacks.
+
+### Fixed
+
+- Write and verify AS5600L programmable I²C addresses as seven-bit register
+  values rather than incorrectly shifting them into an address-plus-R/W byte.
+
 ## v2.6.0 (2026-08-02)
 
 ### Added
