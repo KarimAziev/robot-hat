@@ -1,7 +1,5 @@
 # Changelog
 
-## Unreleased
-
 ## v3.0.0 (2026-08-29)
 
 Breaking release. Read the [v3 migration guide](./docs/migration_guide_v3.md)
