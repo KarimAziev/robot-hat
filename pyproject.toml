@@ -66,6 +66,9 @@ ignore = ["E501", "E731", "E402"]
 music = [
     "pygame-ce",
 ]
+spi = [
+    "spidev>=3.8; sys_platform == 'linux'",
+]
 dev = [
     "coverage[toml]>=7.10",
     "pre-commit",

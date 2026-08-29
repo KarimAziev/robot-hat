@@ -31,18 +31,35 @@ class MotorABC(ABC):
     @property
     @abstractmethod
     def speed(self) -> float:
+        """Return the last constrained logical speed command.
+
+        Direction and magnitude calibration affect the electrical output, not
+        the sign or magnitude reported here. Stopped motors report zero.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def applied_speed(self) -> float:
+        """Return the last calibrated command sent to the motor backend.
+
+        Unlike :attr:`speed`, this value includes direction calibration and the
+        non-zero magnitude offset. It is still expressed in the motor's public
+        speed scale, not as a backend-specific PWM register value.
+        """
         pass
 
     @abstractmethod
     def set_speed(self, speed: float) -> None:
         """
-        Set the motor's speed and direction after applying calibration.
+        Set the motor's logical speed and direction after applying calibration.
 
         A positive speed makes the motor move forward, and a negative speed
         makes it reverse.
 
         Args:
-            speed: Target speed percentage within the range [-100, 100].
+            speed: Target logical speed percentage. Implementations constrain
+                it to their configured ``max_speed`` before applying calibration.
         """
         pass
 

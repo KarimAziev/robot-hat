@@ -49,6 +49,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         self.max_speed = max_speed
         self.name = name or f"P{phase_pin}-E{enable_pin}"
         self._speed: float = 0
+        self._applied_speed: float = 0
 
         self._motor = PhaseEnableMotor(phase=phase_pin, enable=enable_pin, pwm=pwm)
         _log.debug(
@@ -61,6 +62,11 @@ class PhaseMotor(MotorCalibration, MotorABC):
         Return the current motor speed (percentage).
         """
         return self._speed
+
+    @property
+    def applied_speed(self) -> float:
+        """Return the calibrated command represented by the electrical output."""
+        return self._applied_speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -86,22 +92,24 @@ class PhaseMotor(MotorCalibration, MotorABC):
         Args:
             speed: Target speed percentage within [-max_speed, max_speed].
         """
-        speed = self._apply_speed_correction(speed)
-        if speed > 0:
+        logical_speed, applied_speed = self.apply_calibration(speed, self.max_speed)
+        if applied_speed > 0:
             if self._pwm:
-                scale = speed / self.max_speed
+                scale = applied_speed / self.max_speed
                 _log.debug(
-                    f"{self.name}: Running forward at {speed}% (scale {scale:.2f})."
+                    f"{self.name}: Running forward at {applied_speed}% "
+                    f"(scale {scale:.2f})."
                 )
                 self._motor.forward(cast(int, scale))
             else:
                 _log.debug(f"{self.name}: Running full forward (digital mode).")
                 self._motor.forward(1)
-        elif speed < 0:
+        elif applied_speed < 0:
             if self._pwm:
-                scale = abs(speed) / self.max_speed
+                scale = abs(applied_speed) / self.max_speed
                 _log.debug(
-                    f"{self.name}: Running backward at {speed}% (scale {scale:.2f})."
+                    f"{self.name}: Running backward at {applied_speed}% "
+                    f"(scale {scale:.2f})."
                 )
                 self._motor.backward(cast(int, scale))
             else:
@@ -110,7 +118,8 @@ class PhaseMotor(MotorCalibration, MotorABC):
         else:
             self.stop()
 
-        self._speed = speed
+        self._speed = logical_speed
+        self._applied_speed = applied_speed
 
     def stop(self) -> None:
         """
@@ -119,6 +128,7 @@ class PhaseMotor(MotorCalibration, MotorABC):
         _log.debug(f"{self.name}: Motor stopped.")
         self._motor.stop()
         self._speed = 0
+        self._applied_speed = 0
 
     def close(self) -> None:
         """

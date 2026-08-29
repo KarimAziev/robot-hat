@@ -34,6 +34,34 @@ class MotorCalibration:
             self.calibration_speed_offset = value
         return self.speed_offset
 
+    def apply_calibration(self, speed: float, max_speed: float) -> tuple[float, float]:
+        """Return the logical and electrically applied speed commands.
+
+        ``speed`` is first constrained to the public logical range. Direction
+        calibration then changes only the electrical polarity. The speed offset
+        changes the magnitude of non-zero commands and can never start a stopped
+        motor or reverse a command.
+
+        Returns:
+            A ``(logical_speed, applied_speed)`` pair. ``logical_speed`` is the
+            constrained caller command exposed by motor ``speed`` properties;
+            ``applied_speed`` includes direction and magnitude calibration.
+        """
+        if max_speed <= 0:
+            raise MotorValidationError("Maximum motor speed must be greater than zero.")
+
+        logical_speed = max(-max_speed, min(speed, max_speed))
+        if logical_speed == 0:
+            return 0.0, 0.0
+
+        calibrated_magnitude = max(
+            0.0,
+            min(abs(logical_speed) + self.speed_offset, max_speed),
+        )
+        logical_sign = 1 if logical_speed > 0 else -1
+        applied_speed = calibrated_magnitude * logical_sign * self.direction
+        return logical_speed, applied_speed
+
     @property
     def direction(self) -> MotorDirection:
         """

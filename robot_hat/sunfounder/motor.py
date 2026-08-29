@@ -62,11 +62,17 @@ class Motor(MotorCalibration, MotorABC):
             self._convert_speed_to_pwm,
         )
         self._speed: float = 0
+        self._applied_speed: float = 0
 
     @property
     def speed(self) -> float:
         """Return the current motor speed in percentage."""
         return self._speed
+
+    @property
+    def applied_speed(self) -> float:
+        """Return the calibrated command represented by the electrical output."""
+        return self._applied_speed
 
     def _apply_speed_correction(self, speed: float) -> float:
         """
@@ -82,15 +88,18 @@ class Motor(MotorCalibration, MotorABC):
 
     def _apply_pwm_speed_correction(self, speed: float) -> float:
         """
-        Apply calibration to the speed to adjust for motor-specific variances.
+        Return speed unchanged for compatibility with the legacy PWM pipeline.
+
+        Calibration is applied uniformly by :meth:`apply_calibration` before
+        the PWM conversion pipeline runs.
 
         Args:
             speed: The desired speed percentage.
 
         Returns:
-            Adjusted speed after calibration is applied.
+            The unchanged speed value.
         """
-        return speed - self.speed_offset
+        return speed
 
     def _convert_speed_to_pwm(self, speed: float) -> float:
         """
@@ -129,9 +138,13 @@ class Motor(MotorCalibration, MotorABC):
         """
 
         _log.debug(self._log_prefix + "setting speed %s", speed)
-        speed = self._apply_speed_correction(speed)
-        pwm_speed = self.speed_to_pwm_formula(speed)
-        direction = self.direction if speed >= 0 else -self.direction
+        logical_speed, applied_speed = self.apply_calibration(speed, self.max_speed)
+        if applied_speed == 0:
+            self.stop()
+            return
+
+        pwm_speed = self.speed_to_pwm_formula(applied_speed)
+        direction = 1 if applied_speed > 0 else -1
 
         if direction == -1:
             self.direction_pin.high()
@@ -145,7 +158,8 @@ class Motor(MotorCalibration, MotorABC):
             f"direction: {'reverse' if direction == -1 else 'forward'}"
         )
 
-        self._speed = speed
+        self._speed = logical_speed
+        self._applied_speed = applied_speed
 
     def close(self) -> None:
         try:
@@ -171,6 +185,7 @@ class Motor(MotorCalibration, MotorABC):
         """
         self.speed_pin.pulse_width_percent(0)
         self._speed = 0
+        self._applied_speed = 0
         _log.debug(self._log_prefix + "stopped")
 
     def __repr__(self) -> str:

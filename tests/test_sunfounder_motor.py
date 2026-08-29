@@ -47,8 +47,17 @@ class TestMotor(unittest.TestCase):
     def test_set_speed_with_calibration(self):
         self.motor.update_calibration_speed(10, persist=True)
         self.motor.set_speed(50)
-        self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(65)
+        self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(80)
         self.assertEqual(self.motor.speed, 50)
+        self.assertEqual(self.motor.applied_speed, 60)
+
+    def test_zero_with_calibration_offset_stops(self):
+        self.motor.update_calibration_speed(10)
+
+        self.motor.set_speed(0)
+
+        self.mock_pwm_pin.pulse_width_percent.assert_called_once_with(0)
+        self.assertEqual(self.motor.applied_speed, 0)
 
     def test_set_speed_constraints(self):
         self.motor.set_speed(120)

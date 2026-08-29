@@ -27,6 +27,7 @@ class PWMDriverABC(ABC):
         Initialize common attributes and the I2C bus, if needed.
         """
         self._address = address
+        self._closed = False
 
         if isinstance(bus, int):
             from robot_hat.i2c.i2c_bus import I2CBus
@@ -83,6 +84,9 @@ class PWMDriverABC(ABC):
         """
         Clean up or close any resources (like closing the I2C connection).
         """
+        if self._closed:
+            return
+        self._closed = True
         if self.own_bus:
             _log.debug("Closing SMBus")
             self.bus.close()

@@ -11,6 +11,7 @@ class TestUtils(TestCase):
             "GPIOZERO_PIN_FACTORY",
             "PYGAME_HIDE_SUPPORT_PROMPT",
             "ROBOT_HAT_MOCK_SMBUS",
+            "ROBOT_HAT_MOCK_SPI",
             "ROBOT_HAT_DISCHARGE_RATE",
         ]:
             os.environ.pop(key, None)
@@ -108,6 +109,7 @@ class TestUtils(TestCase):
             self.assertEqual(os.environ.get("GPIOZERO_PIN_FACTORY"), "lgpio")
             self.assertEqual(os.environ.get("PYGAME_HIDE_SUPPORT_PROMPT"), "1")
             self.assertIsNone(os.environ.get("ROBOT_HAT_MOCK_SMBUS"))
+            self.assertIsNone(os.environ.get("ROBOT_HAT_MOCK_SPI"))
             self.assertIsNone(os.environ.get("ROBOT_HAT_DISCHARGE_RATE"))
 
     def test_setup_env_vars_when_factory_is_mock(self):
@@ -118,6 +120,7 @@ class TestUtils(TestCase):
             self.assertEqual(os.environ.get("GPIOZERO_PIN_FACTORY"), "mock")
             self.assertEqual(os.environ.get("PYGAME_HIDE_SUPPORT_PROMPT"), "1")
             self.assertEqual(os.environ.get("ROBOT_HAT_MOCK_SMBUS"), "1")
+            self.assertEqual(os.environ.get("ROBOT_HAT_MOCK_SPI"), "1")
             self.assertEqual(os.environ.get("ROBOT_HAT_DISCHARGE_RATE"), "10")
 
     def test_setup_env_vars_when_gpiozero_already_set(self):

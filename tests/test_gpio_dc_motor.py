@@ -56,19 +56,53 @@ class TestGPIOMotor(unittest.TestCase):
         m.set_speed(40)
         self.motor_mock.backward.assert_called_once_with(0.4)
         self.assertEqual(m.speed, 40)
+        self.assertEqual(m.applied_speed, -40)
 
-    def test_set_speed_without_pwm_uses_full_on_and_sets_speed_to_max(self):
+    def test_set_speed_applies_offset_to_magnitude(self):
+        m = GPIODCMotor(
+            forward_pin=7,
+            backward_pin=8,
+            pwm_pin=9,
+            pwm=True,
+            calibration_speed_offset=10,
+            max_speed=100,
+        )
+
+        m.set_speed(-40)
+
+        self.motor_mock.backward.assert_called_once_with(0.5)
+        self.assertEqual(m.speed, -40)
+        self.assertEqual(m.applied_speed, -50)
+
+    def test_set_speed_zero_with_offset_stops(self):
+        m = GPIODCMotor(
+            forward_pin=7,
+            backward_pin=8,
+            pwm_pin=9,
+            pwm=True,
+            calibration_speed_offset=10,
+        )
+
+        m.set_speed(0)
+
+        self.motor_mock.stop.assert_called_once()
+        self.motor_mock.forward.assert_not_called()
+        self.motor_mock.backward.assert_not_called()
+
+    def test_set_speed_without_pwm_preserves_logical_and_reports_full_output(self):
         m = GPIODCMotor(
             forward_pin=1, backward_pin=0, pwm_pin=None, pwm=False, max_speed=80
         )
         m.set_speed(30)
         self.motor_mock.forward.assert_called_once_with(1)
-        self.assertEqual(m.speed, 80)
+        self.assertEqual(m.speed, 30)
+        self.assertEqual(m.applied_speed, 80)
 
         self.motor_mock.reset_mock()
         m.set_speed(-10)
         self.motor_mock.backward.assert_called_once_with(1)
-        self.assertEqual(m.speed, -80)
+        self.assertEqual(m.speed, -10)
+        self.assertEqual(m.applied_speed, -80)
 
     def test_stop_calls_motor_stop_and_sets_speed_zero(self):
         m = GPIODCMotor(forward_pin=11, backward_pin=12, pwm_pin=13, pwm=True)
@@ -77,6 +111,7 @@ class TestGPIOMotor(unittest.TestCase):
         m.stop()
         self.motor_mock.stop.assert_called_once()
         self.assertEqual(m.speed, 0)
+        self.assertEqual(m.applied_speed, 0)
 
     def test_close_calls_motor_close_if_present(self):
         m = GPIODCMotor(forward_pin=21, backward_pin=22, pwm_pin=23, pwm=True)

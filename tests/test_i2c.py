@@ -1,10 +1,8 @@
-import errno
 import unittest
 from typing import List, Optional
 from unittest.mock import MagicMock, patch
 
 from robot_hat import I2C, I2CAddressNotFound
-import sys
 
 
 class TestI2C(unittest.TestCase):
@@ -12,11 +10,11 @@ class TestI2C(unittest.TestCase):
     def test_initialize_successful(self, mock_smbus: MagicMock) -> None:
         mock_bus: MagicMock = MagicMock()
         mock_smbus.return_value = mock_bus
-        mock_bus.write_byte = MagicMock()
+        i2c = I2C(address=0x15)
 
-        with patch.object(I2C, "check_address", return_value=0x15):
-            i2c: I2C = I2C(address=0x15)
-            self.assertEqual(i2c.address, 0x15)
+        self.assertEqual(i2c.address, 0x15)
+        mock_bus.read_byte.assert_not_called()
+        mock_bus.write_byte.assert_not_called()
 
     @patch("robot_hat.i2c.i2c_manager.SMBus")
     @patch("robot_hat.i2c.i2c_manager._log")
@@ -28,19 +26,33 @@ class TestI2C(unittest.TestCase):
 
         with patch.object(I2C, "check_address", return_value=None):
             with self.assertRaises(I2CAddressNotFound):
-                I2C(address=0x99)
+                I2C(address=[0x20])
 
-        mock_logger.error.assert_called_once_with("I2C address %s not found", 0x99)
+        mock_logger.error.assert_called_once_with("I2C address %s not found", [0x20])
+        mock_bus.close.assert_called_once()
+
+    @patch("robot_hat.i2c.i2c_manager.SMBus")
+    def test_initialize_rejects_reserved_or_invalid_address(
+        self, mock_smbus: MagicMock
+    ) -> None:
+        mock_smbus.return_value = MagicMock()
+
+        for address in (0x07, 0x78, True):
+            with (
+                self.subTest(address=address),
+                self.assertRaises((TypeError, ValueError)),
+            ):
+                I2C(address=address)  # type: ignore[arg-type]
 
     @patch("robot_hat.i2c.i2c_manager.SMBus")
     def test_find_address_single_successful(self, mock_smbus: MagicMock) -> None:
         mock_bus: MagicMock = MagicMock()
         mock_smbus.return_value = mock_bus
 
-        with patch.object(I2C, "check_address", return_value=0x20):
-            i2c: I2C = I2C(address=0x20)
-            result: Optional[int] = i2c.find_address(0x20)
-            self.assertEqual(result, 0x20)
+        i2c = I2C(address=0x20)
+        result: Optional[int] = i2c.find_address(0x20)
+        self.assertEqual(result, 0x20)
+        mock_bus.read_byte.assert_not_called()
 
     @patch("robot_hat.i2c.i2c_manager.SMBus")
     def test_find_address_list(self, mock_smbus: MagicMock) -> None:
@@ -48,7 +60,9 @@ class TestI2C(unittest.TestCase):
         mock_smbus.return_value = mock_bus
 
         with patch.object(
-            I2C, "check_address", side_effect=lambda x: x if x == 0x15 else None
+            I2C,
+            "check_address",
+            side_effect=lambda x, probe=None: x if x == 0x15 else None,
         ):
             i2c: I2C = I2C(address=[0x10, 0x15, 0x20])
             self.assertEqual(i2c.address, 0x15)
@@ -117,29 +131,39 @@ class TestI2C(unittest.TestCase):
 
         with patch.object(
             mock_bus,
-            "write_byte",
-            side_effect=lambda addr, _: (
-                None
-                if addr in [0x10, 0x20]
-                else OSError(
-                    errno.EREMOTEIO
-                    if sys.platform != "win32" and sys.platform != "darwin"
-                    else errno.ENXIO
-                )
-            ),
+            "read_byte",
+            side_effect=lambda addr: 0 if addr in [0x10, 0x20] else OSError(),
         ):
             i2c: I2C = I2C(address=0x10)
             devices: List[int] = i2c.scan()
             self.assertIn(0x10, devices)
             self.assertIn(0x20, devices)
+            mock_bus.write_byte.assert_not_called()
+
+    @patch("robot_hat.i2c.i2c_manager.SMBus")
+    def test_device_specific_probe_can_read_identity_register(
+        self, mock_smbus: MagicMock
+    ) -> None:
+        mock_bus = MagicMock()
+        mock_bus.read_byte_data.side_effect = lambda address, register: (
+            0x61 if (address, register) == (0x36, 0x0F) else 0
+        )
+        mock_smbus.return_value = mock_bus
+
+        def probe(bus, address: int) -> bool:
+            return bus.read_byte_data(address, 0x0F) == 0x61
+
+        i2c = I2C(address=[0x35, 0x36], probe=probe)
+
+        self.assertEqual(i2c.address, 0x36)
+        mock_bus.write_byte.assert_not_called()
 
     @patch("robot_hat.i2c.i2c_manager.SMBus")
     def test_is_ready(self, mock_smbus: MagicMock) -> None:
         mock_bus: MagicMock = MagicMock()
-        mock_bus.write_byte = MagicMock()
         mock_smbus.return_value = mock_bus
 
-        with patch.object(I2C, "scan", return_value=[0x15]):
+        with patch.object(I2C, "check_address", return_value=0x15):
             i2c: I2C = I2C(address=0x15)
             self.assertTrue(i2c.is_ready())
 
@@ -150,7 +174,7 @@ class TestI2C(unittest.TestCase):
 
         with patch.object(I2C, "check_address", return_value=True):
             i2c: I2C = I2C(address=0x15)
-            self.assertTrue(i2c.is_avaliable())
+            self.assertTrue(i2c.is_available())
 
 
 if __name__ == "__main__":

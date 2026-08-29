@@ -329,17 +329,29 @@ class MotorFactory:
         """
         _log.debug("Initializing I2C motor %s", config)
 
-        driver = driver or PWMFactory.create_pwm_driver(
-            config.driver,
-            bus=bus,
+        owns_driver = driver is None
+        owns_direction_pin = dir_pin is None
+        resolved_driver = (
+            PWMFactory.create_pwm_driver(config.driver, bus=bus)
+            if driver is None
+            else driver
         )
-        dir_pin = dir_pin or Pin(config.dir_pin)
-
-        return I2CDCMotor(
-            channel=config.channel,
-            driver=driver,
-            frequency=config.driver.freq,
-            dir_pin=dir_pin,
-            calibration_direction=config.calibration_direction,
-            max_speed=config.max_speed,
-        )
+        resolved_dir_pin: Union[Pin, None] = None
+        try:
+            resolved_dir_pin = Pin(config.dir_pin) if dir_pin is None else dir_pin
+            return I2CDCMotor(
+                channel=config.channel,
+                driver=resolved_driver,
+                frequency=config.driver.freq,
+                dir_pin=resolved_dir_pin,
+                calibration_direction=config.calibration_direction,
+                max_speed=config.max_speed,
+                owns_driver=owns_driver,
+                owns_direction_pin=owns_direction_pin,
+            )
+        except Exception:
+            if owns_direction_pin and resolved_dir_pin is not None:
+                resolved_dir_pin.close()
+            if owns_driver:
+                resolved_driver.close()
+            raise

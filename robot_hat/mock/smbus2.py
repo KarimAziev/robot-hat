@@ -70,7 +70,7 @@ def generate_discharge_sequence(
     else:
         discharge_values = list(range(start_raw_value, end_raw_value - 1, -1))
 
-    discharge_sequence = []
+    discharge_sequence: List[int] = []
     for raw_value in discharge_values:
         msb = raw_value >> 8
         lsb = raw_value & 0xFF

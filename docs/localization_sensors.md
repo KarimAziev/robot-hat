@@ -45,6 +45,15 @@ ticks. Those values depend on calibration and consumer history:
 to edge callbacks and reads. `close()` must stop callbacks and release only the
 resources owned by that driver.
 
+### AS5048A absolute magnetic encoder
+
+For the 14-bit SPI/PWM AS5048A, use `AS5048AEncoder` for cumulative ticks or
+`AS5048AAngularPosition` for absolute degrees. The SPI driver validates parity,
+reports protocol and magnetic faults, and avoids permanent OTP programming.
+See [AS5048A magnetic encoder](./as5048a.md) before wiring a marketplace
+breakout, because a `+5V` module label does not prove Raspberry Pi-safe logic
+levels.
+
 ### Incremental A/B quadrature encoders
 
 `QuadratureEncoder` adapts one vendor-neutral

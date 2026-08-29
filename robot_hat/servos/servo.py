@@ -35,6 +35,7 @@ class Servo(ServoABC):
         max_pulse: int = 2500,
         real_min_angle: float = -90.0,
         real_max_angle: float = 90.0,
+        owns_driver: bool = False,
     ) -> None:
         """
         Initialize a Servo instance with the given PWM driver and configuration parameters.
@@ -61,6 +62,10 @@ class Servo(ServoABC):
             `real_max_angle`:
                 The maximum physical angle (in degrees) that the servo can achieve. This value is used in
                 the mapping from the logical angle to the physical angle.
+            `owns_driver`:
+                Whether :meth:`close` also closes ``driver``. Injected drivers
+                remain caller-owned by default; pass ``True`` only for an
+                intentional ownership transfer.
         """
 
         if isinstance(channel, str):
@@ -78,6 +83,8 @@ class Servo(ServoABC):
             self.channel = channel
 
         self.driver = driver
+        self.owns_driver = owns_driver
+        self._closed = False
 
         self.min_angle = min_angle
         self.max_angle = max_angle
@@ -139,9 +146,13 @@ class Servo(ServoABC):
 
     def close(self) -> None:
         """
-        If any resources need to be cleaned up, call the underlying driver's close method.
+        Close the underlying driver only when this servo owns it.
         """
-        self.driver.close()
+        if self._closed:
+            return
+        self._closed = True
+        if self.owns_driver:
+            self.driver.close()
 
     def __repr__(self) -> str:
         """
