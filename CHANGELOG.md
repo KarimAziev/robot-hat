@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `MockIMU` and `MockLidar2D` implementations with deterministic samples,
+  explicit lifecycle behavior, runtime value control, health simulation, and
+  interruptible scan pacing for application-level hardware-free operation.
+
 ## v3.0.0 (2026-08-29)
 
 Breaking release. Read the [v3 migration guide](./docs/migration_guide_v3.md)

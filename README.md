@@ -1344,6 +1344,11 @@ from robot_hat.utils import setup_env_vars
 setup_env_vars()
 ```
 
+Sensor applications can also select the explicit `MockEncoder`, `MockIMU`,
+`MockLidar2D`, and `MockAngularPosition` implementations. Unlike environment
+fallbacks, explicit mocks work on a Raspberry Pi too and therefore support
+repeatable integration tests without touching attached hardware.
+
 Or:
 
 ```python
