@@ -287,18 +287,23 @@ especially the non-volatile memory and I²C address programming sections.
 
 ## Hardware-free mocks
 
-`MockEncoder()`, `MockQuadratureCounterBackend()`, and `MockAngularPosition()`
-require no GPIO or I²C configuration. They have stationary, healthy defaults and
-can be controlled deterministically:
+`MockEncoder()`, `MockQuadratureCounterBackend()`, `MockAngularPosition()`,
+`MockIMU()`, and `MockLidar2D()` require no GPIO, I²C, SPI, or UART
+configuration. They have stationary or uniform healthy defaults and can be
+controlled deterministically:
 
 ```python
 from robot_hat import (
     MockAngularPosition,
     MockEncoder,
+    MockIMU,
+    MockLidar2D,
     MockQuadratureCounterBackend,
 )
 
 left = MockEncoder(ticks_per_sample=4)
+imu = MockIMU(angular_velocity_radps=(0.0, 0.0, 0.2))
+lidar = MockLidar2D(distance_m=2.0, scan_frequency_hz=10.0)
 counter = MockQuadratureCounterBackend(monotonic_ns=lambda: 42)
 steering = MockAngularPosition(
     initial_angle_degrees=180.0,
@@ -310,6 +315,12 @@ counter.advance(120)
 assert counter.read_snapshot().count == 120
 steering.initialize()
 ```
+
+`MockLidar2D` repeats complete revolutions and waits interruptibly at the
+configured scan frequency, so it exercises the same blocking iterator contract
+as physical scanners without delaying shutdown. Use `set_uniform_scan()` to
+move a synthetic wall toward or away from the robot. `MockIMU.set_sample()` can
+change acceleration and angular velocity while a publisher is running.
 
 The mock health objects leave magnet fields as `None` unless configured, matching
 non-magnetic encoder implementations such as a GPIO quadrature encoder.

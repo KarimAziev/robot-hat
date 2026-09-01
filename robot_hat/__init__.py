@@ -141,6 +141,8 @@ from robot_hat.interfaces.spi_abc import SPIABC
 from robot_hat.interfaces.uart_abc import UARTABC
 from robot_hat.mock.angular_position import MockAngularPosition
 from robot_hat.mock.encoder import MockEncoder
+from robot_hat.mock.imu import MockIMU
+from robot_hat.mock.lidar import MockLidar2D
 from robot_hat.mock.quadrature_counter import MockQuadratureCounterBackend
 from robot_hat.mock.spi import MockAS5048ASPI, MockSPI
 from robot_hat.mock.uart import MockUART
@@ -253,6 +255,8 @@ __all__ = [
     "MockUART",
     "MockAngularPosition",
     "MockEncoder",
+    "MockIMU",
+    "MockLidar2D",
     "MockQuadratureCounterBackend",
     "MockAS5048ASPI",
     "MockSPI",
