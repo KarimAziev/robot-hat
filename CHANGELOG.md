@@ -1,5 +1,14 @@
 # Changelog
 
+## v3.1.0 (2026-09-04)
+
+### Added
+
+- Direct, typed LSM9DS1 accelerometer/gyroscope support for the Raspberry Pi
+  Sense HAT v1 and v2 through the vendor-neutral `IMUABC` contract, with
+  configurable ranges and output rates, shared-I²C dependency injection, raw
+  diagnostic counts, and no RTIMULib dependency.
+
 ## v3.0.1 (2026-09-02)
 
 ### Added

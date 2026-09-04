@@ -99,8 +99,8 @@ and instructions for implementing another lidar model.
 ### IMU samples for localization
 
 The hardware-neutral `IMUABC` returns immutable, monotonic samples in SI units.
-The SH3001 driver supports configurable full-scale ranges and exposes raw counts
-only through a deliberately named diagnostic method:
+The SH3001 and LSM9DS1 drivers support configurable full-scale ranges and expose
+raw counts only through a deliberately named diagnostic method:
 
 ```python
 from robot_hat import SH3001, SH3001Config
@@ -119,6 +119,33 @@ try:
 finally:
     imu.close()
 ```
+
+The Raspberry Pi Sense HAT v1 and v2 use an LSM9DS1. Its six-axis
+accelerometer/gyroscope function is available without `sense-hat` or RTIMULib:
+
+```python
+from robot_hat import LSM9DS1, LSM9DS1Config
+
+imu = LSM9DS1(
+    bus=1,
+    address=0x6A,
+    config=LSM9DS1Config(
+        accelerometer_range_g=2,
+        gyroscope_range_dps=245,
+        output_data_rate_hz=119,
+    ),
+)
+try:
+    imu.initialize()
+    sample = imu.read_sample()
+finally:
+    imu.close()
+```
+
+The driver reports the LSM9DS1's native axes; configure the measured transform
+from the HAT to the robot base in the consuming application. The LSM9DS1
+magnetometer at `0x1c`, environmental sensors, joystick, and RGB matrix are not
+part of this first IMU-focused iteration.
 
 See [localization sensor contracts](docs/localization_sensors.md) for frame,
 timestamp, encoder, and driver-implementation requirements.

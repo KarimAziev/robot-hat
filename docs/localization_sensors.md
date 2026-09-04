@@ -21,6 +21,15 @@ manufacturer sensitivity values for those configured ranges and standard gravity
 of 9.80665 m/s². `read_raw_sample()` is available for calibration and diagnostics;
 normal application code should consume `read_sample()`.
 
+`LSM9DS1` provides the same six-axis contract for the Raspberry Pi Sense HAT v1
+and v2, and for standalone LSM9DS1 devices. The Sense HAT accelerometer/gyroscope
+function is wired to I²C bus 1 at `0x6a`; its separately addressed magnetometer at
+`0x1c` is deliberately outside the six-axis `IMUABC` contract. The driver uses ST's
+native X/Y/Z signs without the undocumented application-specific remapping,
+calibration, bias learning, or fusion performed by RTIMULib. Its defaults are
+±2 g, ±245 degrees/s, and 119 Hz. Pass a shared `SMBusABC` to combine it safely
+with other drivers on the bus; closing the IMU does not close an injected bus.
+
 The monotonic timestamp is not Unix time. It is suitable for ordering and fusing
 observations acquired in the same process and monotonic clock domain.
 

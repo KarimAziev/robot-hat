@@ -42,6 +42,7 @@ from robot_hat.data_types.config.motor import (
     PhaseMotorConfig,
 )
 from robot_hat.data_types.config.lidar import RPLidarC1Config
+from robot_hat.data_types.config.lsm9ds1 import LSM9DS1Config
 from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.data_types.config.sh3001 import SH3001Config
 from robot_hat.drivers.adc.INA219 import INA219
@@ -156,6 +157,7 @@ from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
+from robot_hat.sensors.imu.lsm9ds1 import LSM9DS1
 from robot_hat.sensors.angular_position.as5600l_angular_position import (
     AS5600LAngularPosition,
 )
@@ -245,6 +247,8 @@ __all__ = [
     "LidarHealthStatus",
     "LidarMeasurement",
     "LidarScan",
+    "LSM9DS1",
+    "LSM9DS1Config",
     "RPLidarC1",
     "RPLidarC1Config",
     "SerialUART",
