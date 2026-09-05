@@ -1,7 +1,14 @@
 from .battery import BatteryMetrics
 from .angular_position import AngularPositionHealth, AngularPositionSample
 from .encoder import EncoderHealth, EncoderSample
+from .environment import EnvironmentalSample
 from .imu import IMUSample, RawIMUSample, RawVector3, Vector3
+from .magnetometer import (
+    MagneticFieldVector,
+    MagnetometerSample,
+    RawMagneticFieldVector,
+    RawMagnetometerSample,
+)
 from .lidar import (
     LidarDeviceInfo,
     LidarHealth,
@@ -23,7 +30,10 @@ __all__ = [
     "AngularPositionSample",
     "EncoderHealth",
     "EncoderSample",
+    "EnvironmentalSample",
     "IMUSample",
+    "MagneticFieldVector",
+    "MagnetometerSample",
     "LidarDeviceInfo",
     "LidarHealth",
     "LidarHealthStatus",
@@ -34,6 +44,8 @@ __all__ = [
     "QuadratureCounterSnapshot",
     "QuadratureDecodeMode",
     "RawIMUSample",
+    "RawMagneticFieldVector",
+    "RawMagnetometerSample",
     "RawVector3",
     "UARTConfig",
     "USBUARTDevice",

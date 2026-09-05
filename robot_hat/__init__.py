@@ -4,10 +4,15 @@ from robot_hat.data_types import (
     BatteryMetrics,
     EncoderHealth,
     EncoderSample,
+    EnvironmentalSample,
     IMUSample,
+    MagneticFieldVector,
+    MagnetometerSample,
     QuadratureCounterSnapshot,
     QuadratureDecodeMode,
     RawIMUSample,
+    RawMagneticFieldVector,
+    RawMagnetometerSample,
     as530x_counts_per_revolution,
 )
 from robot_hat.data_types.lidar import (
@@ -42,7 +47,12 @@ from robot_hat.data_types.config.motor import (
     PhaseMotorConfig,
 )
 from robot_hat.data_types.config.lidar import RPLidarC1Config
+from robot_hat.data_types.config.hts221 import HTS221Config
+from robot_hat.data_types.config.lps25h import LPS25HConfig
 from robot_hat.data_types.config.lsm9ds1 import LSM9DS1Config
+from robot_hat.data_types.config.lsm9ds1_magnetometer import (
+    LSM9DS1MagnetometerConfig,
+)
 from robot_hat.data_types.config.pwm import PWMDriverConfig
 from robot_hat.data_types.config.sh3001 import SH3001Config
 from robot_hat.drivers.adc.INA219 import INA219
@@ -84,11 +94,17 @@ from robot_hat.exceptions import (
     EncoderError,
     EncoderMagnetError,
     EncoderNotInitializedError,
+    EnvironmentalSensorError,
+    EnvironmentalSensorInitializationError,
+    EnvironmentalSensorReadError,
     FileDBValidationError,
     GrayscaleTypeError,
     I2CAddressNotFound,
     IMUInitializationError,
     IMUReadError,
+    MagnetometerError,
+    MagnetometerInitializationError,
+    MagnetometerReadError,
     InvalidBusType,
     InvalidCalibrationModeError,
     InvalidChannel,
@@ -129,7 +145,9 @@ from robot_hat.interfaces.digital_edge_input_abc import (
     DigitalEdgeInputABC,
 )
 from robot_hat.interfaces.encoder_abc import EncoderABC
+from robot_hat.interfaces.environmental_sensor_abc import EnvironmentalSensorABC
 from robot_hat.interfaces.imu_abc import AbstractIMU, IMUABC
+from robot_hat.interfaces.magnetometer_abc import MagnetometerABC
 from robot_hat.interfaces.lidar_2d_abc import Lidar2DABC
 from robot_hat.interfaces.motor_abc import MotorABC
 from robot_hat.interfaces.pwm_driver_abc import PWMDriverABC
@@ -142,7 +160,9 @@ from robot_hat.interfaces.spi_abc import SPIABC
 from robot_hat.interfaces.uart_abc import UARTABC
 from robot_hat.mock.angular_position import MockAngularPosition
 from robot_hat.mock.encoder import MockEncoder
+from robot_hat.mock.environmental_sensor import MockEnvironmentalSensor
 from robot_hat.mock.imu import MockIMU
+from robot_hat.mock.magnetometer import MockMagnetometer
 from robot_hat.mock.lidar import MockLidar2D
 from robot_hat.mock.quadrature_counter import MockQuadratureCounterBackend
 from robot_hat.mock.spi import MockAS5048ASPI, MockSPI
@@ -158,6 +178,9 @@ from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
 from robot_hat.sensors.imu.lsm9ds1 import LSM9DS1
+from robot_hat.sensors.environmental.hts221 import HTS221
+from robot_hat.sensors.environmental.lps25h import LPS25H
+from robot_hat.sensors.magnetometer.lsm9ds1 import LSM9DS1Magnetometer
 from robot_hat.sensors.angular_position.as5600l_angular_position import (
     AS5600LAngularPosition,
 )
@@ -235,12 +258,19 @@ __all__ = [
     "EncoderMagnetError",
     "EncoderNotInitializedError",
     "EncoderSample",
+    "EnvironmentalSample",
+    "EnvironmentalSensorABC",
+    "EnvironmentalSensorError",
+    "EnvironmentalSensorInitializationError",
+    "EnvironmentalSensorReadError",
     "DigitalEdgeCallback",
     "DigitalEdgeInputABC",
     "GPIOQuadratureCounterBackend",
     "GPIOZeroDigitalEdgeInput",
     "IMUABC",
     "IMUSample",
+    "HTS221",
+    "HTS221Config",
     "Lidar2DABC",
     "LidarDeviceInfo",
     "LidarHealth",
@@ -249,6 +279,16 @@ __all__ = [
     "LidarScan",
     "LSM9DS1",
     "LSM9DS1Config",
+    "LSM9DS1Magnetometer",
+    "LSM9DS1MagnetometerConfig",
+    "LPS25H",
+    "LPS25HConfig",
+    "MagneticFieldVector",
+    "MagnetometerABC",
+    "MagnetometerError",
+    "MagnetometerInitializationError",
+    "MagnetometerReadError",
+    "MagnetometerSample",
     "RPLidarC1",
     "RPLidarC1Config",
     "SerialUART",
@@ -259,7 +299,9 @@ __all__ = [
     "MockUART",
     "MockAngularPosition",
     "MockEncoder",
+    "MockEnvironmentalSensor",
     "MockIMU",
+    "MockMagnetometer",
     "MockLidar2D",
     "MockQuadratureCounterBackend",
     "MockAS5048ASPI",
@@ -270,6 +312,8 @@ __all__ = [
     "QuadratureDecoder",
     "QuadratureEncoder",
     "RawIMUSample",
+    "RawMagneticFieldVector",
+    "RawMagnetometerSample",
     "find_usb_uart_device",
     "as530x_counts_per_revolution",
     "list_usb_uart_devices",

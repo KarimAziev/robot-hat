@@ -143,9 +143,34 @@ finally:
 ```
 
 The driver reports the LSM9DS1's native axes; configure the measured transform
-from the HAT to the robot base in the consuming application. The LSM9DS1
-magnetometer at `0x1c`, environmental sensors, joystick, and RGB matrix are not
-part of this first IMU-focused iteration.
+from the HAT to the robot base in the consuming application.
+
+The independently addressed magnetometer, humidity/temperature sensor, and
+pressure/temperature sensor are regular drivers too:
+
+```python
+from robot_hat import HTS221, LPS25H, LSM9DS1Magnetometer
+
+sensors = [
+    HTS221(bus=1, address=0x5F),
+    LPS25H(bus=1, address=0x5C),
+    LSM9DS1Magnetometer(bus=1, address=0x1C),
+]
+try:
+    for sensor in sensors:
+        sensor.initialize()
+        print(sensor.read_sample())
+finally:
+    for sensor in sensors:
+        sensor.close()
+```
+
+Sense HAT v1 uses the LPS25H and v2 uses the register-compatible LPS25HB. The
+same `LPS25H` driver supports both. See
+[Sense HAT environmental and magnetic sensors](docs/sense_hat_sensors.md) for
+units, configuration, shared-bus ownership, test doubles, and board-revision
+details. Joystick, LED-matrix, and Sense HAT v2 colour/light support remain
+separate future component drivers.
 
 See [localization sensor contracts](docs/localization_sensors.md) for frame,
 timestamp, encoder, and driver-implementation requirements.

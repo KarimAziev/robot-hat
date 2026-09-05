@@ -146,6 +146,30 @@ class IMUReadError(RuntimeError):
     """Raised when an IMU returns an incomplete or malformed sample."""
 
 
+class EnvironmentalSensorError(RuntimeError):
+    """Base error for environmental sensor failures."""
+
+
+class EnvironmentalSensorInitializationError(EnvironmentalSensorError):
+    """Raised when an environmental sensor cannot be initialized."""
+
+
+class EnvironmentalSensorReadError(EnvironmentalSensorError):
+    """Raised when an environmental sensor cannot produce a valid sample."""
+
+
+class MagnetometerError(RuntimeError):
+    """Base error for magnetometer failures."""
+
+
+class MagnetometerInitializationError(MagnetometerError):
+    """Raised when a magnetometer cannot be initialized."""
+
+
+class MagnetometerReadError(MagnetometerError):
+    """Raised when a magnetometer cannot produce a valid sample."""
+
+
 class EncoderError(RuntimeError):
     """Base error for encoder and angular-position sensor failures."""
 
