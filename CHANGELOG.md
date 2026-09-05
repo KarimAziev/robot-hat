@@ -1,5 +1,12 @@
 # Changelog
 
+## v3.2.0 (2026-09-05)
+
+- Added component-oriented Sense HAT sensor support: factory-calibrated HTS221
+  temperature/humidity, register-compatible LPS25H/LPS25HB pressure/temperature,
+  and native-axis LSM9DS1 magnetic-field drivers with typed configuration,
+  reusable ABCs, deterministic mocks, and shared-I²C ownership.
+
 ## v3.1.0 (2026-09-04)
 
 ### Added
