@@ -9,6 +9,18 @@ from robot_hat.data_types.config.lps25h import (
     LPS25HConfig,
     LPS25HOutputDataRateHz,
 )
+from robot_hat.data_types.config.lis3mdl import (
+    LIS3MDLConfig,
+    LIS3MDLMagneticFieldRangeGauss,
+    LIS3MDLOutputDataRateHz,
+    LIS3MDLPerformanceMode,
+)
+from robot_hat.data_types.config.lsm6ds33 import (
+    LSM6DS33AccelerometerRangeG,
+    LSM6DS33Config,
+    LSM6DS33GyroscopeRangeDPS,
+    LSM6DS33OutputDataRateHz,
+)
 from robot_hat.data_types.config.lsm9ds1 import (
     LSM9DS1AccelerometerRangeG,
     LSM9DS1Config,
@@ -36,6 +48,14 @@ __all__ = [
     "HTS221TemperatureAverageSamples",
     "LPS25HConfig",
     "LPS25HOutputDataRateHz",
+    "LIS3MDLConfig",
+    "LIS3MDLMagneticFieldRangeGauss",
+    "LIS3MDLOutputDataRateHz",
+    "LIS3MDLPerformanceMode",
+    "LSM6DS33AccelerometerRangeG",
+    "LSM6DS33Config",
+    "LSM6DS33GyroscopeRangeDPS",
+    "LSM6DS33OutputDataRateHz",
     "LSM9DS1AccelerometerRangeG",
     "LSM9DS1Config",
     "LSM9DS1GyroscopeRangeDPS",

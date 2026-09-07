@@ -20,6 +20,8 @@ Unlike the aforementioned libraries:
 - It avoids requiring **sudo calls** or introducing unnecessary system dependencies, focusing instead on clean, self-contained operations.
 - Plugin-style extensibility.
 
+
+
 **Table of Contents**
 
 > - [Robot Hat](#robot-hat)
@@ -57,6 +59,8 @@ Unlike the aforementioned libraries:
 >     - [Distribution](#distribution)
 >     - [Common Commands](#common-commands)
 >     - [Notes](#notes)
+
+
 
 ## Installation
 
@@ -99,8 +103,20 @@ and instructions for implementing another lidar model.
 ### IMU samples for localization
 
 The hardware-neutral `IMUABC` returns immutable, monotonic samples in SI units.
-The SH3001 and LSM9DS1 drivers support configurable full-scale ranges and expose
-raw counts only through a deliberately named diagnostic method:
+Each six-axis driver supports configurable full-scale ranges and exposes raw
+counts only through a deliberately named diagnostic method. Magnetometers use
+the separate `MagnetometerABC` contract and return teslas.
+
+
+| Driver                | Contract          | Example hardware                   | Default I²C address | Default configuration                   |
+|-----------------------|-------------------|------------------------------------|---------------------|-----------------------------------------|
+| `SH3001`              | `IMUABC`          | SunFounder Robot HAT               | `0x36`              | ±2 g, ±2000°/s                          |
+| `LSM6DS33`            | `IMUABC`          | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x6b`              | ±2 g, ±245°/s, 104 Hz                   |
+| `LSM9DS1`             | `IMUABC`          | Raspberry Pi Sense HAT v1/v2       | `0x6a`              | ±2 g, ±245°/s, 119 Hz                   |
+| `LIS3MDL`             | `MagnetometerABC` | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x1e`              | ±4 gauss, 10 Hz, ultra-high performance |
+| `LSM9DS1Magnetometer` | `MagnetometerABC` | Raspberry Pi Sense HAT v1/v2       | `0x1c`              | ±4 gauss, 20 Hz, ultra-high performance |
+
+For example, the SH3001 can be sampled as follows:
 
 ```python
 from robot_hat import SH3001, SH3001Config
@@ -119,6 +135,40 @@ try:
 finally:
     imu.close()
 ```
+
+The Pololu MiniIMU-9 v5 combines an LSM6DS33 accelerometer/gyroscope and an
+independently addressed LIS3MDL magnetometer. They are reusable component
+drivers rather than a board-specific wrapper, so the same code works with
+standalone carriers and with the equivalent components on the AltIMU-10 v5:
+
+```python
+from robot_hat import I2CBus, LIS3MDL, LSM6DS33, LSM6DS33Config
+
+bus = I2CBus(1)
+imu = LSM6DS33(
+    bus=bus,
+    address=0x6B,
+    config=LSM6DS33Config(
+        accelerometer_range_g=2,
+        gyroscope_range_dps=245,
+        output_data_rate_hz=104,
+    ),
+)
+magnetometer = LIS3MDL(bus=bus, address=0x1E)
+try:
+    imu.initialize()
+    magnetometer.initialize()
+    inertial_sample = imu.read_sample()
+    magnetic_sample = magnetometer.read_sample()
+finally:
+    # Injected buses are caller-owned, so close the sensors before the bus.
+    magnetometer.close()
+    imu.close()
+    bus.close()
+```
+
+The addresses above are the MiniIMU defaults. Driving the board's `SA0` pin low
+changes the LSM6DS33 address to `0x6a` and the LIS3MDL address to `0x1c`.
 
 The Raspberry Pi Sense HAT v1 and v2 use an LSM9DS1. Its six-axis
 accelerometer/gyroscope function is available without `sense-hat` or RTIMULib:
@@ -145,8 +195,8 @@ finally:
 The driver reports the LSM9DS1's native axes; configure the measured transform
 from the HAT to the robot base in the consuming application.
 
-The independently addressed magnetometer, humidity/temperature sensor, and
-pressure/temperature sensor are regular drivers too:
+The Sense HAT's independently addressed magnetometer, humidity/temperature
+sensor, and pressure/temperature sensor are regular drivers too:
 
 ```python
 from robot_hat import HTS221, LPS25H, LSM9DS1Magnetometer
@@ -174,6 +224,8 @@ separate future component drivers.
 
 See [localization sensor contracts](docs/localization_sensors.md) for frame,
 timestamp, encoder, and driver-implementation requirements.
+See [Pololu MiniIMU-9 v5 support](docs/pololu_miniimu9_v5.md) for board wiring,
+addresses, configuration ranges, ownership, and calibration responsibilities.
 
 ### Wheel and steering angle encoders
 

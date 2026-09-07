@@ -49,6 +49,8 @@ from robot_hat.data_types.config.motor import (
 from robot_hat.data_types.config.lidar import RPLidarC1Config
 from robot_hat.data_types.config.hts221 import HTS221Config
 from robot_hat.data_types.config.lps25h import LPS25HConfig
+from robot_hat.data_types.config.lis3mdl import LIS3MDLConfig
+from robot_hat.data_types.config.lsm6ds33 import LSM6DS33Config
 from robot_hat.data_types.config.lsm9ds1 import LSM9DS1Config
 from robot_hat.data_types.config.lsm9ds1_magnetometer import (
     LSM9DS1MagnetometerConfig,
@@ -177,10 +179,12 @@ from robot_hat.motor.phase_motor import PhaseMotor
 from robot_hat.music import Music
 from robot_hat.pin import Pin, PinModeType, PinPullType
 from robot_hat.sensors.imu.sh3001 import SH3001
+from robot_hat.sensors.imu.lsm6ds33 import LSM6DS33
 from robot_hat.sensors.imu.lsm9ds1 import LSM9DS1
 from robot_hat.sensors.environmental.hts221 import HTS221
 from robot_hat.sensors.environmental.lps25h import LPS25H
 from robot_hat.sensors.magnetometer.lsm9ds1 import LSM9DS1Magnetometer
+from robot_hat.sensors.magnetometer.lis3mdl import LIS3MDL
 from robot_hat.sensors.angular_position.as5600l_angular_position import (
     AS5600LAngularPosition,
 )
@@ -277,6 +281,10 @@ __all__ = [
     "LidarHealthStatus",
     "LidarMeasurement",
     "LidarScan",
+    "LIS3MDL",
+    "LIS3MDLConfig",
+    "LSM6DS33",
+    "LSM6DS33Config",
     "LSM9DS1",
     "LSM9DS1Config",
     "LSM9DS1Magnetometer",

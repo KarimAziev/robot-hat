@@ -32,6 +32,16 @@ with other drivers on the bus; closing the IMU does not close an injected bus.
 See [Sense HAT environmental and magnetic sensors](sense_hat_sensors.md) for the
 magnetometer and remaining Sense HAT sensor devices.
 
+`LSM6DS33` provides the six-axis contract for the corresponding ST sensor on
+Pololu's MiniIMU-9 v5 and AltIMU-10 v5, as well as standalone LSM6DS33 carriers.
+It defaults to I²C address `0x6b`, ±2 g, ±245 degrees/s, and 104 Hz. The
+independent `LIS3MDL` driver provides magnetic samples in teslas at address
+`0x1e`. Driving the Pololu board's shared `SA0` pin low changes those addresses
+to `0x6a` and `0x1c`, respectively. Both drivers expose native axes, typed
+configuration, diagnostic raw counts, and caller-owned shared-bus injection.
+See [Pololu MiniIMU-9 v5 support](pololu_miniimu9_v5.md) for wiring, complete
+configuration ranges, and calibration responsibilities.
+
 The monotonic timestamp is not Unix time. It is suitable for ordering and fusing
 observations acquired in the same process and monotonic clock domain.
 
