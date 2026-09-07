@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.3.0 (2026-09-07)
+
+### Added
+
+- Added vendor-agnostic `LSM6DS33` six-axis IMU and `LIS3MDL` magnetometer
+  drivers with typed range/rate configuration, SI-unit and raw-count samples,
+  shared-I²C dependency injection.
+
 ## v3.2.0 (2026-09-05)
 
 - Added component-oriented Sense HAT sensor support: factory-calibrated HTS221
