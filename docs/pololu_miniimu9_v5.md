@@ -2,15 +2,20 @@
 
 The Pololu MiniIMU-9 v5 combines two independently addressed ST sensors:
 
-| Measurement                                  | `robot_hat` driver | Default address | Address with `SA0` low |
-| -------------------------------------------- | ------------------ | --------------- | ---------------------- |
-| Three-axis acceleration and angular velocity | `LSM6DS33`         | `0x6b`          | `0x6a`                 |
-| Three-axis magnetic field                    | `LIS3MDL`          | `0x1e`          | `0x1c`                 |
+| Sensor / driver | Measurement | Default address | Address with `SA0` low |
+| --- | --- | --- | --- |
+| `LSM6DS33` (gyro and accelerometer) | Three-axis angular velocity and acceleration | `0x6b` (`1101011b`) | `0x6a` (`1101010b`) |
+| `LIS3MDL` (magnetometer) | Three-axis magnetic field | `0x1e` (`0011110b`) | `0x1c` (`0011100b`) |
 
 The drivers are named after their sensor ICs rather than the Pololu carrier.
 They can therefore be used independently with standalone LSM6DS33 or LIS3MDL
 breakouts and together on the MiniIMU-9 v5 or AltIMU-10 v5. `LSM6DS33`
 implements `IMUABC`; `LIS3MDL` implements `MagnetometerABC`.
+
+Both drivers have been available since `robot-hat 3.3.0`. Applications must
+configure both components to read all nine axes. Constructing an `LSM6DS33`
+does not initialize or sample the separate `LIS3MDL`. Each component returns
+its own timestamped sample; the board does not supply a fused orientation.
 
 ## Wiring and addresses
 

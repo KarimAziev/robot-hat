@@ -111,9 +111,9 @@ the separate `MagnetometerABC` contract and return teslas.
 | Driver                | Contract          | Example hardware                   | Default I²C address | Default configuration                   |
 |-----------------------|-------------------|------------------------------------|---------------------|-----------------------------------------|
 | `SH3001`              | `IMUABC`          | SunFounder Robot HAT               | `0x36`              | ±2 g, ±2000°/s                          |
-| `LSM6DS33`            | `IMUABC`          | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x6b`              | ±2 g, ±245°/s, 104 Hz                   |
+| `LSM6DS33` (gyro and accelerometer) | `IMUABC` | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x6b` | ±2 g, ±245°/s, 104 Hz |
 | `LSM9DS1`             | `IMUABC`          | Raspberry Pi Sense HAT v1/v2       | `0x6a`              | ±2 g, ±245°/s, 119 Hz                   |
-| `LIS3MDL`             | `MagnetometerABC` | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x1e`              | ±4 gauss, 10 Hz, ultra-high performance |
+| `LIS3MDL` (magnetometer) | `MagnetometerABC` | Pololu MiniIMU-9 v5 / AltIMU-10 v5 | `0x1e` | ±4 gauss, 10 Hz, ultra-high performance |
 | `LSM9DS1Magnetometer` | `MagnetometerABC` | Raspberry Pi Sense HAT v1/v2       | `0x1c`              | ±4 gauss, 20 Hz, ultra-high performance |
 
 For example, the SH3001 can be sampled as follows:
@@ -169,6 +169,12 @@ finally:
 
 The addresses above are the MiniIMU defaults. Driving the board's `SA0` pin low
 changes the LSM6DS33 address to `0x6a` and the LIS3MDL address to `0x1c`.
+
+Both drivers are included from `robot-hat 3.3.0`. To acquire all nine axes,
+configure and initialize both: `LSM6DS33` supplies the six inertial axes and
+`LIS3MDL` supplies the three magnetic axes. Selecting `LSM6DS33` alone does not
+initialize or read the magnetometer. Each component returns its own timestamped
+sample through its corresponding ABC.
 
 The Raspberry Pi Sense HAT v1 and v2 use an LSM9DS1. Its six-axis
 accelerometer/gyroscope function is available without `sense-hat` or RTIMULib:

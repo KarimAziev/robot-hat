@@ -39,6 +39,10 @@ independent `LIS3MDL` driver provides magnetic samples in teslas at address
 `0x1e`. Driving the Pololu board's shared `SA0` pin low changes those addresses
 to `0x6a` and `0x1c`, respectively. Both drivers expose native axes, typed
 configuration, diagnostic raw counts, and caller-owned shared-bus injection.
+In a driver selector, these components should be identified as
+**LSM6DS33 (gyro and accelerometer)** and **LIS3MDL (magnetometer)**.
+Both are included from `robot-hat 3.3.0`; acquiring all nine board axes requires
+initializing and reading both drivers, with separate timestamped samples.
 See [Pololu MiniIMU-9 v5 support](pololu_miniimu9_v5.md) for wiring, complete
 configuration ranges, and calibration responsibilities.
 

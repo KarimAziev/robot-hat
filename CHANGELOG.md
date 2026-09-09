@@ -1,5 +1,15 @@
 # Changelog
 
+## v3.3.1 (2026-09-09)
+
+### Documentation
+
+- Clarified the MiniIMU-9 v5 component names: LSM6DS33 (gyro and accelerometer)
+  and LIS3MDL (magnetometer), including both default and SA0-low address pairs.
+- Documented that both drivers have been available since 3.3.0 and must be
+  configured independently to acquire all nine axes. No hardware behavior or
+  public Python API changed.
+
 ## v3.3.0 (2026-09-07)
 
 ### Added
