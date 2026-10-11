@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Preserve I²C retry-decorated method signatures for static type checking with
+  Tenacity 9.2.1.
+- Pin Tenacity to 9.2.1 for consistent retry dependency resolution.
+
 ## v3.3.1 (2026-09-09)
 
 ### Documentation

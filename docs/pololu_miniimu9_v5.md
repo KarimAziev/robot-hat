@@ -2,10 +2,10 @@
 
 The Pololu MiniIMU-9 v5 combines two independently addressed ST sensors:
 
-| Sensor / driver | Measurement | Default address | Address with `SA0` low |
-| --- | --- | --- | --- |
-| `LSM6DS33` (gyro and accelerometer) | Three-axis angular velocity and acceleration | `0x6b` (`1101011b`) | `0x6a` (`1101010b`) |
-| `LIS3MDL` (magnetometer) | Three-axis magnetic field | `0x1e` (`0011110b`) | `0x1c` (`0011100b`) |
+| Sensor / driver                     | Measurement                                  | Default address     | Address with `SA0` low |
+| ----------------------------------- | -------------------------------------------- | ------------------- | ---------------------- |
+| `LSM6DS33` (gyro and accelerometer) | Three-axis angular velocity and acceleration | `0x6b` (`1101011b`) | `0x6a` (`1101010b`)    |
+| `LIS3MDL` (magnetometer)            | Three-axis magnetic field                    | `0x1e` (`0011110b`) | `0x1c` (`0011100b`)    |
 
 The drivers are named after their sensor ICs rather than the Pololu carrier.
 They can therefore be used independently with standalone LSM6DS33 or LIS3MDL

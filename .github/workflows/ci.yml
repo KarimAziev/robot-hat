@@ -82,7 +82,7 @@ jobs:
             "gpiozero==2.0" \
             "pyserial==3.5" \
             "smbus2==0.4.3" \
-            "tenacity==8.2.0"
+            "tenacity==9.2.1"
           python -m pip install --editable . --no-deps
           python -m pip check
 

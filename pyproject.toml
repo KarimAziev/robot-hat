@@ -24,7 +24,7 @@ dependencies = [
     "pyserial>=3.5",
     "RPi.GPIO; sys_platform == 'linux' and (platform_machine == 'armv6l' or platform_machine == 'armv7l' or platform_machine == 'aarch64')",
     "smbus2>=0.4.3",
-    "tenacity>=8.2",
+    "tenacity==9.2.1",
 ]
 
 keywords = ["i2c", "lidar", "raspberrypi", "robotics", "uart"]
