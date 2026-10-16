@@ -326,13 +326,10 @@ class Pin:
 
     def deinit(self) -> None:
         """
-        Deinitialize the GPIO pin and its factory.
+        Deinitialize this pin without closing the shared GPIO factory.
         """
         if self.gpio:
             self.gpio.close()
-            pin_factory = self.gpio.pin_factory
-            if pin_factory is not None:
-                pin_factory.close()
 
     def setup(
         self, mode: Optional[PinModeType], pull: Optional[PinPullType] = None

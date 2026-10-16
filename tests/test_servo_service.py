@@ -1,4 +1,6 @@
 import unittest
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from unittest.mock import Mock
 
 from robot_hat import (
@@ -240,6 +242,88 @@ class TestServoService(unittest.TestCase):
         self.assertEqual(s.current_angle, 0.0)
         s.current_angle = 7.5
         self.assertEqual(s.current_angle, 7.5)
+
+    def test_initialization_and_calibration_use_the_same_angle_transform(self):
+        service = ServoService(
+            self.fake_servo, "center", calibration_offset=5, calibration_mode=None
+        )
+        self.fake_servo.angle_calls.assert_called_with(0)
+        service.set_angle(10)
+        service.update_calibration(20)
+        self.fake_servo.angle_calls.assert_called_with(0)
+        self.assertEqual(service.current_angle, 0)
+
+    def test_invalid_commands_leave_state_and_hardware_unchanged(self):
+        service = ServoService(self.fake_servo, "finite")
+        service.set_angle(10)
+        self.fake_servo.angle_calls.reset_mock()
+        for value in (float("nan"), float("inf"), float("-inf")):
+            with self.assertRaises(ValueError):
+                service.set_angle(value)
+            with self.assertRaises(ValueError):
+                service.update_calibration(value, persist=True)
+        self.fake_servo.angle_calls.assert_not_called()
+        self.assertEqual(service.current_angle, 10)
+        self.assertEqual(service.calibration_offset, 0)
+        self.assertEqual(service._persisted_calibration_offset, 0)
+
+    def test_failed_calibration_does_not_change_saved_state(self):
+        service = ServoService(self.fake_servo, "fault", calibration_offset=2)
+        service.set_angle(10)
+        self.fake_servo.angle_calls.side_effect = OSError("I2C offline")
+        with self.assertRaises(OSError):
+            service.update_calibration(5, persist=True)
+        self.assertEqual(service.current_angle, 10)
+        self.assertEqual(service.calibration_offset, 2)
+        self.assertEqual(service._persisted_calibration_offset, 2)
+
+    def test_initialization_failure_releases_servo(self):
+        self.fake_servo.angle_calls.side_effect = OSError("I2C offline")
+        with self.assertRaises(OSError):
+            ServoService(self.fake_servo, "fault")
+        self.fake_servo.close_calls.assert_called_once()
+
+    def test_non_finite_custom_calibration_cannot_reach_hardware(self):
+        with self.assertRaises(ValueError):
+            ServoService(
+                self.fake_servo,
+                "custom",
+                calibration_mode=lambda angle, offset: float("nan"),
+            )
+        self.fake_servo.angle_calls.assert_not_called()
+
+    def test_close_waits_for_write_then_rejects_commands(self):
+        service = ServoService(self.fake_servo, "lifecycle")
+        entered, release, closing = Event(), Event(), Event()
+        events: list[str] = []
+
+        def write(angle: float) -> None:
+            entered.set()
+            if not release.wait(2):
+                raise TimeoutError("test did not release servo write")
+            events.append("write")
+
+        def close() -> None:
+            closing.set()
+            service.close()
+
+        self.fake_servo.angle_calls.side_effect = write
+        self.fake_servo.close_calls.side_effect = lambda: events.append("close")
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            moving = pool.submit(service.set_angle, 10)
+            try:
+                self.assertTrue(entered.wait(2))
+                closed = pool.submit(close)
+                self.assertTrue(closing.wait(2))
+                self.fake_servo.close_calls.assert_not_called()
+            finally:
+                release.set()
+            moving.result(2)
+            closed.result(2)
+        self.assertEqual(events, ["write", "close"])
+        for command in (service.set_angle, service.update_calibration):
+            with self.assertRaises(RuntimeError):
+                command(0)
 
 
 if __name__ == "__main__":

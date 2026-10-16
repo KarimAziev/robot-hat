@@ -1,5 +1,7 @@
 import logging
 from enum import Enum
+from math import isfinite
+from threading import RLock
 from typing import Callable, Optional, Union
 
 from robot_hat.exceptions import InvalidCalibrationModeError
@@ -28,9 +30,9 @@ class ServoService:
         self,
         servo: ServoABC,
         name: str,
-        min_angle=-90,
-        max_angle=90,
-        calibration_offset=0.0,
+        min_angle: float = -90,
+        max_angle: float = 90,
+        calibration_offset: float = 0.0,
         reverse: bool = False,
         calibration_mode: Optional[
             Union[ServoCalibrationMode, Callable[[float, float], float]]
@@ -121,8 +123,20 @@ class ServoService:
         ```
 
         """
+        self._lock = RLock()
+        self.servo: Optional[ServoABC] = None
+        if not all(
+            isfinite(value) for value in (min_angle, max_angle, calibration_offset)
+        ):
+            raise ValueError("Servo angles and calibration offset must be finite")
+        if min_angle > max_angle:
+            raise ValueError("min_angle must not exceed max_angle")
+        if calibration_mode is not None and not (
+            isinstance(calibration_mode, ServoCalibrationMode)
+            or callable(calibration_mode)
+        ):
+            raise InvalidCalibrationModeError(calibration_mode)
         self.name = name
-        self.servo = servo
         self.min_angle = min_angle
         self.max_angle = max_angle
         self._persisted_calibration_offset = calibration_offset or 0.0
@@ -136,7 +150,15 @@ class ServoService:
             if isinstance(calibration_mode, ServoCalibrationMode)
             else calibration_mode
         )
-        self.servo.angle(self.calibration_offset)
+        self.servo = servo
+        try:
+            self.set_angle(0)
+        except Exception:
+            try:
+                self.close()
+            except Exception:
+                _log.exception("Failed to close servo after initialization failure")
+            raise
 
     def _get_default_calibration_function(
         self, calibration_mode: ServoCalibrationMode
@@ -218,16 +240,24 @@ class ServoService:
         Args:
         The desired input angle to set.
         """
-        assert self.servo
+        with self._lock:
+            self._write_angle(angle, self.calibration_offset)
 
+    def _write_angle(self, angle: float, offset: float) -> None:
+        if self.servo is None:
+            raise RuntimeError("Servo service is closed")
+        if not isfinite(angle) or not isfinite(offset):
+            raise ValueError("Servo angle and calibration offset must be finite")
         constrained_value = constrain(
             angle if not self._reverse else -angle, self.min_angle, self.max_angle
         )
         calibrated_value = (
-            self.calibration_function(constrained_value, self.calibration_offset)
+            self.calibration_function(constrained_value, offset)
             if self.calibration_function is not None
             else constrained_value
         )
+        if not isfinite(calibrated_value):
+            raise ValueError("Calibrated servo angle must be finite")
 
         _log.debug(
             self._log_prefix + "setting servo angle from %s to %s (calibrated: %s)",
@@ -238,9 +268,9 @@ class ServoService:
         self.servo.angle(calibrated_value)
         self.current_angle = constrained_value
 
-    def update_calibration(self, value: float, persist=False) -> float:
+    def update_calibration(self, value: float, persist: bool = False) -> float:
         """
-        Update the temporary or permanent calibration offset for the servo.
+        Update the calibration offset and move to the calibrated zero position.
 
         Args:
             value: The new offset.
@@ -249,22 +279,12 @@ class ServoService:
         Returns:
             The updated calibration offset.
         """
-        assert self.servo
-        _log.debug(
-            (
-                (self._log_prefix + " updating and persisting from %s to %s")
-                if persist
-                else (self._log_prefix + " updating calibration offset from %s to %s")
-            ),
-            self.calibration_offset,
-            value,
-        )
-        self.calibration_offset = value
-
-        if persist:
-            self._persisted_calibration_offset = value
-        self.servo.angle(self.calibration_offset)
-        return self.calibration_offset
+        with self._lock:
+            self._write_angle(0, value)
+            self.calibration_offset = value
+            if persist:
+                self._persisted_calibration_offset = value
+            return self.calibration_offset
 
     def reset_calibration(self) -> float:
         """
@@ -273,16 +293,8 @@ class ServoService:
         Returns:
             The reset direction calibration.
         """
-        assert self.servo
-        _log.debug(
-            "Resetting calibration offset from %s to %s",
-            self.calibration_offset,
-            self._persisted_calibration_offset,
-        )
-        self.calibration_offset = self._persisted_calibration_offset
-
-        self.servo.angle(self.calibration_offset)
-        return self.calibration_offset
+        with self._lock:
+            return self.update_calibration(self._persisted_calibration_offset)
 
     def reset(self) -> None:
         """
@@ -294,15 +306,19 @@ class ServoService:
         """
         Close servo.
         """
-        if self.servo:
-            self.servo.close()
-        self.servo = None
+        with self._lock:
+            servo, self.servo = self.servo, None
+            if servo is not None:
+                servo.close()
 
     def __del__(self) -> None:
         """
         Destructor method.
         """
-        self.close()
+        try:
+            self.close()
+        except Exception:
+            _log.exception("Failed to close servo service")
 
     def __repr__(self) -> str:
         """

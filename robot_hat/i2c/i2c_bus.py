@@ -1,5 +1,6 @@
 import logging
 import os
+from threading import RLock
 from types import TracebackType
 from typing import TYPE_CHECKING, List, Optional, Sequence, Type, Union, cast
 
@@ -43,6 +44,8 @@ class I2CBus(SMBusABC):
             SMBus = cast(Type[SMBusProtocol], RealSMBus)
 
         self._bus = bus
+        self._lock = RLock()
+        self._closed = False
         self._smbus = SMBus(bus, force)
         self.emitter = EventEmitter()
         _log.debug("SMBus initialized on bus %s with force=%s", bus, force)
@@ -55,10 +58,10 @@ class I2CBus(SMBusABC):
             bus: Bus identifier to open.
         """
         _log.debug("Opening SMBus on bus %s", bus)
-        if hasattr(self._smbus, "open"):
+        with self._lock:
             self._smbus.open(bus)
-        else:
-            _log.warning("Underlying SMBus instance does not support 'open'.")
+            self._bus = bus
+            self._closed = False
 
     def close(self) -> None:
         """
@@ -68,17 +71,28 @@ class I2CBus(SMBusABC):
         is emitted and then removed from the emitter.
         """
         _log.debug("Closing SMBus on bus %s", self._bus)
-        try:
-            self._smbus.close()
-        except TimeoutError as err:
-            _log.error("Timeout closing SMBus '%s': %s", self._bus, err)
-        except OSError as err:
-            _log.error("OS Error closing SMBus '%s': %s", self._bus, err)
-        except Exception:
-            _log.error("Unexpected error closing SMBus '%s'", self._bus, exc_info=True)
-        finally:
-            self.emitter.emit("close", self)
-            self.emitter.off("close")
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            try:
+                self._smbus.close()
+            except TimeoutError as err:
+                _log.error("Timeout closing SMBus '%s': %s", self._bus, err)
+            except OSError as err:
+                _log.error("OS Error closing SMBus '%s': %s", self._bus, err)
+            except Exception:
+                _log.error(
+                    "Unexpected error closing SMBus '%s'", self._bus, exc_info=True
+                )
+        # Manager callbacks can acquire their own lock while another caller is
+        # opening a bus. Do not hold the transaction lock across callbacks.
+        self.emitter.emit("close", self)
+        self.emitter.off("close")
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("I2C bus is closed")
 
     @RETRY_DECORATOR
     def enable_pec(self, enable: bool = False) -> None:
@@ -89,7 +103,9 @@ class I2CBus(SMBusABC):
             enable: Whether to enable PEC.
         """
         _log.debug("Setting PEC to %s", enable)
-        self._smbus.enable_pec(enable)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.enable_pec(enable)
 
     @RETRY_DECORATOR
     def write_quick(self, i2c_addr: int, force: Optional[bool] = None) -> None:
@@ -101,7 +117,9 @@ class I2CBus(SMBusABC):
             force: Optional override for force behavior.
         """
         _log.debug("write_quick: addr=%s, force=%s", i2c_addr, force)
-        self._smbus.write_quick(i2c_addr, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_quick(i2c_addr, force)
 
     @RETRY_DECORATOR
     def read_byte(self, i2c_addr: int, force: Optional[bool] = None) -> int:
@@ -116,7 +134,9 @@ class I2CBus(SMBusABC):
             The byte value read from the device.
         """
         _log.debug("read_byte: addr=%s, force=%s", i2c_addr, force)
-        result = self._smbus.read_byte(i2c_addr, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.read_byte(i2c_addr, force)
         _log.debug("read_byte result: %s", result)
         return result
 
@@ -133,7 +153,9 @@ class I2CBus(SMBusABC):
             force: Optional override for force behavior.
         """
         _log.debug("write_byte: addr=%s, value=%s, force=%s", i2c_addr, value, force)
-        self._smbus.write_byte(i2c_addr, value, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_byte(i2c_addr, value, force)
 
     @RETRY_DECORATOR
     def read_byte_data(
@@ -153,7 +175,9 @@ class I2CBus(SMBusABC):
         _log.debug(
             "Read_byte_data: addr=%s, register=%s, force=%s", i2c_addr, register, force
         )
-        result = self._smbus.read_byte_data(i2c_addr, register, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.read_byte_data(i2c_addr, register, force)
         _log.debug("read_byte_data result: %s", result)
         return result
 
@@ -177,7 +201,9 @@ class I2CBus(SMBusABC):
             value,
             force,
         )
-        self._smbus.write_byte_data(i2c_addr, register, value, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_byte_data(i2c_addr, register, value, force)
 
     @RETRY_DECORATOR
     def read_word_data(
@@ -197,7 +223,9 @@ class I2CBus(SMBusABC):
         _log.debug(
             "read_word_data: addr=%s, register=%s, force=%s", i2c_addr, register, force
         )
-        result = self._smbus.read_word_data(i2c_addr, register, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.read_word_data(i2c_addr, register, force)
         _log.debug("read_word_data result: %s", result)
         return result
 
@@ -221,7 +249,9 @@ class I2CBus(SMBusABC):
             value,
             force,
         )
-        self._smbus.write_word_data(i2c_addr, register, value, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_word_data(i2c_addr, register, value, force)
 
     @RETRY_DECORATOR
     def process_call(
@@ -246,7 +276,9 @@ class I2CBus(SMBusABC):
             value,
             force,
         )
-        result = self._smbus.process_call(i2c_addr, register, value, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.process_call(i2c_addr, register, value, force)
         _log.debug("process_call result: %s", result)
         return result
 
@@ -268,7 +300,9 @@ class I2CBus(SMBusABC):
         _log.debug(
             "read_block_data: addr=%s, register=%s, force=%s", i2c_addr, register, force
         )
-        result = self._smbus.read_block_data(i2c_addr, register, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.read_block_data(i2c_addr, register, force)
         _log.debug("read_block_data result: %s", result)
         return result
 
@@ -296,7 +330,9 @@ class I2CBus(SMBusABC):
             data,
             force,
         )
-        self._smbus.write_block_data(i2c_addr, register, data, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_block_data(i2c_addr, register, data, force)
 
     @RETRY_DECORATOR
     def block_process_call(
@@ -325,7 +361,9 @@ class I2CBus(SMBusABC):
             data,
             force,
         )
-        result = self._smbus.block_process_call(i2c_addr, register, data, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.block_process_call(i2c_addr, register, data, force)
         _log.debug("block_process_call result: %s", result)
         return result
 
@@ -352,7 +390,9 @@ class I2CBus(SMBusABC):
             length,
             force,
         )
-        result = self._smbus.read_i2c_block_data(i2c_addr, register, length, force)
+        with self._lock:
+            self._ensure_open()
+            result = self._smbus.read_i2c_block_data(i2c_addr, register, length, force)
         _log.debug("read_i2c_block_data result: %s", result)
         return result
 
@@ -380,7 +420,9 @@ class I2CBus(SMBusABC):
             data,
             force,
         )
-        self._smbus.write_i2c_block_data(i2c_addr, register, data, force)
+        with self._lock:
+            self._ensure_open()
+            self._smbus.write_i2c_block_data(i2c_addr, register, data, force)
 
     @RETRY_DECORATOR
     def i2c_rdwr(self, *i2c_msgs: "i2c_msg") -> None:
@@ -391,11 +433,15 @@ class I2CBus(SMBusABC):
             *i2c_msgs: One or more message objects describing the transactions.
         """
         _log.debug("i2c_rdwr: messages=%s", i2c_msgs)
-        return self._smbus.i2c_rdwr(*i2c_msgs)
+        with self._lock:
+            self._ensure_open()
+            return self._smbus.i2c_rdwr(*i2c_msgs)
 
     def __enter__(self) -> "I2CBus":
         _log.debug("Entering I2CBus context manager")
-        self._smbus.__enter__()
+        with self._lock:
+            self._ensure_open()
+            self._smbus.__enter__()
         return self
 
     def __exit__(
@@ -405,7 +451,7 @@ class I2CBus(SMBusABC):
         exc_tb: Optional[TracebackType],
     ) -> None:
         """
-        Exit context manager and perform cleanup by delegating to the SMBus.
+        Close the bus and notify its manager when leaving the context.
         """
         _log.debug("Exiting I2CBus context manager")
-        self._smbus.__exit__(exc_type=exc_type, exc_val=exc_val, exc_tb=exc_tb)
+        self.close()

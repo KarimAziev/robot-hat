@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Keep servo travel limits independent of pulse calibration. `Servo` maps
+  `real_min_angle`/`real_max_angle` to the configured pulse endpoints; narrower
+  `min_angle`/`max_angle` limits reduce travel without stretching the pulse range.
+- Validate servo calibration ranges and reject non-finite commands. Serialize
+  servo commands with cleanup and reject writes after close.
+- Initialize GPIO servos without pulses until commanded, and apply the service's
+  calibrated center consistently during initialization and calibration updates.
+- Preserve servo calibration state when a hardware write fails and release
+  servo resources after failed service initialization.
+- Hold GPIO motor enables low until direction outputs are ready, disable and
+  stop motors before releasing GPIO resources. Serialize movement and cleanup.
+- Attempt stops for every managed motor after a command or stop failure, stop
+  all motors before service cleanup, and report cleanup failures to callers.
+- Stop phase/enable motors before closing GPIO resources.
+- Serialize shared I²C transactions and cleanup to protect SMBus address
+  selection, notify bus managers when context managers close.
+- Keep shared GPIO factories open when deinitializing an individual pin, and
+  preserve active bus registrations when a different instance closes.
+
 ## v3.3.2 (2026-10-11)
 
 ### Fixed

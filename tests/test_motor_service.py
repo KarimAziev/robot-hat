@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 from robot_hat import MotorService
 
@@ -16,6 +16,57 @@ class TestMotorController(unittest.TestCase):
 
         self.assertEqual(self.left_motor.stop.call_count, 2)
         self.assertEqual(self.right_motor.stop.call_count, 2)
+
+    def test_stop_attempts_every_motor_and_retries_after_failure(self):
+        self.left_motor.stop.side_effect = OSError("left stop failed")
+
+        with self.assertRaisesRegex(OSError, "left stop failed"):
+            self.controller.stop_all()
+
+        self.assertEqual(self.left_motor.stop.call_count, 2)
+        self.assertEqual(self.right_motor.stop.call_count, 2)
+        self.left_motor.stop.side_effect = None
+
+    def test_failed_second_motor_command_stops_both_motors(self):
+        self.right_motor.set_speed.side_effect = OSError("right command failed")
+
+        for command in (self.controller.move, self.controller.move_with_steering):
+            with self.assertRaisesRegex(OSError, "right command failed"):
+                command(50, 1)
+
+        self.assertEqual(self.left_motor.stop.call_count, 4)
+        self.assertEqual(self.right_motor.stop.call_count, 4)
+
+    def test_close_stops_all_before_releasing_any_motor(self):
+        events = MagicMock()
+        events.attach_mock(self.left_motor, "left")
+        events.attach_mock(self.right_motor, "right")
+
+        self.controller.close()
+        self.controller.close()
+
+        self.assertEqual(
+            events.mock_calls,
+            [
+                call.left.stop(),
+                call.right.stop(),
+                call.left.stop(),
+                call.right.stop(),
+                call.left.close(),
+                call.right.close(),
+            ],
+        )
+
+    def test_close_failure_still_attempts_every_motor(self):
+        self.left_motor.stop.side_effect = OSError("left stop failed")
+        self.left_motor.close.side_effect = OSError("left close failed")
+
+        with self.assertRaisesRegex(OSError, "left stop failed"):
+            self.controller.close()
+
+        self.right_motor.close.assert_called_once()
+        with self.assertRaisesRegex(RuntimeError, "closed"):
+            self.controller.move(50, 1)
 
     def test_update_left_motor_calibration_speed(self):
         self.left_motor.update_calibration_speed.return_value = 10

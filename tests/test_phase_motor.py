@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from robot_hat import PhaseMotor
 
@@ -38,6 +38,25 @@ class TestPhaseMotor(unittest.TestCase):
         self.backend.stop.assert_called_once()
         self.backend.forward.assert_not_called()
         self.backend.backward.assert_not_called()
+
+    def test_close_stops_before_releasing_and_rejects_commands(self) -> None:
+        motor = PhaseMotor(5, 12)
+
+        motor.close()
+        motor.close()
+
+        self.assertEqual(self.backend.mock_calls, [call.stop(), call.close()])
+        with self.assertRaisesRegex(RuntimeError, "closed"):
+            motor.set_speed(50)
+
+    def test_close_attempts_release_after_stop_failure(self) -> None:
+        motor = PhaseMotor(5, 12)
+        self.backend.stop.side_effect = OSError("stop failed")
+
+        with self.assertRaisesRegex(OSError, "stop failed"):
+            motor.close()
+
+        self.backend.close.assert_called_once()
 
 
 if __name__ == "__main__":

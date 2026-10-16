@@ -44,6 +44,7 @@ class TestGPIOAngularServo(unittest.TestCase):
         inst = FakeAngularServo.created_instances[0]
 
         self.assertEqual(inst.pin, pin)
+        self.assertIsNone(inst.kwargs["initial_angle"])
 
         expected_min_pulse_width = min_pulse / 1e6
         expected_max_pulse_width = max_pulse / 1e6
@@ -142,6 +143,35 @@ class TestGPIOAngularServo(unittest.TestCase):
             servo.angle(1)
             self.assertEqual(backend.angle, 1)
         self.assertTrue(backend.closed)
+
+    @patch("gpiozero.AngularServo", new=FakeAngularServo)
+    def test_non_finite_commands_do_not_move_servo(self):
+        servo = GPIOAngularServo(pin=17)
+        servo.angle(5)
+        for value in (float("nan"), float("inf"), float("-inf")):
+            for command in (servo.angle, servo.pulse_width_time):
+                with self.assertRaises(ValueError):
+                    command(value)
+        self.assertEqual(servo._servo.angle, 5)
+
+    @patch("gpiozero.AngularServo", new=FakeAngularServo)
+    def test_closed_servo_rejects_commands(self):
+        servo = GPIOAngularServo(pin=17)
+        servo.close()
+        servo.close()
+        for command in (servo.angle, servo.pulse_width_time):
+            with self.assertRaises(RuntimeError):
+                command(0)
+
+    @patch("gpiozero.AngularServo", new=FakeAngularServo)
+    def test_invalid_calibration_does_not_acquire_gpio(self):
+        for lower, upper in ((10, 10), (20, 10), (float("nan"), 90)):
+            with self.assertRaises(ValueError):
+                GPIOAngularServo(17, min_angle=lower, max_angle=upper)
+        for lower, upper in ((0, 2000), (2000, 1000), (1500, 1500)):
+            with self.assertRaises(ValueError):
+                GPIOAngularServo(17, min_pulse=lower, max_pulse=upper)
+        self.assertEqual(FakeAngularServo.created_instances, [])
 
 
 if __name__ == "__main__":

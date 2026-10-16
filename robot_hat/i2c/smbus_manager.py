@@ -28,7 +28,7 @@ class SMBusManager:
     def _on_bus_close(cls, closed_bus: "I2CBus") -> None:
         normalized_bus = cls._normalize_bus(closed_bus._bus)
         with cls._lock:
-            if normalized_bus in cls._instances:
+            if cls._instances.get(normalized_bus) is closed_bus:
                 _log.debug("Removing closed bus %s from instances", normalized_bus)
                 cls._instances.pop(normalized_bus, None)
 

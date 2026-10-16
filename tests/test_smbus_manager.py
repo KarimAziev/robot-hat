@@ -93,6 +93,16 @@ class TestSMBusManager(unittest.TestCase):
         self.assertNotIn(normalized, SMBusManager._instances)
 
     @patch("robot_hat.i2c.i2c_bus.I2CBus", new=DummyI2CBus)
+    def test_stale_close_callback_does_not_remove_another_bus_instance(self):
+        original = SMBusManager.get_bus(2)
+        SMBusManager.close_bus(2)
+        replacement = SMBusManager.get_bus(2)
+
+        SMBusManager._on_bus_close(original)
+
+        self.assertIs(SMBusManager.get_bus(2), replacement)
+
+    @patch("robot_hat.i2c.i2c_bus.I2CBus", new=DummyI2CBus)
     def test_thread_safety_of_get_bus(self):
         bus_instances = []
         exception_list = []

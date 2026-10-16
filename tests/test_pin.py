@@ -158,7 +158,7 @@ class TestPin(unittest.TestCase):
         pin.gpio.pin_factory = MagicMock()
         pin.deinit()
         pin.gpio.close.assert_called_once()
-        pin.gpio.pin_factory.close.assert_called_once()
+        pin.gpio.pin_factory.close.assert_not_called()
 
 
 if __name__ == "__main__":

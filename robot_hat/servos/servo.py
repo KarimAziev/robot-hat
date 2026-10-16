@@ -5,6 +5,8 @@ The driver must adhere to the PWMDriverABC interface.
 """
 
 import logging
+from math import isfinite
+from threading import RLock
 from typing import Union
 
 from robot_hat.data_types.config.pwm import PWMDriverConfig
@@ -57,16 +59,36 @@ class Servo(ServoABC):
             `max_pulse`:
                 The maximum pulse width (in microseconds) corresponding to the servo's physical movement.
             `real_min_angle`:
-                The minimum physical angle (in degrees) that the servo can achieve. This value is used in
-                the mapping from the logical angle to the physical angle.
+                The measured angle at min_pulse, in the same degree coordinate
+                system as angle(). This defines the pulse calibration independently
+                of the permitted travel limits.
             `real_max_angle`:
-                The maximum physical angle (in degrees) that the servo can achieve. This value is used in
-                the mapping from the logical angle to the physical angle.
+                The measured angle at max_pulse. Pulses are interpolated linearly
+                between these two calibration points.
             `owns_driver`:
                 Whether :meth:`close` also closes ``driver``. Injected drivers
                 remain caller-owned by default; pass ``True`` only for an
                 intentional ownership transfer.
         """
+
+        if not all(
+            isfinite(value)
+            for value in (
+                min_angle,
+                max_angle,
+                real_min_angle,
+                real_max_angle,
+                min_pulse,
+                max_pulse,
+            )
+        ):
+            raise ValueError("Servo angles and pulse widths must be finite")
+        if min_angle > max_angle:
+            raise ValueError("min_angle must not exceed max_angle")
+        if real_min_angle >= real_max_angle:
+            raise ValueError("real_min_angle must be less than real_max_angle")
+        if not 0 < min_pulse < max_pulse:
+            raise ValueError("Pulse widths must satisfy 0 < min_pulse < max_pulse")
 
         if isinstance(channel, str):
             channel_int = parse_int_suffix(channel)
@@ -85,6 +107,7 @@ class Servo(ServoABC):
         self.driver = driver
         self.owns_driver = owns_driver
         self._closed = False
+        self._lock = RLock()
 
         self.min_angle = min_angle
         self.max_angle = max_angle
@@ -97,46 +120,49 @@ class Servo(ServoABC):
         """
         Set the servo to the specified angle.
 
-        The angle is mapped to a pulse width in microseconds based on
-        the configured min and max values.
+        Clamp to the permitted travel and calibrated angle ranges, then
+        interpolate between the measured angle/pulse calibration points.
+        Changing travel limits does not change the pulse for an allowed angle.
         """
-        logical_angle = max(self.min_angle, min(angle, self.max_angle))
-        ratio = (logical_angle - self.min_angle) / (self.max_angle - self.min_angle)
-        physical_angle = self.real_min_angle + ratio * (
-            self.real_max_angle - self.real_min_angle
-        )
-        pulse_width = self.min_pulse + (
-            (physical_angle - self.real_min_angle)
-            / (self.real_max_angle - self.real_min_angle)
-        ) * (self.max_pulse - self.min_pulse)
-        pulse_width_int = int(round(pulse_width))
-
-        _log.debug(
-            "[%s]: Logical Angle=%s, mapped Physical Angle=%s, pulse_width=%s, pulse_width_int=%s, "
-            "logical_range=(%s, %s), physical_range=(%s, %s)",
-            self.name,
-            logical_angle,
-            physical_angle,
-            pulse_width,
-            pulse_width_int,
-            self.min_angle,
-            self.max_angle,
-            self.real_min_angle,
-            self.real_max_angle,
-        )
-        self.driver.set_servo_pulse(self.channel, pulse_width_int)
+        with self._lock:
+            self._ensure_open()
+            if not isfinite(angle):
+                raise ValueError("Servo angle must be finite")
+            limited_angle = max(self.min_angle, min(angle, self.max_angle))
+            calibrated_angle = max(
+                self.real_min_angle, min(limited_angle, self.real_max_angle)
+            )
+            ratio = (calibrated_angle - self.real_min_angle) / (
+                self.real_max_angle - self.real_min_angle
+            )
+            pulse = int(
+                round(self.min_pulse + ratio * (self.max_pulse - self.min_pulse))
+            )
+            _log.debug(
+                "[%s]: angle=%s, pulse=%s µs", self.name, calibrated_angle, pulse
+            )
+            self.driver.set_servo_pulse(self.channel, pulse)
 
     def pulse_width_time(self, pulse_width_time: float) -> None:
         """
         Directly set the pulse width time in microseconds.
 
-        This bypasses the angle-to-pulse conversion.
+        This calibration operation bypasses angle limits, but clamps the pulse
+        to min_pulse/max_pulse. Normal motion should use angle().
 
         Args:
             pulse_width_time: The desired pulse width in microseconds.
         """
-        pulse = max(self.min_pulse, min(pulse_width_time, self.max_pulse))
-        self.driver.set_servo_pulse(self.channel, int(round(pulse)))
+        with self._lock:
+            self._ensure_open()
+            if not isfinite(pulse_width_time):
+                raise ValueError("Servo pulse width must be finite")
+            pulse = max(self.min_pulse, min(pulse_width_time, self.max_pulse))
+            self.driver.set_servo_pulse(self.channel, int(round(pulse)))
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("Servo is closed")
 
     def reset(self) -> None:
         """
@@ -148,11 +174,12 @@ class Servo(ServoABC):
         """
         Close the underlying driver only when this servo owns it.
         """
-        if self._closed:
-            return
-        self._closed = True
-        if self.owns_driver:
-            self.driver.close()
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            if self.owns_driver:
+                self.driver.close()
 
     def __repr__(self) -> str:
         """
@@ -202,13 +229,13 @@ def main() -> None:
             "--real-min-angle",
             type=int,
             default=-90,
-            help="The minimum physical angle (in degrees) that the servo can achieve.",
+            help="Measured angle in degrees at min-pulse.",
         )
         servo_group.add_argument(
             "--real-max-angle",
             type=int,
             default=90,
-            help="The maximum physical angle (in degrees) that the servo can achieve.",
+            help="Measured angle in degrees at max-pulse.",
         )
         servo_group.add_argument(
             "--min-pulse",
@@ -220,7 +247,7 @@ def main() -> None:
             "--max-pulse",
             type=int,
             default=2500,
-            help="The maximum logical angle (in degrees) that can be commanded to the servo.",
+            help="Maximum calibrated pulse width in microseconds.",
         )
         servo_group.add_argument(
             "--step",
@@ -300,7 +327,16 @@ def main() -> None:
         with PWMFactory.create_pwm_driver(pwm_config) as pwm_driver:
             pwm_driver.set_pwm_freq(args.freq)
 
-            servo = Servo(driver=pwm_driver, channel=args.channel)
+            servo = Servo(
+                driver=pwm_driver,
+                channel=args.channel,
+                min_angle=args.min_angle,
+                max_angle=args.max_angle,
+                min_pulse=args.min_pulse,
+                max_pulse=args.max_pulse,
+                real_min_angle=args.real_min_angle,
+                real_max_angle=args.real_max_angle,
+            )
             while True:
                 # Sweep from min_angle to max_angle
                 for angle in range(args.min_angle, args.max_angle + 1, args.step):

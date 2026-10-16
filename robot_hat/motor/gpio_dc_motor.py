@@ -2,9 +2,9 @@
 This module is intended for cases where a motor is controlled directly via
 GPIO pins without I²C.
 
-It typically uses one or more GPIO pins to drive the motor in forward or
-reverse direction, and, if available, an RPi.GPIO.PWM instance for speed
-control.
+gpiozero controls forward and reverse direction outputs, with optional PWM
+on those outputs for speed control. A separate optional active-high enable
+output gates the motor driver.
 
 This class is suitable when the motor driver board (e.g., a
 Waveshare/MC33886-based module) does not require or use an external PWM driver
@@ -12,7 +12,8 @@ and is controlled entirely through direct GPIO calls.
 """
 
 import logging
-from typing import Optional, Union, cast
+from threading import RLock
+from typing import Callable, Optional, Union, cast
 
 from robot_hat.data_types.config.motor import MotorDirection
 from robot_hat.interfaces.motor_abc import MotorABC
@@ -27,8 +28,8 @@ class GPIODCMotor(MotorCalibration, MotorABC):
     This implementation controls a motor using direct GPIO control. It drives the motor by toggling
     GPIO output pins for forward and reverse directions.
 
-    If speed control is desired and available, an RPi.GPIO.PWM object can be
-    used in conjunction with the direction pins.
+    gpiozero PWMOutputDevice instances provide speed control on the direction
+    pins when PWM is enabled.
 
     Use Case:
       - Ideal for hardware setups (like the Waveshare MC33886 module) that do not rely on a dedicated PWM
@@ -37,7 +38,8 @@ class GPIODCMotor(MotorCalibration, MotorABC):
 
     Example wiring:
       - Two GPIO pins are used for direction control (one for forward, one for reverse).
-      - Optionally, a third GPIO pin can be used to generate PWM (using RPi.GPIO.PWM) for variable speed.
+      - An optional third GPIO pin is a digital active-high enable, held low
+        while the motor is stopped.
     """
 
     def __init__(
@@ -57,14 +59,18 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         Args:
             forward_pin: GPIO pin for forward direction.
             backward_pin: GPIO pin for reverse direction.
-            pwm_pin: PWM (enable) pin for speed control.
-            pwm: Whether to construct PWM Output Device instances, allowing both direction
-                 and speed control.
+            pwm_pin: Optional digital active-high enable pin for the motor driver.
+            pwm: Whether to use PWM on the direction outputs for variable speed.
             calibration_direction: Initial calibration for the motor direction (+1 or -1).
             calibration_speed_offset: Adjustment for the motor speed calibration.
             name: Optional identifier for the motor for logging and debugging.
         """
-        from gpiozero import Motor
+        from gpiozero import DigitalOutputDevice, Motor
+
+        self._lock = RLock()
+        self._closed = False
+        self._motor: Optional[Motor] = None
+        self._enable: Optional[DigitalOutputDevice] = None
 
         super().__init__(
             calibration_direction=calibration_direction,
@@ -75,9 +81,14 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         self.name = name or f"F{forward_pin}-B{backward_pin}-P{pwm_pin}"
         self._speed: float = 0
         self._applied_speed: float = 0
-        self._motor = Motor(
-            forward=forward_pin, backward=backward_pin, enable=pwm_pin, pwm=pwm
-        )
+        try:
+            # Hold the bridge disabled while its direction outputs are acquired.
+            if pwm_pin is not None:
+                self._enable = DigitalOutputDevice(pwm_pin, initial_value=False)
+            self._motor = Motor(forward=forward_pin, backward=backward_pin, pwm=pwm)
+        except Exception:
+            self.close()
+            raise
         _log.debug(
             f"Initialized motor {self.name} with forward_pin={forward_pin}, backward_pin={backward_pin}, pwm_pin={pwm_pin}"
         )
@@ -115,12 +126,29 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         Args:
             speed: Target speed percentage within [-max_speed, max_speed].
         """
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("Motor is closed")
+            try:
+                self._set_speed(speed)
+            except Exception:
+                try:
+                    self.stop()
+                except Exception:
+                    _log.exception("Failed to stop motor after a command failure")
+                raise
+
+    def _set_speed(self, speed: float) -> None:
+        assert self._motor is not None
         logical_speed, applied_speed = self.apply_calibration(speed, self.max_speed)
         if applied_speed == 0:
             self.stop()
             return
 
         applied_sign = 1 if applied_speed > 0 else -1
+
+        if self._enable is not None:
+            self._enable.off()
 
         if applied_sign > 0:
             command = self._motor.forward
@@ -144,6 +172,9 @@ class GPIODCMotor(MotorCalibration, MotorABC):
             command(1)
             applied_speed = applied_sign * self.max_speed
 
+        if self._enable is not None:
+            self._enable.on()
+
         self._speed = logical_speed
         self._applied_speed = applied_speed
 
@@ -151,24 +182,72 @@ class GPIODCMotor(MotorCalibration, MotorABC):
         """
         Stop the motor.
         """
-        _log.debug("Motor stopped.")
-        self._motor.stop()
-        self._speed = 0
-        self._applied_speed = 0
+        with self._lock:
+            if self._closed:
+                return
+            actions: list[Callable[[], None]] = []
+            if self._enable is not None:
+                actions.append(self._enable.off)
+            if self._motor is not None:
+                actions.append(self._motor.stop)
+            first_error: Exception | None = None
+            for action in actions:
+                try:
+                    action()
+                except Exception as error:
+                    if first_error is None:
+                        first_error = error
+            if first_error is not None and self._motor is not None:
+                from gpiozero import OutputDevice
+
+                # A composite stop can fail before reaching its second output.
+                for output in (
+                    self._motor.forward_device,
+                    self._motor.backward_device,
+                ):
+                    try:
+                        if isinstance(output, OutputDevice):
+                            output.off()
+                    except Exception:
+                        _log.exception("Failed to clear motor direction output")
+            if first_error is not None:
+                raise first_error
+            self._speed = 0
+            self._applied_speed = 0
+            _log.debug("Motor stopped.")
 
     def close(self) -> None:
         """
         Close the underlying resources.
         """
-        _log.debug("Closing motor.")
-        if self._motor and hasattr(self._motor, "close"):
-            self._motor.close()
+        with self._lock:
+            if self._closed:
+                return
+            first_error: Exception | None = None
+            actions: list[Callable[[], None]] = [self.stop]
+            if self._motor is not None:
+                actions.append(self._motor.close)
+            if self._enable is not None:
+                actions.append(self._enable.close)
+            for action in actions:
+                try:
+                    action()
+                except Exception as error:
+                    if first_error is None:
+                        first_error = error
+                    _log.exception("Failed to stop or close motor output")
+            self._closed = True
+            if first_error is not None:
+                raise first_error
 
     def __del__(self) -> None:
         """
         Destructor method.
         """
-        self.close()
+        try:
+            self.close()
+        except Exception:
+            _log.exception("Failed to close motor during destruction")
 
 
 def main() -> None:

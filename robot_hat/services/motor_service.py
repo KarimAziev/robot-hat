@@ -283,6 +283,18 @@ class MotorService(BaseMotorService):
         - direction: 1 for forward, -1 for backward.
         - current_angle: Steering angle for turning (e.g., -100 to 100).
         """
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("Motor service is closed")
+            try:
+                self._move_with_steering(speed, direction, current_angle)
+            except Exception:
+                self._stop_after_failure()
+                raise
+
+    def _move_with_steering(
+        self, speed: int, direction: MotorServiceDirection, current_angle: float
+    ) -> None:
         assert self.left_motor, "Left motor is None"
         assert self.right_motor, "Right motor is None"
 

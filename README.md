@@ -319,6 +319,22 @@ for examples and custom `MotorABC` requirements.
 
 GPIO motors are motors that are controlled entirely via direct GPIO calls; no I²C address or external PWM driver is needed. Examples include the Waveshare RPi Motor Driver Board with the MC33886 module.
 
+`GPIODCMotor` holds its optional active-high enable pin low during initialization,
+while stopped, and before releasing GPIO resources. It enables the bridge only
+after setting the direction outputs. Each GPIO must belong to one device;
+an indicator LED must not share a motor's enable or direction pin.
+
+Motor services stop every motor before releasing resources and attempt every
+stop even if one output fails. Stop and close failures are reported to the caller.
+A failed movement command triggers a stop attempt for all managed motors, and
+closed services reject movement commands.
+
+GPIO cleanup releases pin ownership. Software cannot guarantee the electrical
+state during boot, OS halt, power loss, or a crashed process. The motor driver
+must have a hardware-defined disabled state when control inputs are undriven,
+and an independent power cutoff or inhibit appropriate to the mechanism.
+Validate startup, shutdown, and loss of control with wheels clear of the ground.
+
 ```python
 from robot_hat import GPIODCMotorConfig, MotorFactory, MotorService, setup_env_vars
 
@@ -474,6 +490,29 @@ calibrated_angle = -1 × (input_angle + (-1 × calibration_offset))
 
 The `ServoService` provides a high-level abstraction for managing servo operations. It allows easy configuration of the calibration mode, movement bounds, and custom calibration logic if needed.
 
+`Servo` separates permitted travel (`min_angle`, `max_angle`) from pulse
+calibration (`real_min_angle` at `min_pulse`, `real_max_angle` at `max_pulse`).
+An allowed angle produces the same pulse when travel limits change. For
+example, with measured calibration points of -45° at 1000 µs and +45° at
+2000 µs, limits of -10° to +10° produce approximately 1389–1611 µs.
+The default calibration assumes -90° to +90°; verify it for the particular
+servo. These are two calibration points, not a request to find mechanical
+end stops. Pulse rounding, PWM resolution, backlash, and servo behavior limit
+physical accuracy. Wheel steering angle also depends on the linkage geometry.
+
+When using `ServoService`, set its bounds to the desired movement relative
+to the calibrated center. Give its underlying `Servo` the full calibrated
+angle range so that the center offset can be applied without a second travel
+clamp. `GPIOAngularServo` follows gpiozero's convention: its `min_angle` and
+`max_angle` are the measured pulse endpoints; use `ServoService` for narrower
+travel limits. GPIO servos start with pulses disabled until the first angle
+command, including the calibrated center command issued by `ServoService`.
+
+Direct `pulse_width_time()` calls are calibration operations and bypass travel
+limits. Use angle commands for normal movement. Non-finite angle, offset, and
+pulse commands are rejected before hardware writes; closed servos reject
+further commands.
+
 Here's how to use `ServoCalibrationMode` in your servo configuration:
 
 **Example 1**: Steering servo using `ServoCalibrationMode.SUM`
@@ -505,6 +544,7 @@ driver = PWMFactory.create_pwm_driver(
     bus=pwm_config.bus,  # either a bus number or an smbus instance.
     config=pwm_config,
 )
+driver.set_pwm_freq(pwm_config.freq)
 
 steering_servo = ServoService(
     servo=Servo(
@@ -517,8 +557,7 @@ steering_servo = ServoService(
         # The minimum and maximum pulse widths (in microseconds) corresponding to the servo's physical movement.
         min_pulse=500,
         max_pulse=2500,
-        # The minimum and maximum physical angles (in degrees) that the servo can achieve.
-        # These values are used to map the logical angle to the physical angle.
+        # Measured angles at min_pulse and max_pulse, respectively.
         real_min_angle=-90.0,
         real_max_angle=90.0,
     ),
@@ -528,8 +567,6 @@ steering_servo = ServoService(
     calibration_mode=ServoCalibrationMode.SUM,
     calibration_offset=-14.4,
 )
-driver.set_pwm_freq(pwm_config.freq)
-
 steering_servo.set_angle(-30)  # Turn left.
 steering_servo.set_angle(15)  # Turn slightly to the right.
 steering_servo.reset()  # Reset to the center position.
@@ -796,8 +833,6 @@ class MyRobotCar:
         else:
             servo = GPIOAngularServo(
                 pin=channel,
-                min_angle=min_angle,
-                max_angle=max_angle,
             )
         return ServoService(
             servo=servo,

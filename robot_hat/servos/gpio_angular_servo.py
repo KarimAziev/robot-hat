@@ -3,12 +3,32 @@ A wrapper for servos driven directly via Raspberry Pi GPIO (using gpiozero's Ang
 """
 
 import logging
+from math import isfinite
+from threading import RLock
 from types import TracebackType
-from typing import Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Optional, Protocol, Type, Union, cast
 
 from robot_hat.interfaces.servo_abc import ServoABC
 
+if TYPE_CHECKING:
+    from gpiozero import AngularServo
+
 _log = logging.getLogger(__name__)
+
+
+class _AngularServoFactory(Protocol):
+    """gpiozero accepts None to acquire a servo pin without starting pulses."""
+
+    def __call__(
+        self,
+        pin: Union[int, str],
+        *,
+        initial_angle: Optional[float],
+        min_angle: float,
+        max_angle: float,
+        min_pulse_width: float,
+        max_pulse_width: float,
+    ) -> "AngularServo": ...
 
 
 class GPIOAngularServo(ServoABC):
@@ -50,16 +70,30 @@ class GPIOAngularServo(ServoABC):
         """
         from gpiozero import AngularServo
 
+        if not all(
+            isfinite(value) for value in (min_angle, max_angle, min_pulse, max_pulse)
+        ):
+            raise ValueError("Servo angles and pulse widths must be finite")
+        if min_angle >= max_angle:
+            raise ValueError("min_angle must be less than max_angle")
+        if not 0 < min_pulse < max_pulse:
+            raise ValueError("Pulse widths must satisfy 0 < min_pulse < max_pulse")
         self.pin = pin
+        self._lock = RLock()
+        self._closed = False
         self.min_angle = min_angle
         self.max_angle = max_angle
         self.min_pulse = min_pulse
         self.max_pulse = max_pulse
 
-        self._servo = AngularServo(
+        # gpiozero's unannotated constructor infers float from its default,
+        # although None is its documented detached initialization value.
+        factory = cast(_AngularServoFactory, AngularServo)
+        self._servo = factory(
             pin,
-            min_angle=cast(int, min_angle),
-            max_angle=cast(int, max_angle),
+            initial_angle=None,
+            min_angle=min_angle,
+            max_angle=max_angle,
             min_pulse_width=min_pulse / 1e6,
             max_pulse_width=max_pulse / 1e6,
         )
@@ -78,9 +112,13 @@ class GPIOAngularServo(ServoABC):
         Args:
             angle: The target angle in degrees.
         """
-        clamped = max(self.min_angle, min(angle, self.max_angle))
-        self._servo.angle = clamped
-        _log.debug("Set servo on pin %s to angle %.2f°", self.pin, clamped)
+        with self._lock:
+            self._ensure_open()
+            if not isfinite(angle):
+                raise ValueError("Servo angle must be finite")
+            clamped = max(self.min_angle, min(angle, self.max_angle))
+            self._servo.angle = clamped
+            _log.debug("Set servo on pin %s to angle %.2f°", self.pin, clamped)
 
     def pulse_width_time(self, pulse_width_time: float) -> None:
         """
@@ -91,32 +129,38 @@ class GPIOAngularServo(ServoABC):
         Args:
             pulse_width_time: The desired pulse width in microseconds.
         """
-        pulse = max(self.min_pulse, min(pulse_width_time, self.max_pulse))
-        angle = ((pulse - self.min_pulse) / (self.max_pulse - self.min_pulse)) * (
-            self.max_angle - self.min_angle
-        ) + self.min_angle
-        self._servo.angle = angle
-        _log.debug(
-            "Translated pulse width %d µs on pin %s to angle %.2f°",
-            pulse,
-            self.pin,
-            angle,
-        )
+        with self._lock:
+            self._ensure_open()
+            if not isfinite(pulse_width_time):
+                raise ValueError("Servo pulse width must be finite")
+            pulse = max(self.min_pulse, min(pulse_width_time, self.max_pulse))
+            angle = ((pulse - self.min_pulse) / (self.max_pulse - self.min_pulse)) * (
+                self.max_angle - self.min_angle
+            ) + self.min_angle
+            self.angle(angle)
+
+    def _ensure_open(self) -> None:
+        if self._closed:
+            raise RuntimeError("GPIO servo is closed")
 
     def reset(self) -> None:
         """
         Reset the servo to its default (mid-point) position.
         """
         mid_angle = (self.min_angle + self.max_angle) / 2
-        self._servo.angle = mid_angle
+        self.angle(mid_angle)
         _log.debug("Reset servo on pin %s to mid position %.2f°", self.pin, mid_angle)
 
     def close(self) -> None:
         """
         Release any resources used by the servo (i.e. free the GPIO pin).
         """
-        self._servo.close()
-        _log.debug("Closed GPIOAngularServo on pin %s", self.pin)
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            self._servo.close()
+            _log.debug("Closed GPIOAngularServo on pin %s", self.pin)
 
     def __enter__(self) -> "GPIOAngularServo":
         return self

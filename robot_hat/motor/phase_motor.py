@@ -1,4 +1,5 @@
 import logging
+from threading import RLock
 from typing import Optional, Union, cast
 
 from robot_hat.data_types.config.motor import MotorDirection
@@ -50,6 +51,8 @@ class PhaseMotor(MotorCalibration, MotorABC):
         self.name = name or f"P{phase_pin}-E{enable_pin}"
         self._speed: float = 0
         self._applied_speed: float = 0
+        self._lock = RLock()
+        self._closed = False
 
         self._motor = PhaseEnableMotor(phase=phase_pin, enable=enable_pin, pwm=pwm)
         _log.debug(
@@ -92,6 +95,19 @@ class PhaseMotor(MotorCalibration, MotorABC):
         Args:
             speed: Target speed percentage within [-max_speed, max_speed].
         """
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("Motor is closed")
+            try:
+                self._set_speed(speed)
+            except Exception:
+                try:
+                    self.stop()
+                except Exception:
+                    _log.exception("Failed to stop phase motor after command failure")
+                raise
+
+    def _set_speed(self, speed: float) -> None:
         logical_speed, applied_speed = self.apply_calibration(speed, self.max_speed)
         if applied_speed > 0:
             if self._pwm:
@@ -125,19 +141,32 @@ class PhaseMotor(MotorCalibration, MotorABC):
         """
         Stop the motor.
         """
-        _log.debug(f"{self.name}: Motor stopped.")
-        self._motor.stop()
-        self._speed = 0
-        self._applied_speed = 0
+        with self._lock:
+            if self._closed:
+                return
+            self._motor.stop()
+            self._speed = 0
+            self._applied_speed = 0
+            _log.debug(f"{self.name}: Motor stopped.")
 
     def close(self) -> None:
         """
         Close the underlying GPIO resources.
         """
-        try:
-            self._motor.close()
-        except Exception as e:
-            _log.exception(f"Error closing motor resources: {e}")
+        with self._lock:
+            if self._closed:
+                return
+            first_error: Exception | None = None
+            for action in (self.stop, self._motor.close):
+                try:
+                    action()
+                except Exception as error:
+                    if first_error is None:
+                        first_error = error
+                    _log.exception("Failed to stop or close phase motor")
+            self._closed = True
+            if first_error is not None:
+                raise first_error
 
 
 def main() -> None:
