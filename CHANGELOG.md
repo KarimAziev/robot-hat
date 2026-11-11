@@ -1,5 +1,27 @@
 # Changelog
 
+## v3.3.4 (2026-11-11)
+
+### Fixed
+
+- Normalize `LSM9DS1.read_sample()` to a right-handed sensor-local frame by
+  reversing native Y for both acceleration and angular velocity. X, Z, SI
+  sensitivities, timestamps, and `read_raw_sample()` native counts are unchanged.
+  **Compatibility:** remove any application-side Y inversion that performs this
+  same normalization, and express mounting rotations relative to
+  `(native X, -native Y, native Z)`. A mounting rotation alone cannot correct the
+  previous left-handed output. The separate magnetometer driver is unchanged.
+
+### Documentation
+
+- Define the shared `IMUSample` and `IMUABC.read_sample()` contract: one
+  right-handed local frame, right-hand-rule angular velocity, SI units,
+  accelerometer specific force with its stationary gravity response, and host
+  monotonic observation timestamps. Document native raw-count semantics and
+  keep mounting transforms, bias estimation, and fusion in the application.
+- Identify the native frame references for LSM6DS33 and SH3001 and the
+  corresponding sample conventions for the mock IMU.
+
 ## v3.3.3 (2026-10-16)
 
 ### Fixed

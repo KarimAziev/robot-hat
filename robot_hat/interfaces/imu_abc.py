@@ -13,7 +13,14 @@ class IMUABC(ABC):
 
     @abstractmethod
     def read_sample(self) -> IMUSample:
-        """Read one timestamped sample in m/s² and rad/s."""
+        """Read specific force and angular velocity under the IMUSample contract.
+
+        Drivers convert hardware units and axis conventions into m/s² and rad/s
+        in one documented right-handed local frame. Angular velocity follows
+        the right-hand rule; specific force retains the stationary gravity
+        response. Timestamp the observation with the host monotonic clock.
+        Mounting rotation, bias estimation, and fusion belong to the consumer.
+        """
         pass
 
     @abstractmethod

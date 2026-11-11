@@ -104,10 +104,46 @@ class TestLSM9DS1(unittest.TestCase):
         sample = self.imu.read_sample()
 
         self.assertAlmostEqual(sample.acceleration_mps2[0], 0.122 * 9.80665)
-        self.assertAlmostEqual(sample.acceleration_mps2[1], -0.122 * 9.80665)
+        self.assertAlmostEqual(sample.acceleration_mps2[1], 0.122 * 9.80665)
         self.assertAlmostEqual(sample.angular_velocity_radps[0], math.radians(17.5))
-        self.assertAlmostEqual(sample.angular_velocity_radps[1], math.radians(-17.5))
+        self.assertAlmostEqual(sample.angular_velocity_radps[1], math.radians(17.5))
         self.assertEqual(sample.timestamp_monotonic_ns, 42)
+
+    def test_read_sample_reports_right_handed_axes_and_preserves_raw_counts(
+        self,
+    ) -> None:
+        self.initialize()
+        cases = (
+            ((1000, 0, 0), (1000, 0, 0)),
+            ((-1000, 0, 0), (-1000, 0, 0)),
+            ((0, 1000, 0), (0, -1000, 0)),
+            ((0, -1000, 0), (0, 1000, 0)),
+            ((0, 0, 1000), (0, 0, 1000)),
+            ((0, 0, -1000), (0, 0, -1000)),
+            ((1234, -32768, -5678), (1234, 32768, -5678)),
+            ((-5678, 32767, 1234), (-5678, -32767, 1234)),
+        )
+        for native, expected in cases:
+            with self.subTest(native=native):
+                block = [byte for value in native for byte in _little_endian(value)]
+                self.bus.read_i2c_block_data.return_value = block
+
+                sample = self.imu.read_sample()
+                raw = self.imu.read_raw_sample()
+
+                for axis in range(3):
+                    self.assertAlmostEqual(
+                        sample.acceleration_mps2[axis],
+                        expected[axis] * 0.000061 * 9.80665,
+                    )
+                    self.assertAlmostEqual(
+                        sample.angular_velocity_radps[axis],
+                        math.radians(expected[axis] * 0.00875),
+                    )
+                self.assertEqual(raw.accelerometer_counts, native)
+                self.assertEqual(raw.gyroscope_counts, native)
+                self.assertEqual(sample.timestamp_monotonic_ns, 123_456_789)
+                self.assertEqual(raw.timestamp_monotonic_ns, 123_456_789)
 
     def test_read_requires_initialization_and_rejects_short_blocks(self) -> None:
         with self.assertRaisesRegex(IMUReadError, "initialize"):

@@ -17,6 +17,14 @@ _DEGREES_TO_RADIANS = math.pi / 180.0
 
 
 class SH3001(I2C, IMUABC):
+    """Six-axis IMU using the native right-handed sensor frame.
+
+    Positive axes and rotation signs follow the Senodia SH3001 datasheet,
+    section 7.1, Figure 15, relative to the package pin-1 marker. SI samples
+    contain specific force and right-hand-rule angular velocity in that frame;
+    the application supplies the board-to-robot mounting rotation.
+    """
+
     SH3001_ADDRESS: ClassVar[int] = 0x36  # 7bit: 011 0111
 
     """

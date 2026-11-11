@@ -90,6 +90,37 @@ class TestSH3001(unittest.TestCase):
         self.assertAlmostEqual(sample.angular_velocity_radps[1], math.radians(-100))
         self.assertEqual(sample.angular_velocity_radps[2], 0.0)
 
+    def test_read_sample_preserves_native_right_handed_axis_signs(self) -> None:
+        inst = self.make_instance()
+        for axis in range(3):
+            for sign in (-1, 1):
+                with self.subTest(axis=axis, sign=sign):
+                    acceleration = [0, 0, 0]
+                    gyroscope = [0, 0, 0]
+                    acceleration[axis] = sign * 16384
+                    gyroscope[axis] = -sign * 1640
+                    cast(Mock, inst.mem_read).return_value = [
+                        byte
+                        for count in acceleration + gyroscope
+                        for byte in (count & 0xFF, (count >> 8) & 0xFF)
+                    ]
+
+                    sample = inst.read_sample()
+                    raw = inst.read_raw_sample()
+
+                    for index in range(3):
+                        self.assertAlmostEqual(
+                            sample.acceleration_mps2[index],
+                            acceleration[index] / 16384 * 9.80665,
+                        )
+                        self.assertAlmostEqual(
+                            sample.angular_velocity_radps[index],
+                            math.radians(gyroscope[index] / 16.4),
+                        )
+                    self.assertEqual(raw.accelerometer_counts, tuple(acceleration))
+                    self.assertEqual(raw.gyroscope_counts, tuple(gyroscope))
+                    self.assertEqual(sample.timestamp_monotonic_ns, 123_456_789)
+
     def test_read_raw_sample_rejects_incomplete_data(self):
         inst = self.make_instance()
         cast(Mock, inst.mem_read).return_value = [0] * 11

@@ -39,9 +39,13 @@ class LSM9DS1(IMUABC):
     ``0x6a`` on bus 1. The separate magnetometer function at ``0x1c`` is not
     part of the six-axis :class:`IMUABC` contract.
 
-    Samples use the native sensor X/Y/Z axes and signs from the ST datasheet.
-    No RTIMULib axis remapping, bias learning, calibration, or sensor fusion is
-    applied. Applications should configure their measured mounting transform.
+    SI samples use a right-handed local frame: X and Z follow the native
+    accelerometer/gyroscope axes in ST's datasheet, Figure 1; Y points opposite
+    native Y. Both vectors are converted as ``(x, -y, z)`` before applying their
+    sensitivity. On a Sense HAT viewed from above with GPIO at the top, local
+    X points right, Y points toward GPIO, and Z points out of the board.
+    Applications apply the mounting rotation from this local frame to the robot.
+    ``read_raw_sample()`` exposes native register counts for diagnostics.
 
     Passing a bus number creates an owned :class:`I2CBus`. Passing an existing
     :class:`SMBusABC` injects a shared bus which this driver never closes.
@@ -121,7 +125,7 @@ class LSM9DS1(IMUABC):
             self._initialized = True
 
     def read_raw_sample(self) -> RawIMUSample:
-        """Read unscaled, signed accelerometer and gyroscope counts."""
+        """Read signed counts in the native left-handed A/G register frame."""
 
         with self._lock:
             self._ensure_ready()
@@ -134,16 +138,18 @@ class LSM9DS1(IMUABC):
             )
 
     def read_sample(self) -> IMUSample:
-        """Read one native-axis sample converted to m/s² and rad/s."""
+        """Read one right-handed local-frame sample in m/s² and rad/s."""
 
         raw = self.read_raw_sample()
         acceleration_scale = self.config.accelerometer_mps2_per_lsb
         gyroscope_scale = self.config.gyroscope_radps_per_lsb
         return IMUSample(
-            acceleration_mps2=_scale_vector(
+            acceleration_mps2=_scale_right_handed_vector(
                 raw.accelerometer_counts, acceleration_scale
             ),
-            angular_velocity_radps=_scale_vector(raw.gyroscope_counts, gyroscope_scale),
+            angular_velocity_radps=_scale_right_handed_vector(
+                raw.gyroscope_counts, gyroscope_scale
+            ),
             timestamp_monotonic_ns=raw.timestamp_monotonic_ns,
         )
 
@@ -214,8 +220,12 @@ def _decode_i16(lsb: int, msb: int) -> int:
     return value - 0x10000 if value & 0x8000 else value
 
 
-def _scale_vector(value: RawVector3, scale: float) -> tuple[float, float, float]:
-    return (value[0] * scale, value[1] * scale, value[2] * scale)
+def _scale_right_handed_vector(
+    value: RawVector3, scale: float
+) -> tuple[float, float, float]:
+    # ST LSM9DS1 datasheet, Figure 1: the A/G axes are left-handed. Reverse Y
+    # to preserve the native X/Z directions and permit rigid mounting rotations.
+    return (value[0] * scale, -value[1] * scale, value[2] * scale)
 
 
 def _validate_address(address: int) -> None:

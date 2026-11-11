@@ -31,6 +31,13 @@ driver deliberately does not apply hard-iron offsets, soft-iron correction,
 declination, board rotation, or heading calculation. Those depend on the
 installation and belong in application calibration or sensor fusion.
 
+The six-axis `LSM9DS1.read_sample()` frame is right-handed, with native A/G X,
+reversed native A/G Y, and native A/G Z. Its `read_raw_sample()` frame contains
+native register counts. The independently addressed magnetometer uses the
+magnetic axes shown in ST's datasheet, Figure 1. Applications combining IMU and
+magnetometer samples must align their documented local frames before fusion;
+matching tuple indices alone does not establish a shared frame.
+
 The Sense HAT temperature sensors are physically close to the Raspberry Pi and
 LED matrix. Their readings can therefore be warmer than ambient air. The two
 temperature values also come from different physical devices and should remain

@@ -198,7 +198,8 @@ finally:
     imu.close()
 ```
 
-The driver reports the LSM9DS1's native axes; configure the measured transform
+The driver reports a right-handed local frame: native X, reversed native Y,
+and native Z for both acceleration and angular velocity. Configure the transform
 from the HAT to the robot base in the consuming application.
 
 The Sense HAT's independently addressed magnetometer, humidity/temperature

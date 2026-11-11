@@ -33,7 +33,8 @@ class LSM6DS33(IMUABC):
     and AltIMU-10 v5, and is also available on standalone carrier boards. The
     separate LIS3MDL magnetometer is intentionally exposed by its own driver.
 
-    Samples use the native sensor X/Y/Z axes and signs from the ST datasheet.
+    Samples use the native right-handed X/Y/Z axes in the ST datasheet,
+    Figure 1, for both specific force and right-hand-rule angular velocity.
     No mounting transform, calibration, bias learning, or sensor fusion is
     applied. Passing a bus number creates an owned :class:`I2CBus`; passing an
     existing :class:`SMBusABC` injects a shared bus which this driver does not

@@ -107,6 +107,37 @@ class TestLSM6DS33(unittest.TestCase):
         self.assertAlmostEqual(sample.angular_velocity_radps[1], math.radians(-4.375))
         self.assertEqual(sample.timestamp_monotonic_ns, 42)
 
+    def test_read_sample_preserves_native_right_handed_axis_signs(self) -> None:
+        self.initialize()
+        for axis in range(3):
+            for sign in (-1, 1):
+                with self.subTest(axis=axis, sign=sign):
+                    acceleration = [0, 0, 0]
+                    gyroscope = [0, 0, 0]
+                    acceleration[axis] = sign * 1000
+                    gyroscope[axis] = -sign * 2000
+                    self.bus.read_i2c_block_data.return_value = [
+                        byte
+                        for count in gyroscope + acceleration
+                        for byte in _little_endian(count)
+                    ]
+
+                    sample = self.imu.read_sample()
+                    raw = self.imu.read_raw_sample()
+
+                    for index in range(3):
+                        self.assertAlmostEqual(
+                            sample.acceleration_mps2[index],
+                            acceleration[index] * 0.000061 * 9.80665,
+                        )
+                        self.assertAlmostEqual(
+                            sample.angular_velocity_radps[index],
+                            math.radians(gyroscope[index] * 0.00875),
+                        )
+                    self.assertEqual(raw.accelerometer_counts, tuple(acceleration))
+                    self.assertEqual(raw.gyroscope_counts, tuple(gyroscope))
+                    self.assertEqual(sample.timestamp_monotonic_ns, 123_456_789)
+
     def test_read_errors_lifecycle_and_ownership(self) -> None:
         with self.assertRaisesRegex(IMUReadError, "initialize"):
             self.imu.read_sample()

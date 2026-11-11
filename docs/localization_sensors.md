@@ -8,25 +8,40 @@ mounting transforms, filtering, fusion, wheel geometry, and SLAM state.
 
 `IMUABC.read_sample()` returns an immutable `IMUSample` with:
 
-- acceleration in metres per second squared;
+- accelerometer specific force in metres per second squared, without gravity removal;
 - angular velocity in radians per second;
 - a process-local `time.monotonic_ns()` observation timestamp.
 
-The axis order is `(x, y, z)`. A concrete driver must document its positive axis
-directions. The application must transform that local frame into its robot base
-frame instead of hiding board mounting assumptions inside the hardware driver.
+Both vectors use axis order `(x, y, z)` in the same right-handed local frame.
+Positive angular velocity follows the right-hand rule. A stationary sensor with
+local +Z pointing upward reports approximately `(0, 0, +9.80665)` m/s²; ideal free
+fall reports zero. A concrete driver must document its positive axis directions
+and normalize hardware conventions before returning an `IMUSample`. The
+application applies the mounting rotation into its robot base frame and owns
+bias estimation, gravity compensation, and fusion.
+
+`RawIMUSample` contains signed native register counts for diagnostics. Its axis
+signs may differ from the normalized SI sample, as documented by each driver.
 
 `SH3001` defaults to ±2 g and ±2000 degrees/s. Its conversion uses the
 manufacturer sensitivity values for those configured ranges and standard gravity
 of 9.80665 m/s². `read_raw_sample()` is available for calibration and diagnostics;
-normal application code should consume `read_sample()`.
+normal application code should consume `read_sample()`. Its local frame follows
+the native right-handed axes in the Senodia SH3001 datasheet, section 7.1,
+Figure 15 (pin-1 marker identifies the package orientation).
 
 `LSM9DS1` provides the same six-axis contract for the Raspberry Pi Sense HAT v1
 and v2, and for standalone LSM9DS1 devices. The Sense HAT accelerometer/gyroscope
 function is wired to I²C bus 1 at `0x6a`; its separately addressed magnetometer at
-`0x1c` uses `MagnetometerABC` rather than the six-axis `IMUABC` contract. The IMU driver uses ST's
-native X/Y/Z signs without the undocumented application-specific remapping,
-calibration, bias learning, or fusion performed by RTIMULib. Its defaults are
+`0x1c` uses `MagnetometerABC` rather than the six-axis `IMUABC` contract. The IMU
+driver reports a right-handed local frame for both acceleration and angular
+velocity: `(native X, -native Y, native Z)`. ST's native A/G axes are left-handed
+([datasheet, Figure 1](https://www.st.com/resource/en/datasheet/lsm9ds1.pdf));
+the Y sign normalization lets applications use ordinary rigid mounting rotations.
+With a Sense HAT viewed from above and GPIO at the top, local X points right,
+local Y points toward GPIO, and local Z points out of the board. Robot mounting,
+bias calibration, and fusion belong to the application. `read_raw_sample()`
+returns native signed register counts. The driver's defaults are
 ±2 g, ±245 degrees/s, and 119 Hz. Pass a shared `SMBusABC` to combine it safely
 with other drivers on the bus; closing the IMU does not close an injected bus.
 See [Sense HAT environmental and magnetic sensors](sense_hat_sensors.md) for the
@@ -37,7 +52,9 @@ Pololu's MiniIMU-9 v5 and AltIMU-10 v5, as well as standalone LSM6DS33 carriers.
 It defaults to I²C address `0x6b`, ±2 g, ±245 degrees/s, and 104 Hz. The
 independent `LIS3MDL` driver provides magnetic samples in teslas at address
 `0x1e`. Driving the Pololu board's shared `SA0` pin low changes those addresses
-to `0x6a` and `0x1c`, respectively. Both drivers expose native axes, typed
+to `0x6a` and `0x1c`, respectively. The IMU's local frame follows the native
+right-handed axes in the [LSM6DS33 datasheet, Figure 1](https://www.pololu.com/file/0J1087/LSM6DS33.pdf).
+Both drivers expose native axes, typed
 configuration, diagnostic raw counts, and caller-owned shared-bus injection.
 In a driver selector, these components should be identified as
 **LSM6DS33 (gyro and accelerometer)** and **LIS3MDL (magnetometer)**.
@@ -47,7 +64,9 @@ See [Pololu MiniIMU-9 v5 support](pololu_miniimu9_v5.md) for wiring, complete
 configuration ranges, and calibration responsibilities.
 
 The monotonic timestamp is not Unix time. It is suitable for ordering and fusing
-observations acquired in the same process and monotonic clock domain.
+observations acquired in the same monotonic clock domain. It records host
+observation time, not a hardware sampling timestamp or a guarantee that the
+accelerometer and gyroscope sampled simultaneously.
 
 ## Wheel encoders
 

@@ -10,7 +10,11 @@ from robot_hat.interfaces.imu_abc import IMUABC
 
 
 class MockIMU(IMUABC):
-    """Deterministic IMU with stationary, level no-argument defaults."""
+    """Deterministic IMU with stationary, level no-argument defaults.
+
+    Supplied vectors follow the IMUSample right-handed local-frame contract.
+    The default pose has +Z upward and includes the stationary gravity response.
+    """
 
     def __init__(
         self,

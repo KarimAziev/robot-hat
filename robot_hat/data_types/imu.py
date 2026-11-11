@@ -18,9 +18,23 @@ def _validate_vector(name: str, value: Vector3) -> None:
 class IMUSample:
     """One six-axis inertial observation in SI units.
 
-    Axes use the concrete sensor driver's documented local frame. Consumers are
-    responsible for applying the rigid transform from that frame to the robot
-    base frame.
+    Both vectors use axis order ``(x, y, z)`` in the same right-handed,
+    sensor-local frame. Concrete drivers document the positive axis directions
+    and normalize hardware axis conventions before constructing this sample.
+    Positive angular velocity follows the right-hand rule about each axis.
+
+    ``acceleration_mps2`` is accelerometer specific force in m/s², without
+    gravity removal. A stationary sensor with local +Z pointing upward reports
+    approximately ``(0, 0, +9.80665)``; ideal free fall reports zero.
+    ``angular_velocity_radps`` is angular velocity in rad/s.
+
+    ``timestamp_monotonic_ns`` is the host observation time in nanoseconds,
+    using ``time.monotonic_ns()`` or an injected clock with the same semantics.
+    It is not Unix time or a guarantee of simultaneous hardware acquisition.
+    Compare timestamps only within a shared monotonic clock domain.
+
+    Consumers apply the installation-specific mounting rotation into the robot
+    frame and own bias calibration, gravity compensation, and sensor fusion.
     """
 
     acceleration_mps2: Vector3
@@ -36,7 +50,12 @@ class IMUSample:
 
 @dataclass(frozen=True)
 class RawIMUSample:
-    """Unscaled signed sensor counts for diagnostics and calibration tools."""
+    """Unscaled signed sensor counts for diagnostics and calibration tools.
+
+    Axis order and signs follow the concrete driver's documented native
+    register convention, which may differ from the normalized ``IMUSample``
+    frame. The timestamp has the same host monotonic semantics as ``IMUSample``.
+    """
 
     accelerometer_counts: RawVector3
     gyroscope_counts: RawVector3
